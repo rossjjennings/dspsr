@@ -16,10 +16,10 @@ endif
 #############################################################################
 
 
-LDADD = $(top_builddir)/Kernel/libdspbase.la @CUDA_LIBS@ @CUFFT_LIBS@
+LDADD = $(top_builddir)/Kernel/libdspbase.la @CUDA_LIBS@ @CUFFT_LIBS@ @OPENMP_CFLAGS@
 
 include $(top_srcdir)/config/Makefile.include
 
 AM_CPPFLAGS += -I$(top_builddir)/local_include 
-AM_CPPFLAGS += @CUDA_CFLAGS@ @CUFFT_CFLAGS@
+AM_CPPFLAGS += @CUDA_CFLAGS@ @CUFFT_CFLAGS@ @OPENMP_CFLAGS@
 
