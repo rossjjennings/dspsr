@@ -77,8 +77,16 @@ namespace dsp {
     //! The byte resolution
     unsigned byte_resolution;
 
+#if HAVE_CUDA
     //! Zero the input data_block after reading values
-    char zero_input;
+    unsigned zero_input;
+
+    //! device buffer containing zeros
+    void * zeroed_buffer;
+
+    //! size of the zeroed buffer
+    uint64_t zeroed_buffer_size;
+#endif
 
   };
 

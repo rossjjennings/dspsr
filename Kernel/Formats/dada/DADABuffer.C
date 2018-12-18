@@ -29,8 +29,11 @@ dsp::DADABuffer::DADABuffer ()
 {
   hdu = 0;
   passive = false;
+#if HAVE_CUDA
   zero_input = 0;
-
+  zeroed_buffer = NULL;
+  zeroed_buffer_size = 0;
+#endif
   /*
     when a block overlap policy is necessary (e.g. when using two GPUs)
     different threads cannot recycle BitSeries data and must share a
@@ -42,6 +45,14 @@ dsp::DADABuffer::DADABuffer ()
 dsp::DADABuffer::~DADABuffer ()
 {
   close ();
+#if HAVE_CUDA
+  if (zeroed_buffer)
+  {
+    cudaFree (zeroed_buffer);
+    zeroed_buffer = NULL;
+    zeroed_buffer_size = 0;
+  }
+#endif
 }
 
 void dsp::DADABuffer::close ()
@@ -284,14 +295,30 @@ int64_t dsp::DADABuffer::load_bytes_device (unsigned char* device_memory, uint64
     cerr << "dsp::DADABuffer::load_bytes_device ipcio_read_cuda "
          << bytes << " bytes" << endl;
 
-  int64_t bytes_read = -1;
-#ifdef DADA_IPCIO_READ_ZERO_CUDA
   if (zero_input)
-    bytes_read = ipcio_read_zero_cuda (hdu->data_block, (char*) device_memory, bytes, stream);
+  {
+    if (!zeroed_buffer)
+    {
+      zeroed_buffer_size = ipcbuf_get_bufsz ((ipcbuf_t*) hdu->data_block);
+      if (verbose)
+        cerr << "dsp::DADABuffer::load_bytes_device allocating "
+             << zeroed_buffer_size << " bytes for zeroing buffer" << endl;
+      cudaError_t err = cudaMalloc (&zeroed_buffer, size_t(zeroed_buffer_size));
+      if (err != cudaSuccess)
+        throw Error (FailedCall, "dsp::DADABuffer::load_bytes_device", "cudaMalloc failed");
+      err = cudaMemsetAsync (zeroed_buffer, 0, zeroed_buffer_size, stream);
+      if (err != cudaSuccess)
+        throw Error (FailedCall, "dsp::DADABuffer::load_bytes_device", "cudaMemsetAsync failed");
+    } 
+  }
+
+  int64_t bytes_read = -1;
+#ifdef DADA_IPCIO_READ_ZERO_CUDA  // from psrdada/src/ipcio_cuda.h
+  if (zero_input)
+    bytes_read = ipcio_read_zero_cuda (hdu->data_block, (char*) device_memory, (char *) zeroed_buffer, bytes, stream);
   else
-#else
-    bytes_read = ipcio_read_cuda (hdu->data_block, (char*) device_memory, bytes, stream);
 #endif
+    bytes_read = ipcio_read_cuda (hdu->data_block, (char*) device_memory, bytes, stream);
 	cudaStreamSynchronize(stream);
   if (bytes_read < 0)
     cerr << "dsp::DADABuffer::load_bytes_device error ipcio_read_cuda" << endl;
