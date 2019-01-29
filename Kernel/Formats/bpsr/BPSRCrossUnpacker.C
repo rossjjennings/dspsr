@@ -52,6 +52,14 @@ bool dsp::BPSRCrossUnpacker::set_output_ppqq ()
 
 bool dsp::BPSRCrossUnpacker::matches (const Observation* observation)
 {
+  if (!dynamic_cast<const ASCIIObservation *>(observation))
+  {
+    if (verbose)
+      cerr << "dsp::BPSRCrossUnpacker::matches"
+              " ASCIIObservation required and not available" << endl;
+    return false;
+  }
+
   if (verbose)
     cerr << "dsp::BPSRCrossUnpacker::matches \n"
       " machine=" << observation->get_machine() << " should be BPSR \n"
