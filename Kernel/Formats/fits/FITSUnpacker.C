@@ -39,6 +39,23 @@ dsp::FITSUnpacker::FITSUnpacker(const char* name) : Unpacker(name)
 
 void dsp::FITSUnpacker::set_parameters (FITSFile* ff)
 {
+  /*
+    WvS 2018 July 04 - Note that, if the CFITSIO library is not
+    detected by the dspsr configure script, then the code that sets
+    things up to call this method (in Signal/Pulsar/LoadToFold1.C)
+    does not get compiled.  However, before today, not detecting
+    CFITSIO (and therefore not defining HAVE_CFITSIO) did not stop one
+    from enabling PSRFITS support (by including "fits" in
+    backends.list).  Therefore, if everthing compiled and linked, it
+    was possible for dspsr to run with PSRFITS support enabled but
+    without CFITSIO-related code (like this method) enabled.
+  */
+  
+#if _DEBUG
+  cerr << "dsp::FITSUnpacker::set_parameters"
+    " dat_scl size=" << ff->dat_scl.size() << endl;
+#endif
+  
   zero_off = ff->zero_off;
   dat_scl = ff->dat_scl;
   dat_offs = ff->dat_offs;
@@ -74,6 +91,8 @@ void dsp::FITSUnpacker::unpack()
     case 8:
       p = &dsp::FITSUnpacker::eightBitNumber;
       break;
+    case 16:
+      break;
     default:
       throw Error(InvalidState, "FITSUnpacker::unpack",
           "invalid nbit=%d", nbit);
@@ -86,8 +105,11 @@ void dsp::FITSUnpacker::unpack()
   // Make sure scales and offsets exist
   if (dat_scl.size() == 0)
   {
-    dat_scl.assign(nchan,1);
-    dat_offs.assign(nchan,0);
+#if _DEBUG
+    cerr << "dsp::FITSUnpacker::unpack dat_scl empty" << endl;
+#endif
+    dat_scl.assign(nchan*npol,1);
+    dat_offs.assign(nchan*npol,0);
   }
 
   // Number of samples in one byte.
@@ -95,32 +117,58 @@ void dsp::FITSUnpacker::unpack()
   const int mod_offset = samples_per_byte - 1;
 
   const unsigned char* from = input->get_rawptr();
+  const int16_t* from16 = (int16_t *)input->get_rawptr();
 
-  // Iterate through input data, split the byte depending on number of
-  // samples per byte, get corresponding mapped value and store it
-  // as pol-chan-dat.
-  //
-  // TODO: Use a lookup table???
-  for (unsigned idat = 0; idat < ndat; ++idat) {
-    float* scl = &dat_scl[0];
-    float* off = &dat_offs[0];
-    for (unsigned ipol = 0; ipol < npol; ++ipol) {
-      for (unsigned ichan = 0; ichan < nchan;) {
+  if (nbit<=8) {
 
-        const int mod = mod_offset - (ichan % samples_per_byte);
-        const int shifted_number = *from >> (mod * nbit);
+    // Iterate through input data, split the byte depending on number of
+    // samples per byte, get corresponding mapped value and store it
+    // as pol-chan-dat.
+    //
+    // TODO: Use a lookup table???
+    for (unsigned idat = 0; idat < ndat; ++idat) {
+      float* scl = &dat_scl[0];
+      float* off = &dat_offs[0];
+      for (unsigned ipol = 0; ipol < npol; ++ipol) {
+        for (unsigned ichan = 0; ichan < nchan;) {
 
-        float* into = output->get_datptr(ichan, ipol) + idat;
-        *into = (*this.*p)(shifted_number) * (*scl) + (*off);
-        ++scl; ++off;
+          const int mod = mod_offset - (ichan % samples_per_byte);
+          const int shifted_number = *from >> (mod * nbit);
 
-        // Move to next byte when the entire byte has been split.
-        if ((++ichan) % (samples_per_byte) == 0) {
-          ++from;
+          float* into = output->get_datptr(ichan, ipol) + idat;
+
+#if 0
+          cerr << "ipol=" << ipol << " ichan=" << ichan 
+               << " scl=" << *scl << " off=" << *off << endl;
+#endif
+   
+          *into = (*this.*p)(shifted_number) * (*scl) + (*off);
+          ++scl; ++off;
+
+          // Move to next byte when the entire byte has been split.
+          if ((++ichan) % (samples_per_byte) == 0) {
+            ++from;
+          }
         }
       }
     }
   }
+
+  else if (nbit==16) {
+    for (unsigned idat=0; idat<ndat; idat++) {
+      float* scl = &dat_scl[0];
+      float* off = &dat_offs[0];
+      for (unsigned ipol=0; ipol<npol; ipol++) {
+        for (unsigned ichan=0; ichan<nchan; ichan++) {
+          float* into = output->get_datptr(ichan, ipol) + idat;
+          *into = (float)(*from16) * (*scl) + (*off);
+          ++scl; ++off;
+          ++from16;
+        }
+      }
+    }
+  }
+
 }
 
 bool dsp::FITSUnpacker::matches(const Observation* observation)
