@@ -54,7 +54,11 @@ dsp::Observation::Interface::Interface( Observation *c )
   add( &Observation::get_state,
        &Observation::set_state,
        "state", "Data state" );
-  
+
+  add( &Observation::get_machine,
+       &Observation::set_machine,
+       "machine", "Name of machine/backend" );
+
   if (c)
     set_instance (c);
 }
