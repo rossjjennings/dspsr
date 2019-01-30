@@ -59,6 +59,7 @@
 
 #include <string.h>             /* NULL, strlen, strstr, strcpy */
 #include <stdio.h>
+#include <stdlib.h>
 #include "fitshead.h"   /* FITS header extraction subroutines */
 #include <stdlib.h>
 #ifndef VMS
@@ -174,6 +175,7 @@ const char *keyword;    /* character string containing the name of the keyword
 int *ival;
 {
     char *value;
+    char *value0;
     double dval;
     int minint;
     int lval;
@@ -185,6 +187,7 @@ int *ival;
 
     /* Translate value from ASCII to binary */
     if (value != NULL) {
+        value0 = value;
         if (value[0] == '#') value++;
         minint = -INT_MAX - 1;
         lval = strlen (value);
@@ -211,6 +214,7 @@ int *ival;
             *ival = minint;
         else
             *ival = (int) (dval - 0.001);
+        free(value0);
         return (1);
         }
     else {
@@ -234,6 +238,7 @@ const char *keyword;    /* character string containing the name of the keyword
 short *ival;
 {
     char *value;
+    char *value0;
     double dval;
     int minshort;
     int lval;
@@ -245,6 +250,7 @@ short *ival;
 
     /* Translate value from ASCII to binary */
     if (value != NULL) {
+        value0 = value;
         if (value[0] == '#') value++;
         lval = strlen (value);
         if (lval > VLENGTH) {
@@ -271,6 +277,7 @@ short *ival;
             *ival = minshort;
         else
             *ival = (short) (dval - 0.001);
+        free(value0);
         return (1);
         }
     else {
@@ -293,6 +300,7 @@ const char *keyword;    /* character string containing the name of the keyword
 float *rval;
 {
     char *value;
+    char *value0;
     int lval;
     char *dchar;
     char val[VLENGTH+1];
@@ -302,6 +310,7 @@ float *rval;
 
     /* translate value from ASCII to binary */
     if (value != NULL) {
+        value0 = value;
         if (value[0] == '#') value++;
         lval = strlen (value);
         if (lval > VLENGTH) {
@@ -319,6 +328,7 @@ float *rval;
                 *dchar = 'e';
             }
         *rval = (float) atof (val);
+        free(value0);
         return (1);
         }
     else {
@@ -350,6 +360,7 @@ double *dval;   /* Right ascension in degrees (returned) */
     if (value != NULL) {
         *dval = str2ra_hget (value);
         return (1);
+        free(value);
         }
     else
         return (0);
@@ -378,6 +389,7 @@ double *dval;   /* Right ascension in degrees (returned) */
     /* Translate value from ASCII colon-delimited string to binary */
     if (value != NULL) {
         *dval = str2dec_hget (value);
+        free(value);
         return (1);
         }
     else
@@ -431,6 +443,7 @@ const char *keyword;    /* character string containing the name of the keyword
 double *dval;
 {
     char *value;
+    char *value0;
     int lval;
     char *dchar;
     char val[VLENGTH+1];
@@ -440,6 +453,7 @@ double *dval;
 
     /* Translate value from ASCII to binary */
     if (value != NULL) {
+        value0 = value;
         if (value[0] == '#') value++;
         lval = strlen (value);
         if (lval > VLENGTH) {
@@ -457,6 +471,7 @@ double *dval;
                 *dchar = 'e';
             }
         *dval = atof (val);
+        free(value0);
         return (1);
         }
     else {
@@ -501,6 +516,7 @@ int *ival;
             *ival = 1;
         else
             *ival = 0;
+        free(value);
         return (1);
         }
     else {
@@ -579,9 +595,11 @@ double *dval;
                 for (i = 0; i < month-1; i++)
                     yday = yday + mday[i];
                 *dval = (double) year + ((double)yday / yeardays);
+                free(value);
                 return (1);
                 }
             else
+                free(value);
                 return (0);
             }
 
@@ -663,9 +681,11 @@ double *dval;
                        seconds) / 8.64e4;
                 *dval = *dval + (fday / yeardays);
                 }
+            free(value);
             return (1);
             }
         else
+            free(value);
             return (0);
         }
     else
@@ -815,6 +835,7 @@ char *str;      /* String (returned) */
             strncpy (str, value, lstr-1);
         else
             str[0] = value[0];
+        free(value);
         return (1);
         }
     else
@@ -851,6 +872,7 @@ int *ndec;      /* Number of decimal places in keyword value */
                 return (1);
             *ndec = *ndec + 1;
             }
+        free(value);
         return (1);
         }
     else
@@ -871,8 +893,9 @@ const char *keyword0;   /* character string containing the name of the keyword
                    the n'th token in the value is returned.
                    (the first 8 characters must be unique) */
 {
+    // This needs to be dynamically allocated for thread safety --PBD
     //static char cval[80];
-    char cval[80];
+    char *cval;
     char *value;
     char cwhite[2];
     char squot[2], dquot[2], lbracket[2], rbracket[2], slash[2], comma[2];
@@ -922,6 +945,9 @@ const char *keyword0;   /* character string containing the name of the keyword
     if (vpos == NULL) {
         return (NULL);
         }
+
+    /* Alloc memory for return value */
+    cval = (char *)malloc(80);
 
     /* Initialize line to nulls */
     for (i = 0; i < 100; i++)
@@ -1094,6 +1120,7 @@ const char *keyword0;   /* character string containing the name of the keyword
             }
         }
 
+    if (value==NULL) { free(cval); }
     return (value);
 #ifdef USE_SAOLIB
     } else {
