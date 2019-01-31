@@ -102,6 +102,12 @@ void dsp::Filterbank::make_preparations ()
       throw Error (InvalidState, "dsp::Filterbank::make_preparations",
                    "Response.ndat = 0");
   }
+  else
+  {
+    // configure normalizer with the width of the frequency response
+    normalizer->set_ndat (freq_res);
+    normalizer->match (input, nchan);
+  }
 
   // number of complex values in the result of the first fft
   unsigned n_fft = nchan_subband * freq_res;
@@ -127,6 +133,9 @@ void dsp::Filterbank::make_preparations ()
   else if (FTransform::get_norm() == FTransform::normalized)
     scalefac = double(n_fft) / double(freq_res);
 
+  // sqrt since the scale factor is applied prior to detection
+  scalefac = sqrt(scalefac);
+
   // number of complex samples invalid in result of small ffts
   nfilt_tot = nfilt_pos + nfilt_neg;
 
@@ -150,6 +159,31 @@ void dsp::Filterbank::make_preparations ()
   else
     throw Error (InvalidState, "dsp::Filterbank::make_preparations",
                  "invalid input data state = " + tostring(input->get_state()));
+
+  // configure the normalizing response to ensure FFT lengths do
+  // not rescale the data exceedingly
+  normalizer->set_scale_factor (1.0 / scalefac);
+  scalefac = 1.0;
+
+  if (response)
+  {
+    if (verbose)
+      cerr << "dsp::Filterbank::make_preparations building a response product" << endl;
+    response_product = new ResponseProduct ();
+    response_product->add_response (response);
+    response_product->add_response (normalizer);
+    response_product->set_copy_index (0);
+    response_product->set_match_index (0);
+    response = response_product;
+  }
+  else
+  {
+    if (verbose)
+      cerr << "dsp::Filterbank::make_preparations using normalized response" << endl;
+    response = normalizer;
+  }
+
+  response -> match (input, nchan);
 
   // number of timesamples between start of each big fft
   nsamp_step = nsamp_fft - nsamp_overlap;

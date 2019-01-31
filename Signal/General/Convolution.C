@@ -35,6 +35,7 @@ dsp::Convolution::Convolution (const char* _name, Behaviour _type)
   : Transformation<TimeSeries,TimeSeries> (_name, _type)
 {
   set_buffering_policy (new InputBuffering (this));
+  normalizer = new ScalarFilter();
 }
 
 dsp::Convolution::~Convolution ()
@@ -113,6 +114,7 @@ void dsp::Convolution::prepare ()
                  "input data are detected");
 
   response->match (input);
+  normalizer->match (input);
 
   if (passband)
     passband->match (response);
@@ -182,6 +184,22 @@ void dsp::Convolution::prepare ()
     throw Error (InvalidState, "dsp::Convolution::prepare",
                  "Cannot transform Signal::State="
                  + tostring(input->get_state()));
+
+  // configure the normalizing response to ensure FFT lengths do
+  // not rescale the data exceedingly
+  scalefac = 1.0;
+  if (FTransform::get_norm() == FTransform::unnormalized)
+    scalefac = double(nsamp_fft);
+  normalizer->set_scale_factor (1.0/scalefac);
+
+  response_product = new ResponseProduct ();
+  response_product->add_response (response);
+  response_product->add_response (normalizer);
+  response_product->set_copy_index (0);
+  response_product->set_match_index (0);
+  response = response_product;
+
+  response->match(input);
 
   // the FFT size must be greater than the number of discarded points
   if (nsamp_fft < nsamp_overlap)
@@ -299,11 +317,8 @@ void dsp::Convolution::reserve ()
   // nfilt_pos complex points are dropped from the start of the first FFT
   output->change_start_time (nfilt_pos);
 
-  // data will be scaled by the FFT
-  if (FTransform::get_norm() == FTransform::unnormalized)
-    // after performing forward and backward FFTs the data will be scaled
-    output->rescale (double(nsamp_fft) * double(n_fft));
-
+  // data will be normalised by the response product, removing the effect
+  // of an unnormalized FFT
   if (verbose)
     cerr << "Convolution::reserve scale="<< output->get_scale() <<endl;
 

@@ -88,9 +88,13 @@ const dsp::Response& dsp::Response::operator *= (const Response& response)
     (so B operates on A's buffer)
   */
 
-  unsigned original_step = response.step;
+  if (response.ndim > ndim)
+    throw Error (InvalidParam, "dsp::Response::operator *=",
+      "response.ndim=%u < ndim=%u, incorrect ndim order for operation",
+      response.ndim, ndim);
 
-  response.step = 4;
+  unsigned original_step = response.step;
+  response.step = ndim / response.ndim;
 
    for (unsigned istep=0; istep < step; istep++)
     for (unsigned ipol=0; ipol < npol; ipol++)
