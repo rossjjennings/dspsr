@@ -135,6 +135,9 @@ namespace dsp {
     //! Name of the output file
     std::string output_filename;
 
+    //! produce upper sideband output
+    bool upper_sideband_output;
+
     //! Set quiet mode
     virtual void set_quiet ();
 

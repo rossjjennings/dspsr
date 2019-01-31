@@ -97,6 +97,9 @@ dsp::LoadToFITS::Config::Config()
 
   // by default, time series weights are not used
   weighted_time_series = false;
+
+  // by default, lower sideband output
+  upper_sideband_output = false;
 }
 
 // set block size to this factor times the minimum possible
@@ -523,6 +526,7 @@ void dsp::LoadToFITS::construct () try
   FITSDigitizer* digitizer = new FITSDigitizer (config->nbits);
   digitizer->set_input (timeseries);
   digitizer->set_output (bitseries);
+  digitizer->set_upper_sideband_output (config->upper_sideband_output);
 
   // PSRFITS allows us to save the reference spectrum in each output block
   // "subint", so we can take advantage of this to store the exect
@@ -561,6 +565,7 @@ void dsp::LoadToFITS::construct () try
   outputfile->set_nsblk (config->nsblk);
   outputfile->set_nbit (config->nbits);
   outputfile->set_max_length (config->integration_length);
+  outputfile->set_upper_sideband_output (config->upper_sideband_output);
   outputFile = outputfile;
   outputFile->set_input (bitseries);
 
