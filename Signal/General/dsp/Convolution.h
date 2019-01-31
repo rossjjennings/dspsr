@@ -12,6 +12,8 @@
 #define __Convolution_h
 
 #include "dsp/Response.h"
+#include "dsp/ResponseProduct.h"
+#include "dsp/ScalarFilter.h"
 
 #include "dsp/Transformation.h"
 #include "dsp/TimeSeries.h"
@@ -112,8 +114,14 @@ namespace dsp {
     //! Perform the convolution transformation on the input TimeSeries
     virtual void transformation ();
 
+    //! Scalar filter (normalizer)
+    Reference::To<ScalarFilter> normalizer;
+
     //! Frequency response (convolution kernel)
     Reference::To<Response> response;
+
+    //! Product of response and normaliser
+    Reference::To<ResponseProduct> response_product;
 
     //! Apodization function (time domain window)
     Reference::To<Apodization> apodization;
