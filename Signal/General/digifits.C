@@ -140,6 +140,9 @@ void parse_options (int argc, char** argv) try
   arg = menu.add (config->output_filename, 'o', "file");
   arg->set_help ("output filename");
 
+  arg = menu.add (config->upper_sideband_output, 'u');
+  arg->set_help ("produced upper side-band output");
+
   //bool revert = false;
   //arg = menu.add (revert, 'p');
   //arg->set_help ("revert to FPT order");

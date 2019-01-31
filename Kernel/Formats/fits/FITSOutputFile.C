@@ -110,6 +110,7 @@ dsp::FITSOutputFile::FITSOutputFile (const char* filename)
   // this should be parameterized
   mangle_output = true;
   max_length = 0;
+  upper_sideband_output = false;
 }
 
 dsp::FITSOutputFile::~FITSOutputFile ()
@@ -129,6 +130,11 @@ unsigned char* dsp::FITSOutputFile::write_bytes (int colnum, int isub, int offse
 void dsp::FITSOutputFile::set_atnf (bool _use_atnf)
 {
   use_atnf = _use_atnf;
+}
+
+void dsp::FITSOutputFile::set_upper_sideband_output (bool _usb)
+{
+  upper_sideband_output = _usb;
 }
 
 void dsp::FITSOutputFile::set_mangle_output (bool _mangle_output)
@@ -247,7 +253,10 @@ void dsp::FITSOutputFile::write_header ()
 
   archive-> set_source ( get_input()->get_source() );
   archive-> set_coordinates ( get_input()->get_coordinates() );
-  archive-> set_bandwidth ( -fabs(get_input()->get_bandwidth()) );
+  if (upper_sideband_output)
+    archive-> set_bandwidth ( fabs(get_input()->get_bandwidth()) );
+  else
+    archive-> set_bandwidth ( -fabs(get_input()->get_bandwidth()) );
   archive-> set_centre_frequency ( get_input()->get_centre_frequency() );
   archive-> set_dispersion_measure ( get_input()->get_dispersion_measure() );
 

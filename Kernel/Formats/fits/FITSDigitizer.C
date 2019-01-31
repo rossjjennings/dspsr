@@ -55,6 +55,7 @@ dsp::FITSDigitizer::FITSDigitizer (unsigned _nbit)
   rescale_idx = 0;
   rescale_counter = 0;
   rescale_constant = false;
+  upper_sideband_output = false;
   freq_total = freq_totalsq = scale = offset = NULL;
   digi_scale = 1;
   digi_mean = 0;
@@ -124,8 +125,9 @@ class ChannelSort
 
 public:
 
-  ChannelSort (const dsp::Observation* input) :
-    flip_band ( input->get_bandwidth() > 0 ),
+  ChannelSort (const dsp::Observation* input, bool upper_sideband) :
+    flip_band ((upper_sideband && input->get_bandwidth() < 0) ||
+               (!upper_sideband && input->get_bandwidth() > 0)),
     swap_band ( input->get_swap() ),
     nchan ( input->get_nchan() ),
     half_chan ( nchan / 2 ),
@@ -342,7 +344,10 @@ void dsp::FITSDigitizer::pack ()
   }
 
   // ChannelSort will re-organize the frequency channels in the output
-  output->set_bandwidth ( -fabs(input->get_bandwidth()) );
+  if (upper_sideband_output)
+    output->set_bandwidth ( fabs(input->get_bandwidth()) );
+  else
+    output->set_bandwidth ( -fabs(input->get_bandwidth()) );
   output->set_swap ( false );
   output->set_nsub_swap ( 0 );
   output->set_input_sample ( input->get_input_sample() );
@@ -360,7 +365,7 @@ void dsp::FITSDigitizer::pack ()
 
   // this always puts channels in "lower sideband" order
   // I reckon that's OK
-  ChannelSort channel (input);
+  ChannelSort channel (input, upper_sideband_output);
 
   int samp_per_byte = 8/nbit;
   set_digi_scales();
@@ -498,7 +503,10 @@ void dsp::FITSDigitizer::rescale_pack ()
     init ();
 
   // ChannelSort will re-organize the frequency channels in the output
-  output->set_bandwidth ( -fabs(input->get_bandwidth()) );
+  if (upper_sideband_output)
+    output->set_bandwidth ( fabs(input->get_bandwidth()) );
+  else
+    output->set_bandwidth ( -fabs(input->get_bandwidth()) );
   output->set_swap ( false );
   output->set_nsub_swap ( 0 );
   output->set_input_sample ( input->get_input_sample() );
@@ -528,7 +536,7 @@ void dsp::FITSDigitizer::rescale_pack ()
 
   // this always puts channels in "lower sideband" order
   // I reckon that's OK
-  ChannelSort channel (input);
+  ChannelSort channel (input, upper_sideband_output);
 
   int samp_per_byte = 8/nbit;
   set_digi_scales();
@@ -682,7 +690,7 @@ void dsp::FITSDigitizer::get_scales(
   unsigned npol = input->get_npol ();
   dat_scl->resize(nchan*npol);
   dat_offs->resize(nchan*npol);
-  ChannelSort channel (input);
+  ChannelSort channel (input, upper_sideband_output);
 
   for (unsigned ichan=0; ichan < nchan; ++ichan)
   {

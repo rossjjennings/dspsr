@@ -54,6 +54,9 @@ namespace dsp {
     //! Set the output filename convention
     void set_atnf ( bool );
 
+    //! Set the output to upper sideband
+    void set_upper_sideband_output ( bool );
+
     //! Set output mangling
     void set_mangle_output ( bool );
 
@@ -145,6 +148,9 @@ namespace dsp {
 
     //! keep track of samples written so far
     int64_t samples_written;
+
+    //! produce upper sideband output ordering
+    bool upper_sideband_output;
 
   };
 

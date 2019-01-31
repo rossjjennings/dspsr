@@ -40,6 +40,9 @@ namespace dsp
     //! If true, leave scales/offsets constant after first measurement.
     void set_rescale_constant (bool rconst);
 
+    //! Set the channel ordering of the output
+    void set_upper_sideband_output (bool usb) { upper_sideband_output = usb; };
+
     //virtual void transformation ();
 
     //! Pack the data
@@ -79,6 +82,8 @@ namespace dsp
 
     //! arrays for accumulating and storing scales
     double *freq_totalsq, *freq_total, *scale, *offset;
+
+    bool upper_sideband_output;
 
   };
 }
