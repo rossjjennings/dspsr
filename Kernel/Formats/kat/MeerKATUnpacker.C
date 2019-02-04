@@ -137,6 +137,7 @@ void dsp::MeerKATUnpacker::set_device (Memory* memory)
 bool dsp::MeerKATUnpacker::matches (const Observation* observation)
 {
   return (observation->get_machine() == "MKBF" || 
+          observation->get_machine() == "MeerKAT" ||
           observation->get_machine() == "MKBFRo")
     && observation->get_ndim() == 2
     && (observation->get_npol() == 2 || observation->get_npol() == 1)
