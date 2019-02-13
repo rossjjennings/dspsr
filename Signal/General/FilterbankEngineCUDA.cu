@@ -9,7 +9,7 @@
 
 //#define _DEBUG 1
 
-#include "dsp/FilterbankCUDA.h"
+#include "dsp/FilterbankEngineCUDA.h"
 #include "CUFFTError.h"
 #include "debug.h"
 
@@ -74,7 +74,7 @@ void CUDA::FilterbankEngine::setup (dsp::Filterbank* filterbank)
 {
   // the CUDA engine does not maintain/compute the passband
   filterbank->set_passband (NULL);
-  
+
   freq_res = filterbank->get_freq_res ();
   nchan_subband = filterbank->get_nchan_subband();
 
@@ -106,7 +106,7 @@ void CUDA::FilterbankEngine::setup (dsp::Filterbank* filterbank)
   DEBUG("CUDA::FilterbankEngine::setup setting stream=" << stream);
   result = cufftSetStream (plan_fwd, stream);
   if (result != CUFFT_SUCCESS)
-    throw CUFFTError (result, "CUDA::FilterbankEngine::setup", 
+    throw CUFFTError (result, "CUDA::FilterbankEngine::setup",
 		      "cufftSetStream(plan_fwd)");
 
   DEBUG("CUDA::FilterbankEngine::setup fwd FFT plan set");
@@ -115,7 +115,7 @@ void CUDA::FilterbankEngine::setup (dsp::Filterbank* filterbank)
   {
     result = cufftPlan1d (&plan_bwd, freq_res, CUFFT_C2C, nchan_subband);
     if (result != CUFFT_SUCCESS)
-      throw CUFFTError (result, "CUDA::FilterbankEngine::setup", 
+      throw CUFFTError (result, "CUDA::FilterbankEngine::setup",
 			"cufftPlan1d(plan_bwd)");
 
     result = cufftSetStream (plan_bwd, stream);
@@ -153,10 +153,10 @@ void CUDA::FilterbankEngine::setup (dsp::Filterbank* filterbank)
 
     // points kept from each small fft
     nkeep = freq_res - nfilt_tot;
- 
+
     // copy the kernel accross
     const float* kernel = filterbank->get_response()->get_datptr(0,0);
-    
+
     if (stream)
       cudaMemcpyAsync(d_kernel, kernel, mem_size, cudaMemcpyHostToDevice, stream);
     else
@@ -178,7 +178,7 @@ void CUDA::FilterbankEngine::finish ()
 }
 
 
-void CUDA::FilterbankEngine::perform (const dsp::TimeSeries * in, dsp::TimeSeries * out, 
+void CUDA::FilterbankEngine::perform (const dsp::TimeSeries * in, dsp::TimeSeries * out,
             uint64_t npart, const uint64_t in_step, const uint64_t out_step)
 {
   verbose = dsp::Operation::record_time || dsp::Operation::verbose;
@@ -186,11 +186,11 @@ void CUDA::FilterbankEngine::perform (const dsp::TimeSeries * in, dsp::TimeSerie
   const unsigned npol = in->get_npol();
   const unsigned input_nchan = in->get_nchan();
   const unsigned output_nchan = out->get_nchan();
- 
+
   // counters
   unsigned ipol, ichan;
   uint64_t ipart;
- 
+
   // offsets into input and output
   uint64_t in_offset, out_offset;
   DEBUG("CUDA::FilterbankEngine::perform stream=" << stream);
@@ -246,7 +246,7 @@ void CUDA::FilterbankEngine::perform (const dsp::TimeSeries * in, dsp::TimeSerie
         if (d_kernel)
         {
           // complex numbers offset (d_kernel is float2*)
-          unsigned offset = ichan * nchan_subband * freq_res; 
+          unsigned offset = ichan * nchan_subband * freq_res;
           DEBUG("CUDA::FilterbankEngine::perform multiply dedipersion kernel stream=" << stream);
           k_multiply<<<multiply.get_nblock(),multiply.get_nthread(),0,stream>>> (cscratch, d_kernel+offset);
           CHECK_ERROR ("CUDA::FilterbankEngine::perform multiply", stream);

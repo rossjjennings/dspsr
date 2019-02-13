@@ -16,7 +16,8 @@ nobase_include_HEADERS = dsp/ACFilterbank.h dsp/Detection.h	       \
 	dsp/FourthMoment.h dsp/PolnCalibration.h dsp/Dump.h	       \
 	dsp/OptimalFFT.h dsp/OptimalFilterbank.h dsp/on_host.h	       \
 	dsp/FScrunch.h dsp/FilterbankBench.h dsp/FilterbankConfig.h    \
-	dsp/FilterbankEngine.h dsp/filterbank_engine.h dsp/FZoom.h  \
+	dsp/FilterbankEngine.h dsp/FilterbankEngineCPU.h  \
+	dsp/filterbank_engine.h dsp/FZoom.h  \
 	dsp/GeometricDelay.h					       \
 	dsp/TFPFilterbank.h dsp/RFIZapper.h dsp/SKFilterbank.h	       \
 	dsp/Resize.h dsp/SKDetector.h dsp/SKMasker.h		       \
@@ -28,6 +29,7 @@ libdspdsp_la_SOURCES = optimize_fft.c cross_detect.c cross_detect.h  \
 	cross_detect.ic stokes_detect.c stokes_detect.h		     \
 	stokes_detect.ic ACFilterbank.C TScrunch.C      \
 	TimeOrder.C Apodization.C AutoCorrelation.C Filterbank.C     \
+	FilterbankEngineCPU.C \ 
 	IncoherentFilterbank.C Bandpass.C LevelMonitor.C RFIFilter.C \
 	Chomper.C Response.C ResponseProduct.C Convolution.C	     \
 	Dedispersion.C SampleDelay.C DedispersionHistory.C	     \
@@ -86,7 +88,7 @@ endif
 endif
 
 
-dmsmear_SOURCES = dmsmear.C 
+dmsmear_SOURCES = dmsmear.C
 digitxt_SOURCES = digitxt.C
 digimon_SOURCES = digimon.C
 digihist_SOURCES = digihist.C
@@ -97,7 +99,7 @@ check_PROGRAMS = test_PolnCalibration test_OptimalFFT
 test_PolnCalibration_SOURCES = test_PolnCalibration.C
 test_OptimalFFT_SOURCES = test_OptimalFFT.C
 
-libdspdsp_la_LIBADD = 
+libdspdsp_la_LIBADD =
 
 if HAVE_PGPLOT
 
@@ -195,4 +197,3 @@ LDADD = libdspdsp.la \
 
 AM_CPPFLAGS += @PGPLOT_CFLAGS@ @CUFFT_CFLAGS@ @CFITSIO_CFLAGS@
 AM_CXXFLAGS = @OPENMP_CFLAGS@
-

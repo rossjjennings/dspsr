@@ -9,8 +9,8 @@
 
 // dspsr/Signal/General/dsp/FilterbankCUDA.h
 
-#ifndef __FilterbankCUDA_h
-#define __FilterbankCUDA_h
+#ifndef __FilterbankEngineCUDA_h
+#define __FilterbankEngineCUDA_h
 
 #include "dsp/FilterbankEngine.h"
 #include "dsp/LaunchConfig.h"
@@ -30,7 +30,7 @@ namespace CUDA
   };
 
   //! Discrete convolution filterbank step implemented using CUDA streams
-  class FilterbankEngine : public dsp::Filterbank::Engine
+  class FilterbankEngineCUDA : public dsp::Filterbank::Engine
   {
     unsigned nstream;
 
@@ -51,7 +51,7 @@ namespace CUDA
 
   protected:
 
-    //! forward fft plan 
+    //! forward fft plan
     cufftHandle plan_fwd;
 
     //! backward fft plan

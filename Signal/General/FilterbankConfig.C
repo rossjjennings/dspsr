@@ -12,8 +12,10 @@
 #include "dsp/FilterbankConfig.h"
 #include "dsp/Scratch.h"
 
+#include "dsp/FilterbankEngineCPU.h"
+
 #if HAVE_CUDA
-#include "dsp/FilterbankCUDA.h"
+#include "dsp/FilterbankEngineCUDA.h"
 #include "dsp/MemoryCUDA.h"
 #endif
 
@@ -108,24 +110,23 @@ dsp::Filterbank* dsp::Filterbank::Config::create ()
   if (freq_res)
     filterbank->set_frequency_resolution ( freq_res );
 
-#if HAVE_CUDA
 
-  CUDA::DeviceMemory* device_memory = 
+
+#if HAVE_CUDA
+  CUDA::DeviceMemory* device_memory =
     dynamic_cast< CUDA::DeviceMemory*> ( memory );
 
   if ( device_memory )
   {
     cudaStream_t cuda_stream = reinterpret_cast<cudaStream_t>( stream );
 
-    filterbank->set_engine (new CUDA::FilterbankEngine (cuda_stream));
+    filterbank->set_engine (new CUDA::FilterbankEngineCUDA (cuda_stream));
 
     Scratch* gpu_scratch = new Scratch;
     gpu_scratch->set_memory (device_memory);
     filterbank->set_scratch (gpu_scratch);
   }
-
 #endif
 
   return filterbank.release();
 }
-

@@ -93,8 +93,8 @@ void dsp::Filterbank::make_preparations ()
     freq_res = response->get_ndat();
 
     if (verbose)
-      cerr << "dsp::Filterbank Response nfilt_pos=" << nfilt_pos 
-           << " nfilt_neg=" << nfilt_neg 
+      cerr << "dsp::Filterbank Response nfilt_pos=" << nfilt_pos
+           << " nfilt_neg=" << nfilt_neg
            << " freq_res=" << response->get_ndat()
            << " ndim=" << response->get_ndim() << endl;
 
@@ -121,8 +121,8 @@ void dsp::Filterbank::make_preparations ()
       norm = "unnormalized";
     else if (FTransform::get_norm() == FTransform::normalized)
       norm = "normalized";
-        
-    cerr << "dsp::Filterbank::make_preparations n_fft=" << n_fft 
+
+    cerr << "dsp::Filterbank::make_preparations n_fft=" << n_fft
          << " freq_res=" << freq_res << " fft::norm=" << norm
          << " nchan_subband=" << nchan_subband << endl;
   }
@@ -206,12 +206,12 @@ void dsp::Filterbank::make_preparations ()
                    "invalid apodization function ndat=%d"
                    " (nfft=%d)", apodization->get_ndat(), nsamp_fft);
 
-    if (input->get_state() == Signal::Analytic 
+    if (input->get_state() == Signal::Analytic
         && apodization->get_ndim() != 2)
       throw Error (InvalidState, "dsp::Filterbank::make_preparations",
                    "Signal::Analytic signal. Real apodization function.");
 
-    if (input->get_state() == Signal::Nyquist 
+    if (input->get_state() == Signal::Nyquist
         && apodization->get_ndim() != 1)
       throw Error (InvalidState, "dsp::Filterbank::make_preparations",
                    "Signal::Nyquist signal. Complex apodization function.");
@@ -226,7 +226,7 @@ void dsp::Filterbank::make_preparations ()
     matrix_convolution = (response->get_ndim() == 8);
 
     if (verbose)
-      cerr << "dsp::Filterbank::make_preparations with " 
+      cerr << "dsp::Filterbank::make_preparations with "
            << ((matrix_convolution)?"matrix":"complex") << " convolution"
            << endl;
 
@@ -250,29 +250,21 @@ void dsp::Filterbank::make_preparations ()
 
   prepare_output ();
 
-  if (engine)
-  {
-    if (verbose)
-      cerr << "dsp::Filterbank::make_preparations setup engine" << endl;
-    engine->setup (this);
-    return;
-  }
-
   // the engine should delete the passband if it doesn't support this feature
-  if (passband)
-  {
-    if (response)
-      passband -> match (response);
-
-    unsigned passband_npol = input->get_npol();
-    if (matrix_convolution)
-      passband_npol = 4;
-
-    passband->resize (passband_npol, input->get_nchan(), n_fft, 1);
-
-    if (!response)
-      passband->match (input);
-  }
+  // if (passband)
+  // {
+  //   if (response)
+  //     passband -> match (response);
+  //
+  //   unsigned passband_npol = input->get_npol();
+  //   if (matrix_convolution)
+  //     passband_npol = 4;
+  //
+  //   passband->resize (passband_npol, input->get_nchan(), n_fft, 1);
+  //
+  //   if (!response)
+  //     passband->match (input);
+  // }
 
   using namespace FTransform;
 
@@ -294,6 +286,13 @@ void dsp::Filterbank::make_preparations ()
   if (freq_res > 1)
     backward = Agent::current->get_plan (freq_res, FTransform::bcc);
 
+  if (engine)
+  {
+    if (verbose)
+      cerr << "dsp::Filterbank::make_preparations setup engine" << endl;
+    engine->setup (this);
+    return;
+  }
 }
 
 void dsp::Filterbank::prepare_output (uint64_t ndat, bool set_ndat)
@@ -360,7 +359,7 @@ void dsp::Filterbank::prepare_output (uint64_t ndat, bool set_ndat)
          << output->get_ndat() << endl;
 
   output->rescale (scalefac);
-  
+
   if (verbose) cerr << "dsp::Filterbank::prepare_output scale="
                     << output->get_scale() <<endl;
 
@@ -445,7 +444,7 @@ void dsp::Filterbank::resize_output (bool reserve_extra)
   uint64_t output_ndat = npart * nkeep;
 
   if (verbose)
-    cerr << "dsp::Filterbank::reserve input ndat=" << ndat 
+    cerr << "dsp::Filterbank::reserve input ndat=" << ndat
          << " overlap=" << nsamp_overlap << " step=" << nsamp_step
          << " reserve=" << reserve_extra << " nkeep=" << nkeep
          << " npart=" << npart << " output ndat=" << output_ndat << endl;
@@ -482,21 +481,23 @@ void dsp::Filterbank::transformation ()
   // points kept from each small fft
   unsigned nkeep = freq_res - nfilt_tot;
 
-  if (verbose)
-    cerr << "dsp::Filterbank::transformation npart=" << npart 
+  if (verbose) {
+    cerr << "dsp::Filterbank::transformation npart=" << npart
          << " nkeep=" << nkeep << " output_ndat=" << output_ndat << endl;
-
+  }
   // set the input sample
   int64_t input_sample = input->get_input_sample();
-  if (output_ndat == 0)
+  if (output_ndat == 0) {
     output->set_input_sample (0);
-  else if (input_sample >= 0)
+  } else if (input_sample >= 0) {
     output->set_input_sample ((input_sample / nsamp_step) * nkeep);
+  }
 
-  if (verbose)
+  if (verbose) {
     cerr << "dsp::Filterbank::transformation after prepare output"
-            " ndat=" << output->get_ndat() << 
+            " ndat=" << output->get_ndat() <<
             " input_sample=" << output->get_input_sample() << endl;
+  }
 
   if (!npart)
   {
@@ -511,80 +512,94 @@ void dsp::Filterbank::transformation ()
 void dsp::Filterbank::filterbank ()
 {
   // initialize scratch space for FFTs
-  unsigned bigfftsize = nchan_subband * freq_res * 2;
-  if (input->get_state() == Signal::Nyquist)
-    bigfftsize += 256;
+  // unsigned bigfftsize = nchan_subband * freq_res * 2;
+  // if (input->get_state() == Signal::Nyquist)
+  //   bigfftsize += 256;
+  //
+  // // also need space to hold backward FFTs
+  // unsigned scratch_needed = bigfftsize + 2 * freq_res;
+  //
+  // if (apodization){
+  //   scratch_needed += bigfftsize;
+  // }
+  //
+  // if (matrix_convolution){
+  //   scratch_needed += bigfftsize;
+  // }
+  //
+  // // divide up the scratch space
+  // float* c_spectrum[2];
+  // c_spectrum[0] = scratch->space<float> (scratch_needed);
+  // c_spectrum[1] = c_spectrum[0];
+  // if (matrix_convolution) {
+  //   c_spectrum[1] += bigfftsize;
+  // }
+  // float* c_time = c_spectrum[1] + bigfftsize;
+  // float* windowed_time_domain = c_time + 2 * freq_res;
 
-  // also need space to hold backward FFTs
-  unsigned scratch_needed = bigfftsize + 2 * freq_res;
+  // unsigned cross_pol = 1;
+  // if (matrix_convolution) {
+  //   cross_pol = 2;
+  // }
 
-  if (apodization)
-    scratch_needed += bigfftsize;
-
-  if (matrix_convolution)
-    scratch_needed += bigfftsize;
-
-  // divide up the scratch space
-  float* c_spectrum[2];
-  c_spectrum[0] = scratch->space<float> (scratch_needed);
-  c_spectrum[1] = c_spectrum[0];
-  if (matrix_convolution)
-    c_spectrum[1] += bigfftsize;
-
-  float* c_time = c_spectrum[1] + bigfftsize;
-  float* windowed_time_domain = c_time + 2 * freq_res;
-
-  unsigned cross_pol = 1;
-  if (matrix_convolution)
-    cross_pol = 2;
-
-  if (verbose)
-    cerr << "dsp::Filterbank::transformation enter main loop" <<
-      " cpol=" << cross_pol << " npol=" << input->get_npol() <<
-      " npart=" << npart  << endl;
+  // if (verbose) {
+  //   cerr << "dsp::Filterbank::transformation enter main loop" <<
+  //     " cpol=" << cross_pol << " npol=" << input->get_npol() <<
+  //     " npart=" << npart  << endl;
+  // }
   if (engine) {
-	  if (verbose)
-		  cerr << "have engine"<<endl;
+	  if (verbose) {
+		  cerr << "dsp::Filterbank::filterbank: has engine" << endl;
+    }
   }
 
+  if (verbose){
+    cerr << "dsp::Filterbank::filterbank: computing in_step and out_step" << endl;
+  }
   // number of floats to step between input to filterbank
-  const unsigned long in_step = nsamp_step * input->get_ndim();
+  const uint64_t in_step = nsamp_step * input->get_ndim();
 
   // points kept from each small fft
   const unsigned nkeep = freq_res - nfilt_tot;
 
   // number of floats to step between output from filterbank
-  const unsigned long out_step = nkeep * 2;
+  const uint64_t out_step = nkeep * 2;
 
-  // counters
-  unsigned ipt, ipol, jpol, ichan;
-  uint64_t ipart;
+  // // counters
+  // unsigned ipt, ipol, jpol, ichan;
+  // uint64_t ipart;
 
-  const unsigned npol = input->get_npol();
+  // const unsigned npol = input->get_npol();
 
-  // offsets into input and output
-  uint64_t in_offset, out_offset;
+  // // offsets into input and output
+  // uint64_t in_offset, out_offset;
 
-  // some temporary pointers
-  float* time_dom_ptr = NULL;  
-  float* freq_dom_ptr = NULL;
+  // // some temporary pointers
+  // float* time_dom_ptr = NULL;
+  // float* freq_dom_ptr = NULL;
 
   // do a 64-bit copy
   uint64_t* data_into = NULL;
   uint64_t* data_from = NULL;
+
+  // engine->set_scratch(c_spectrum[0]);
+  engine->perform (input, output, npart, in_step, out_step);
+  if (Operation::record_time){
+    engine->finish ();
+  }
 
   // /////////////////////////////////////////////////////////////////////
   //
   // PERFORM FILTERBANK VIA ENGINE (e.g. on GPU)
   //
   // /////////////////////////////////////////////////////////////////////
-  if (engine)
-  {
-    engine->set_scratch(c_spectrum[0]);
-    engine->perform (input, output, npart, in_step, out_step);
-    if (Operation::record_time)
-      engine->finish ();
-  }
+  // if (engine)
+  // {
+  //   engine->set_scratch(c_spectrum[0]);
+  //   engine->perform (input, output, npart, in_step, out_step);
+  //   if (Operation::record_time)
+  //     engine->finish ();
+  // }
 //  cerr << "output ndat=" <<output->get_ndat() << " output ptr=" << output->get_datptr(0,0) << endl;
 
   // /////////////////////////////////////////////////////////////////////
@@ -592,114 +607,113 @@ void dsp::Filterbank::filterbank ()
   // PERFORM FILTERBANK DIRECTLY (CPU)
   //
   // /////////////////////////////////////////////////////////////////////
-  else
-  {
-    for (unsigned input_ichan=0; input_ichan<input->get_nchan(); input_ichan++)
-    {
+//   else
+//   {
+//     for (unsigned input_ichan=0; input_ichan<input->get_nchan(); input_ichan++)
+//     {
+//
+//       for (ipart=0; ipart<npart; ipart++)
+//       {
+// #ifdef _DEBUG
+//         cerr << "ipart=" << ipart << endl;
+// #endif
+//         in_offset = ipart * in_step;
+//         out_offset = ipart * out_step;
+//
+//         for (ipol=0; ipol < npol; ipol++)
+//         {
+//           for (jpol=0; jpol<cross_pol; jpol++)
+//           {
+//             if (matrix_convolution)
+//               ipol = jpol;
+//
+//             time_dom_ptr = const_cast<float*>(input->get_datptr (input_ichan, ipol));
+//
+//             time_dom_ptr += in_offset;
+//
+//             if (apodization)
+//             {
+//               apodization -> operate (time_dom_ptr, windowed_time_domain);
+//               time_dom_ptr = windowed_time_domain;
+//             }
+//             if (input->get_state() == Signal::Nyquist)
+//               forward->frc1d (nsamp_fft, c_spectrum[ipol], time_dom_ptr);
+//             else
+//               forward->fcc1d (nsamp_fft, c_spectrum[ipol], time_dom_ptr);
+//
+//
+//           }
+//
+//           if (matrix_convolution)
+//           {
+//             if (passband)
+//               passband->integrate (c_spectrum[0], c_spectrum[1], input_ichan);
+//
+//             // cross filt can be set only if there is a response
+//             response->operate (c_spectrum[0], c_spectrum[1]);
+//           }
+//           else
+//           {
+//             if (passband)
+//               passband->integrate (c_spectrum[ipol], ipol, input_ichan);
+//
+//             if (response)
+//               response->operate (c_spectrum[ipol], ipol,
+//                                  input_ichan*nchan_subband, nchan_subband);
+//           }
+//
+//           for (jpol=0; jpol<cross_pol; jpol++)
+//           {
+//             if (matrix_convolution)
+//               ipol = jpol;
+//
+//             if (freq_res == 1)
+//             {
+//               data_from = (uint64_t*)( c_spectrum[ipol] );
+//               for (ichan=0; ichan < nchan_subband; ichan++)
+//               {
+//                 data_into = (uint64_t*)( output->get_datptr (input_ichan*nchan_subband+ichan, ipol) + out_offset );
+//
+//                 *data_into = data_from[ichan];
+//               }
+//               continue;
+//             }
+//
+//
+//             // freq_res > 1 requires a backward fft into the time domain
+//             // for each channel
+//
+//             unsigned jchan = input_ichan * nchan_subband;
+//             freq_dom_ptr = c_spectrum[ipol];
+//
+//             for (ichan=0; ichan < nchan_subband; ichan++)
+//             {
+//               backward->bcc1d (freq_res, c_time, freq_dom_ptr);
+//
+//               freq_dom_ptr += freq_res*2;
+//
+//               data_into = (uint64_t*)( output->get_datptr (jchan+ichan, ipol) + out_offset);
+//               data_from = (uint64_t*)( c_time + nfilt_pos*2 );  // complex nos.
+//
+//               for (ipt=0; ipt < nkeep; ipt++)
+//                 data_into[ipt] = data_from[ipt];
+//
+//             } // for each output channel
+//
+//           } // for each cross poln
+//
+//         } // for each polarization
+//
+//       } // for each big fft (ipart)
+//
+//     } // for each input channel
+//
+//   } // if no engine (on CPU)
 
-      for (ipart=0; ipart<npart; ipart++)
-      {
-#ifdef _DEBUG
-        cerr << "ipart=" << ipart << endl;
-#endif
-        in_offset = ipart * in_step;
-        out_offset = ipart * out_step;
-      
-        for (ipol=0; ipol < npol; ipol++)
-        {
-          for (jpol=0; jpol<cross_pol; jpol++)
-          {
-            if (matrix_convolution)
-              ipol = jpol;
-            
-            time_dom_ptr = const_cast<float*>(input->get_datptr (input_ichan, ipol));
-
-            time_dom_ptr += in_offset;
-            
-            if (apodization)
-            {
-              apodization -> operate (time_dom_ptr, windowed_time_domain);
-              time_dom_ptr = windowed_time_domain;
-            }
-            if (input->get_state() == Signal::Nyquist)
-              forward->frc1d (nsamp_fft, c_spectrum[ipol], time_dom_ptr);
-            else
-              forward->fcc1d (nsamp_fft, c_spectrum[ipol], time_dom_ptr);
-            
-            
-          }
-          
-          if (matrix_convolution)
-          {
-            if (passband)
-              passband->integrate (c_spectrum[0], c_spectrum[1], input_ichan);
-
-            // cross filt can be set only if there is a response
-            response->operate (c_spectrum[0], c_spectrum[1]);
-          }
-          else
-          {
-            if (passband)
-              passband->integrate (c_spectrum[ipol], ipol, input_ichan);
-
-            if (response)
-              response->operate (c_spectrum[ipol], ipol,
-                                 input_ichan*nchan_subband, nchan_subband);
-          }
-
-          for (jpol=0; jpol<cross_pol; jpol++)
-          {
-            if (matrix_convolution)
-              ipol = jpol;
-            
-            if (freq_res == 1)
-            {
-              data_from = (uint64_t*)( c_spectrum[ipol] );
-              for (ichan=0; ichan < nchan_subband; ichan++)
-              {
-                data_into = (uint64_t*)( output->get_datptr (input_ichan*nchan_subband+ichan, ipol) + out_offset );
-                
-                *data_into = data_from[ichan];
-              }
-              continue;
-            }
-
-
-            // freq_res > 1 requires a backward fft into the time domain
-            // for each channel
-
-            unsigned jchan = input_ichan * nchan_subband;
-            freq_dom_ptr = c_spectrum[ipol];
-
-            for (ichan=0; ichan < nchan_subband; ichan++)
-            {
-              backward->bcc1d (freq_res, c_time, freq_dom_ptr);
-
-              freq_dom_ptr += freq_res*2;
-              
-              data_into = (uint64_t*)( output->get_datptr (jchan+ichan, ipol) + out_offset);
-              data_from = (uint64_t*)( c_time + nfilt_pos*2 );  // complex nos.
-
-              for (ipt=0; ipt < nkeep; ipt++)
-                data_into[ipt] = data_from[ipt];
-              
-            } // for each output channel
-            
-          } // for each cross poln
-        
-        } // for each polarization
-
-      } // for each big fft (ipart)
-    
-    } // for each input channel
-
-  } // if no engine (on CPU)
-
-  if (Operation::record_time && engine)
-    engine->finish ();
+  // if (Operation::record_time && engine)
+  //   engine->finish ();
 
   if (verbose)
     cerr << "dsp::Filterbank::transformation return with output ndat="
          << output->get_ndat() << endl;
 }
-

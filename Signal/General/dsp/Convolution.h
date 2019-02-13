@@ -20,7 +20,7 @@
 #include "FTransformAgent.h"
 
 namespace dsp {
-  
+
   class Apodization;
 
   //! Convolves a TimeSeries using a frequency response function
@@ -31,16 +31,16 @@ namespace dsp {
     The algorithm can perform both scalar and matrix convolution
     methods, and is highly suited to phase-coherent dispersion removal
     and phase-coherent polarimetric calibration.
-    
+
     If g(t) is the finite impulse response function with which the
     data stream will be convolved, then the Convolution::response
     attribute represents G(w), the FFT of g(t).  Convolution::response
     may contain an array of filters, one for each frequency channel.
-    
+
     In order to improve the spectral leakage characteristics, an
     apodization function may be applied to the data in the time domain
     by setting the Convolution::apodization attribute.
-    
+
     Referring to Figure 13.1.3 in Numerical Recipes,
     \f$m_+\f$=response->get_impulse_pos() and
     \f$m_-\f$=response->get_impulse_neg(), so that the duration,
@@ -101,6 +101,15 @@ namespace dsp {
     //! Return a pointer to the integrated passband
     virtual const Response* get_passband() const;
 
+    //! Return true if the apodization attribute has been set
+    bool has_apodization() const;
+
+    //! Return a pointer to to the apodization object
+    virtual const Apodization* get_apodization() const;
+
+    //! get the matrix_convolution flag
+    bool get_matrix_convolution () const { return matrix_convolution; };
+
     //! Set the memory allocator to be used
     void set_device (Memory *);
 
@@ -108,6 +117,7 @@ namespace dsp {
     class Engine;
 
     void set_engine (Engine*);
+
 
   protected:
 
@@ -174,7 +184,7 @@ namespace dsp {
       virtual void perform (const TimeSeries* in, TimeSeries* out, unsigned npart) = 0;
   };
 
-  
+
 }
 
 #endif
