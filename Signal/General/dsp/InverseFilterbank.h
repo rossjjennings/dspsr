@@ -67,6 +67,23 @@ namespace dsp {
     void set_frequency_overlap (unsigned over) { overlap_ratio = over; }
     unsigned get_frequency_overlap () const { return (unsigned) overlap_ratio; }
 
+    void set_oversampling_factor (const Rational& _osf) { oversampling_factor = _osf; }
+
+    const Rational& get_oversampling_factor () {return input->get_oversampling_factor();}
+
+    unsigned get_input_discard_neg() const {return input_discard_neg;}
+
+    unsigned get_input_discard_pos() const {return input_discard_pos;}
+
+    unsigned get_output_discard_neg() const {return output_discard_neg;}
+
+    unsigned get_output_discard_pos() const {return output_discard_pos;}
+
+    unsigned get_input_fft_length() const {return input_fft_length;}
+
+    unsigned get_output_fft_length() const {return output_fft_length;}
+
+
     //! Engine used to perform discrete convolution step
     class Engine;
     void set_engine (Engine*);
@@ -100,7 +117,7 @@ namespace dsp {
     //! Polyphase filterbank oversampling ratio.
     //! This will be 1/1 for critically sampled,
     //! and some number greater than 1 for over sampled case
-    Rational oversampling_ratio;
+    Rational oversampling_factor;
 
     //! Interface to alternate processing engine (e.g. GPU)
     Reference::To<Engine> engine;
@@ -108,16 +125,16 @@ namespace dsp {
   private:
 
     void optimize_discard_region(
-      int* input_discard_pos,
-      int* input_discard_neg,
-      int* output_discard_neg,
-      int* output_discard_pos);
+      unsigned* _input_discard_pos,
+      unsigned* _input_discard_neg,
+      unsigned* _output_discard_neg,
+      unsigned* _output_discard_pos);
 
     void optimize_fft_length(
-      int* input_fft_length,
-      int* output_fft_length);
+      unsigned* _input_fft_length,
+      unsigned* _output_fft_length);
 
-    div_t calc_lcf (int n, int input_nchan, Rational osf);
+    div_t calc_lcf (int a, int b, Rational osf);
 
     void make_preparations ();
     void prepare_output (uint64_t ndat = 0, bool set_ndat = false);
@@ -131,6 +148,12 @@ namespace dsp {
 
     unsigned output_discard_total;
     unsigned output_sample_step;
+
+    unsigned input_discard_pos;
+    unsigned input_discard_neg;
+    unsigned output_discard_neg;
+    unsigned output_discard_pos;
+
 
   };
 

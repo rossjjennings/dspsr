@@ -55,7 +55,7 @@ namespace dsp
 
     bool verbose;
 
-    const Response* response;
+    Response* response;
 
     double scalefac;
 
@@ -64,6 +64,9 @@ namespace dsp
     //! This is the number of floats per sample. This could be 1 or 2,
     //! depending on whether input is Analytic (complex) or Nyquist (real)
     unsigned n_per_sample;
+
+    unsigned input_nchan;
+    unsigned output_nchan;
 
     unsigned input_discard_neg;
     unsigned input_discard_pos;

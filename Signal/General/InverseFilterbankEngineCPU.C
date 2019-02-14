@@ -14,6 +14,7 @@
 
 #include <iostream>
 #include <assert.h>
+#include <cstring>
 
 #include "FTransform.h"
 
@@ -29,7 +30,7 @@ dsp::InverseFilterbankEngineCPU::InverseFilterbankEngineCPU ()
 void dsp::InverseFilterbankEngineCPU::setup (
   dsp::InverseFilterbank* filterbank)
 {
-  TimeSeries* input = filterbank->get_input();
+  const TimeSeries* input = filterbank->get_input();
   TimeSeries* output = filterbank->get_output();
 
   if (filterbank->has_response()) {
@@ -58,21 +59,21 @@ void dsp::InverseFilterbankEngineCPU::setup (
 
   // create FFT plans
   // Start with forward plan
-  FTransform::OptimalFFT* optimal = 0;
+  OptimalFFT* optimal = 0;
   if (response && response->has_optimal_fft()) {
     optimal = response->get_optimal_fft();
     if (optimal) {
       FTransform::set_library(optimal->get_library(input_fft_length));
     }
   }
-  forward = Agent::current->get_plan(
+  forward = FTransform::Agent::current->get_plan(
       input_fft_length,
       real_to_complex ? FTransform::frc: FTransform::fcc);
 
   if (optimal) {
     FTransform::set_library(optimal->get_library(output_fft_length));
   }
-  backward = Agent::current->get_plan(output_fft_length, FTransform::bcc);
+  backward = FTransform::Agent::current->get_plan(output_fft_length, FTransform::bcc);
   if (verbose) {
     cerr << "dsp::InverseFilterbankEngineCPU::setup: done setting up FFT plans" << endl;
   }
@@ -153,11 +154,11 @@ void dsp::InverseFilterbankEngineCPU::perform (const dsp::TimeSeries* in, dsp::T
 					// time_dom_ptr += n_dims*ipart*(input_fft_length - _input_discard.neg);
 					// time_dom_ptr += n_dims*ipart*(input_fft_length);
 					// perform forward FFT to convert time domain data to the frequency domain
-					if (_isRealToComplex) {
-						_forward->frc1d(input_fft_length, freq_dom_ptr, time_dom_ptr);
+					if (real_to_complex) {
+						forward->frc1d(input_fft_length, freq_dom_ptr, time_dom_ptr);
 					} else {
 						// fcc1d(number_of_points, destinationPtr, sourcePtr);
-						_forward->fcc1d(input_fft_length, freq_dom_ptr, time_dom_ptr);
+						forward->fcc1d(input_fft_length, freq_dom_ptr, time_dom_ptr);
 					}
 					response_offset = n_dims*input_ichan*input_fft_length;
 
@@ -216,8 +217,8 @@ void dsp::InverseFilterbankEngineCPU::perform (const dsp::TimeSeries* in, dsp::T
 					sizeof_complex * (input_os_keep_2 * circ_shift_size)
 				);
 
-				if (_response!=nullptr) {
-					_response->operate(stitch_scratch, ipol, 0, 1);
+				if (response!=nullptr) {
+					response->operate(stitch_scratch, ipol, 0, 1);
 				}
 
 
@@ -227,7 +228,7 @@ void dsp::InverseFilterbankEngineCPU::perform (const dsp::TimeSeries* in, dsp::T
 						cerr << "dsp::InverseFilterbankEngineCPU::perform: pol: " << ipol <<" loop: " << ipart+1 << "/" << npart << " doing inverse FFT" << endl; //. output_fft_length: "<< output_fft_length << endl;
 					#endif
 
-					_backward->bcc1d(output_fft_length, output_fft_scratch, stitch_scratch);
+					backward->bcc1d(output_fft_length, output_fft_scratch, stitch_scratch);
 
 					#if _DEBUG
 						cerr << "dsp::InverseFilterbankEngineCPU::perform: backward FFT complete." << endl;

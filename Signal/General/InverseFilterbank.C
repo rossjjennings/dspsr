@@ -10,6 +10,7 @@
 
 #include "dsp/WeightedTimeSeries.h"
 #include "dsp/Response.h"
+#include "dsp/Dedispersion.h"
 #include "dsp/Apodization.h"
 #include "dsp/InputBuffering.h"
 #include "dsp/Scratch.h"
@@ -120,10 +121,10 @@ void dsp::InverseFilterbank::filterbank()
 
 void dsp::InverseFilterbank::make_preparations ()
 {
-
+  bool real_to_complex = (input->get_state() == Signal::Nyquist);
+  unsigned n_per_sample = real_to_complex ? 2: 1;
   // setup the dedispersion discard region for the forward and backward FFTs
   if (has_response()) {
-    response = get_response();
     response->match(input, output_nchan);
 
     output_discard_pos = (int) response->get_impulse_pos();
@@ -132,10 +133,10 @@ void dsp::InverseFilterbank::make_preparations ()
   }
 
   optimize_discard_region(
-    input_discard_neg, input_discard_pos,
-    output_discard_neg, output_discard_pos
+    &input_discard_neg, &input_discard_pos,
+    &output_discard_neg, &output_discard_pos
   );
-  optimize_fft_length(input_fft_length, output_fft_length);
+  optimize_fft_length(&input_fft_length, &output_fft_length);
 
   freq_res = output_fft_length;
 
@@ -175,10 +176,10 @@ void dsp::InverseFilterbank::make_preparations ()
     get_buffering_policy()->set_minimum_samples(output_fft_length);
   }
 
-  prepare_output();
+  prepare_output ();
 
   if (engine) {
-    engine->setup();
+    engine->setup (this);
   }
 
   scalefac = sqrt(engine->get_scalefac());
@@ -193,7 +194,7 @@ void dsp::InverseFilterbank::prepare_output (uint64_t ndat, bool set_ndat)
       cerr << "dsp::InverseFilterbank::prepare_output set ndat=" << ndat << endl;
 
     output->set_npol( input->get_npol() );
-    output->set_nchan( nchan );
+    output->set_nchan( output_nchan );
     output->set_ndim( 2 );
     output->set_state( Signal::Analytic);
     output->resize( ndat );
@@ -217,7 +218,7 @@ void dsp::InverseFilterbank::prepare_output (uint64_t ndat, bool set_ndat)
 
   output->copy_configuration ( get_input() );
 
-  output->set_nchan( nchan );
+  output->set_nchan( output_nchan );
   output->set_ndim( 2 );
   output->set_state( Signal::Analytic );
 
@@ -344,47 +345,47 @@ void dsp::InverseFilterbank::resize_output (bool reserve_extra)
   prepare_output (output_ndat, true);
 }
 
-div_t dsp::Filterbank::_calc_lcf (
+div_t dsp::InverseFilterbank::calc_lcf (
 	int a, int b, Rational os)
 {
 	return div (a, os.get_denominator()*b);
 }
 
-void dsp::Filterbank::_optimize_fft_length (
-	int* _input_fft_length, int* _output_fft_length
+void dsp::InverseFilterbank::optimize_fft_length (
+	unsigned* _input_fft_length, unsigned* _output_fft_length
 )
 {
 	const Rational os = get_oversampling_factor();
-	unsigned n_input_channels = input->get_nchan();
+	int n_input_channels = (int) input->get_nchan();
 
-	div_t max_input_fft_length_lcf = _calc_lcf(*_output_fft_length, n_input_channels, os);
+	div_t max_input_fft_length_lcf = calc_lcf((int)*_output_fft_length, n_input_channels, os);
   while (max_input_fft_length_lcf.rem != 0 || fmod(log2(max_input_fft_length_lcf.quot), 1) != 0){
     if (max_input_fft_length_lcf.rem != 0) {
       (*_output_fft_length) -= max_input_fft_length_lcf.rem;
     } else {
       (*_output_fft_length) -= 2;
     }
-    max_input_fft_length_lcf = _calc_lcf(*_output_fft_length, n_input_channels, os);
+    max_input_fft_length_lcf = calc_lcf((int)*_output_fft_length, n_input_channels, os);
   }
   *_input_fft_length = max_input_fft_length_lcf.quot * os.get_numerator();
 }
 
-void dsp::Filterbank::_optimize_discard_region(
-  int* _input_discard_neg,
-  int* _input_discard_pos,
-  int* _output_discard_neg,
-  int* _output_discard_pos,
+void dsp::InverseFilterbank::optimize_discard_region(
+  unsigned* _input_discard_neg,
+  unsigned* _input_discard_pos,
+  unsigned* _output_discard_neg,
+  unsigned* _output_discard_pos
 )
 {
 	const Rational os = get_oversampling_factor();
-	unsigned n_input_channels = input->get_nchan();
+	int n_input_channels = (int) input->get_nchan();
 	vector<int> n = {_output_discard_pos, _output_discard_neg};
   vector<div_t> lcfs(2);
   int min_n;
 	div_t lcf;
   for (int i=0; i<n.size(); i++) {
     min_n = n[i];
-    lcf = _calc_lcf(min_n, n_input_channels, os);
+    lcf = calc_lcf(min_n, n_input_channels, os);
     if (lcf.rem != 0) {
       min_n += os.get_denominator()*n_input_channels - lcf.rem;
 			lcf.quot += 1;

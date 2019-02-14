@@ -13,6 +13,7 @@
 
 #include "dsp/SingleThread.h"
 #include "dsp/Filterbank.h"
+#include "dsp/InverseFilterbank.h"
 
 namespace dsp {
 
@@ -54,7 +55,7 @@ namespace dsp {
 
     //! Constructor
     LoadToFold (Config* config = 0);
-    
+
     //! Destructor
     ~LoadToFold ();
 
@@ -118,7 +119,7 @@ namespace dsp {
     //! Optional Spectral Kurtosis (for convolution)
     Reference::To<SpectralKurtosis> skestimator;
 
-    //! Optional SK Resizer 
+    //! Optional SK Resizer
     Reference::To<Resize> skresize;
 
     //! Creates the filterbank
@@ -126,6 +127,12 @@ namespace dsp {
 
     //! Optional filterbank engine
     Reference::To<Filterbank::Engine> filterbank_engine;
+
+    //! reference to inverse filterbank
+    Reference::To<InverseFilterbank> inverse_filterbank;
+
+    //! Optional inverse filterbank engine
+    Reference::To<InverseFilterbank::Engine> inverse_filterbank_engine;
 
     //! Performs coherent dedispersion
     Reference::To<Convolution> convolution;
@@ -170,8 +177,3 @@ namespace dsp {
 }
 
 #endif // !defined(__LoadToFold_h)
-
-
-
-
-

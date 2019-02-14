@@ -25,6 +25,8 @@
 #include "dsp/RFIFilter.h"
 #include "dsp/PolnCalibration.h"
 
+#include "dsp/InverseFilterbank.h"
+#include "dsp/InverseFilterbankEngineCPU.h"
 #include "dsp/Filterbank.h"
 #include "dsp/FilterbankEngineCPU.h"
 #include "dsp/SpectralKurtosis.h"
@@ -296,6 +298,26 @@ void dsp::LoadToFold::construct () try
 
   // convolved and filterbank are out of place
   TimeSeries* filterbanked = unpacked;
+
+  if (config->is_inverse_filterbank) {
+    inverse_filterbanked = new_time_series();
+    inverse_filterbank = new InverseFilterbank;
+
+    if (!config->input_buffering) {
+      inverse_filterbank->set_buffering_policy (NULL);
+    }
+    inverse_filterbank->set_input (unpacked);
+    inverse_filterbank->set_output (filterbanked);
+    // default engine is the CPU engine
+    dsp::InverseFilterbankEngineCPU* inverse_filterbank_engine = new dsp::FilterbankEngineCPU;
+    // for now, inverse filterbank does convolution during inversion.
+    inverse_filterbank->set_response (response);
+    inverse_filterbank->set_engine (inverse_filterbank_engine);
+
+    filterbanked = inverse_filterbanked;
+  }
+
+
 
   // filterbank is performing channelisation
   if (config->filterbank.get_nchan() > 1)

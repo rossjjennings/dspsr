@@ -94,18 +94,21 @@ namespace dsp {
 
     //! Return a pointer to the frequency response function
     virtual const Response* get_response() const;
+    virtual Response* get_response();
 
     //! Return true if the passband attribute has been set
     bool has_passband () const;
 
     //! Return a pointer to the integrated passband
     virtual const Response* get_passband() const;
+    virtual Response* get_passband();
 
     //! Return true if the apodization attribute has been set
     bool has_apodization() const;
 
     //! Return a pointer to to the apodization object
     virtual const Apodization* get_apodization() const;
+    virtual Apodization* get_apodization();
 
     //! get the matrix_convolution flag
     bool get_matrix_convolution () const { return matrix_convolution; };

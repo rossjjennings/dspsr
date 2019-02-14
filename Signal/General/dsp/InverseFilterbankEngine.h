@@ -36,6 +36,8 @@ public:
   //! Finish up
   virtual void finish () { }
 
+  virtual double get_scalefac ();
+
 protected:
 
   float* scratch;

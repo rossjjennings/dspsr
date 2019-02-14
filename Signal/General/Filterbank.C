@@ -578,9 +578,9 @@ void dsp::Filterbank::filterbank ()
   // float* time_dom_ptr = NULL;
   // float* freq_dom_ptr = NULL;
 
-  // do a 64-bit copy
-  uint64_t* data_into = NULL;
-  uint64_t* data_from = NULL;
+  // // do a 64-bit copy
+  // uint64_t* data_into = NULL;
+  // uint64_t* data_from = NULL;
 
   // engine->set_scratch(c_spectrum[0]);
   engine->perform (input, output, npart, in_step, out_step);
