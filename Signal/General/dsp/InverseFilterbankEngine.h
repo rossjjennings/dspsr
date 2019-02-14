@@ -6,14 +6,14 @@
  *
  ***************************************************************************/
 
-#ifndef __FilterbankEngine_h
-#define __FilterbankEngine_h
+#ifndef __InverseFilterbankEngine_h
+#define __InverseFilterbankEngine_h
 
 #include "dsp/InverseFilterbank.h"
 //#include "dsp/filterbank_engine.h"
 
 //! Abstract base class for derived engines that operate on data
-//! in order to perform  inverse (synthesis) filterbank operation 
+//! in order to perform  inverse (synthesis) filterbank operation
 class dsp::InverseFilterbank::Engine : public Reference::Able
 {
 public:

@@ -23,13 +23,15 @@ nobase_include_HEADERS = dsp/ACFilterbank.h dsp/Detection.h	       \
 	dsp/Resize.h dsp/SKDetector.h dsp/SKMasker.h		       \
 	dsp/Pipeline.h dsp/SingleThread.h dsp/MultiThread.h            \
 	dsp/PolnSelect.h dsp/PolnReshape.h dsp/SpectralKurtosis.h \
-  dsp/SKComputer.h dsp/ScalarFilter.h
+  dsp/SKComputer.h dsp/ScalarFilter.h \
+	dsp/InverseFilterbank.h dsp/InverseFilterbankEngine.h \
+	dsp/InverseFilterbankEngineCPU.h
 
 libdspdsp_la_SOURCES = optimize_fft.c cross_detect.c cross_detect.h  \
 	cross_detect.ic stokes_detect.c stokes_detect.h		     \
 	stokes_detect.ic ACFilterbank.C TScrunch.C      \
 	TimeOrder.C Apodization.C AutoCorrelation.C Filterbank.C     \
-	FilterbankEngineCPU.C \ 
+	FilterbankEngineCPU.C \
 	IncoherentFilterbank.C Bandpass.C LevelMonitor.C RFIFilter.C \
 	Chomper.C Response.C ResponseProduct.C Convolution.C	     \
 	Dedispersion.C SampleDelay.C DedispersionHistory.C	     \
@@ -41,7 +43,9 @@ libdspdsp_la_SOURCES = optimize_fft.c cross_detect.c cross_detect.h  \
 	TFPFilterbank.C RFIZapper.C SKFilterbank.C \
 	Resize.C SKDetector.C SKMasker.C \
 	SingleThread.C MultiThread.C dsp_verbosity.C \
-	PolnSelect.C PolnReshape.C SpectralKurtosis.C ScalarFilter.C
+	PolnSelect.C PolnReshape.C SpectralKurtosis.C ScalarFilter.C \
+	InverseFilterbank.C InverseFilterbankEngineCPU.C
+
 
 bin_PROGRAMS = dmsmear digitxt digimon digihist filterbank_speed
 

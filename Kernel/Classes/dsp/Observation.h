@@ -16,6 +16,7 @@
 #include "sky_coord.h"
 #include "Types.h"
 #include "MJD.h"
+#include "Rational.h"
 
 // forward declaration of text interface
 namespace TextInterface
@@ -202,6 +203,14 @@ namespace dsp
     virtual void set_calfreq (double _calfreq) {calfreq = _calfreq;}
     //! get the calibrator frequency
     double get_calfreq() const {return calfreq;} 
+    
+    //! Set the oversampling factor
+    virtual void set_oversampling_factor (const Rational& _osf)
+    { oversampling_factor = _osf; }
+
+    //! Get the oversampling factor
+    const Rational& get_oversampling_factor () const
+    { return oversampling_factor; }
 
     //! Change the state and correct other attributes accordingly
     virtual void change_state (Signal::State new_state);
@@ -331,6 +340,9 @@ namespace dsp
 
     //! Flag set when centre channel is centred on centre frequency
     bool dc_centred;
+
+    //! oversampling factor
+    Rational oversampling_factor;
 
   private:
 

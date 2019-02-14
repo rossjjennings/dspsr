@@ -1,7 +1,7 @@
 //-*-C++-*-
 /***************************************************************************
  *
- *   Copyright (C) 2002-2011 by Willem van Straten
+ *   Copyright (C) 2019 by Willem van Straten
  *   Licensed under the Academic Free License version 2.1
  *
  ***************************************************************************/
@@ -12,6 +12,7 @@
 #define __InverseFilterbank_h
 
 #include "dsp/Convolution.h"
+// #include "Rational.h"
 
 namespace dsp {
 
@@ -19,13 +20,13 @@ namespace dsp {
   //! into a smaller number of output channels.
   //! Input can be critically sampled or over sampled.
   //! In the over sampled case, input spectra will be appropriately stitched
-  //! together, discarding band edge overlap regions. 
+  //! together, discarding band edge overlap regions.
 
   class InverseFilterbank: public Convolution {
 
   public:
 
-    //! Configuration options
+    // //! Configuration options
     class Config;
 
     //! Null constructor
@@ -44,10 +45,14 @@ namespace dsp {
     uint64_t get_minimum_samples_lost () { return nsamp_overlap; }
 
     //! Set the number of channels into which the input will be divided
-    void set_nchan (unsigned _nchan) { nchan = _nchan; }
+    // void set_nchan (unsigned _nchan) { nchan = _nchan; }
 
-    //! Get the number of channels into which the input will be divided
-    unsigned get_nchan () const { return nchan; }
+    //! get input_nchan
+    unsigned get_input_nchan () const { return input_nchan; }
+
+    //! get output_nchan
+    unsigned get_output_nchan () const { return output_nchan; }
+
 
     unsigned get_nchan_subband () const {return nchan_subband; }
 
@@ -75,18 +80,27 @@ namespace dsp {
     virtual void filterbank ();
     virtual void custom_prepare () {}
 
-    //! Number of channels into which the input will be divided
+    //! number of input channels
+    unsigned input_nchan;
+
+    //! Number of channels into which the input will be synthesized
     //! This is the final number of channels in the output
-    unsigned nchan;
+    unsigned output_nchan;
 
     //! Frequency resolution factor
     unsigned freq_res;
 
-    // This is the number of channels each input channel will be divided into
+    //! This is the number of input channels per output channel,
+    //! or input_nchan / output_nchan
     unsigned nchan_subband;
 
     //! Frequency channel overlap ratio
     double overlap_ratio;
+
+    //! Polyphase filterbank oversampling ratio.
+    //! This will be 1/1 for critically sampled,
+    //! and some number greater than 1 for over sampled case
+    Rational oversampling_ratio;
 
     //! Interface to alternate processing engine (e.g. GPU)
     Reference::To<Engine> engine;

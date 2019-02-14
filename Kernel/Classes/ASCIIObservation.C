@@ -74,7 +74,7 @@ void dsp::ASCIIObservation::set_required (std::string key,
 }
 
 dsp::ASCIIObservation::ASCIIObservation (const Observation* obs)
-  : Observation (*obs) 
+  : Observation (*obs)
 {
   hdr_version = "HDR_VERSION";
 }
@@ -112,11 +112,11 @@ void dsp::ASCIIObservation::load (const char* header)
   //
   // TELESCOPE
   //
-  // Note: The function ascii_header_check will check the list of 
+  // Note: The function ascii_header_check will check the list of
   // required keywords and throw an error only if the requested
   // keyword is required and not present.
   // If a value < 0 is returned here, then the keyword
-  // has been marked as not required so rather than throwing an error, 
+  // has been marked as not required so rather than throwing an error,
   // some default/unknown value should be used.
   //
   if (ascii_header_check (header, "TELESCOPE", "%s", buffer) < 0)
@@ -147,7 +147,7 @@ void dsp::ASCIIObservation::load (const char* header)
   // MODE
   //
   ascii_header_check (header, "MODE", "%s", buffer);
-    
+
   if (strncmp(buffer,"PSR",3) == 0)
     set_type(Signal::Pulsar);
   else if (strncmp(buffer,"CAL",3) == 0)
@@ -255,7 +255,7 @@ void dsp::ASCIIObservation::load (const char* header)
   */
 
   uint64_t scan_ndat = 0;
-  if (ascii_header_check (header, "NDAT", "%"PRIu64, &scan_ndat) >= 0)
+  if (ascii_header_check (header, "NDAT", "%" PRIu64, &scan_ndat) >= 0)
     set_ndat( scan_ndat );
   else
     set_ndat( 0 );
@@ -314,7 +314,7 @@ void dsp::ASCIIObservation::load (const char* header)
   {
 
     if (verbose)
-      cerr << "dsp::ASCIIObservation::load UTC_START='" 
+      cerr << "dsp::ASCIIObservation::load UTC_START='"
         << buffer << "'" << endl;
 
     struct tm utc;
@@ -334,13 +334,13 @@ void dsp::ASCIIObservation::load (const char* header)
 #endif
 
     if (verbose)
-      cerr << "dsp::ASCIIObservation::load start_mjd=" 
+      cerr << "dsp::ASCIIObservation::load start_mjd="
            << recording_start_time << endl;
   }
 
   // //////////////////////////////////////////////////////////////////////
   //
-  // PICOSECONDS offset from UTC_START second 
+  // PICOSECONDS offset from UTC_START second
   //
   int64_t offset_picoseconds = 0;
   if (ascii_header_check (header, "PICOSECONDS", I64, &offset_picoseconds) >= 0)
@@ -369,7 +369,7 @@ void dsp::ASCIIObservation::load (const char* header)
   //
   // CALCULATE the various offsets and sizes
   //
-  
+
   if ( recording_start_time != MJD::zero )
   {
     double offset_seconds = get_nsamples(offset_bytes) * sampling_interval;
@@ -385,39 +385,26 @@ void dsp::ASCIIObservation::load (const char* header)
 
   // //////////////////////////////////////////////////////////////////////
   //
-  // RA - Right Ascension of source in hh:mm:ss.sss
+  // RA and DEC
   //
   bool has_position = true;
-  double ra = 0;
+  double ra, dec;
 
-  has_position = (ascii_header_check (header, "RA", "%s", buffer) == 1);
+  if (has_position)
+    has_position = (ascii_header_check (header, "RA", "%s", buffer) == 1);
 
-  if (!has_position)
-    has_position = (ascii_header_check (header, "RAJ", "%s", buffer) == 1);
-  
   if (has_position)
     has_position = (str2ra (&ra, buffer) == 0);
 
-  if (!has_position)
-    ra = 0;
-  
-  // //////////////////////////////////////////////////////////////////////
-  //
-  // DEC - Declination of source in dd:mm:ss.sss
-  //
-  double dec = 0;
-  
-  has_position = (ascii_header_check (header, "DEC", "%s", buffer) == 1);
-
-  if (!has_position)
-    has_position = (ascii_header_check (header, "DECJ", "%s", buffer) == 1);
+  if (has_position)
+    has_position = (ascii_header_check (header, "DEC", "%s", buffer) == 1);
 
   if (has_position)
     has_position = (str2dec2 (&dec, buffer) == 0);
 
   if (!has_position)
-    dec = 0;
-  
+    ra = dec = 0.0;
+
   coordinates.setRadians (ra, dec);
 
   // /////////////////////////////////////////////////////////////////////
@@ -425,6 +412,15 @@ void dsp::ASCIIObservation::load (const char* header)
   // save the header to the local buffer
   //
   loaded_header = string (header);
+
+  // //////////////////////////////////////////////////////////////////////
+  //
+  // OS_FACTOR
+  //
+  if (ascii_header_check (header, "OS_FACTOR", "%s", buffer) >= 0)
+  {
+    set_oversampling_factor (fromstring<Rational>(buffer));
+  }
 }
 
 /* ***********************************************************************
@@ -452,7 +448,7 @@ void dsp::ASCIIObservation::unload (char* header)
   //
   // TELESCOPE
   //
-  if (ascii_header_set (header, "TELESCOPE", "%s", 
+  if (ascii_header_set (header, "TELESCOPE", "%s",
 			get_telescope().c_str() ) < 0)
     throw Error (InvalidState, "ASCIIObservation", "failed unload TELESCOPE");
 
@@ -485,7 +481,7 @@ void dsp::ASCIIObservation::unload (char* header)
   default: mode = "UNKNOWN"; break;
   }
   ascii_header_set (header, "MODE", "%s", mode.c_str());
-    
+
 
   if (get_type() == Signal::PolnCal
       && ascii_header_set (header, "CALFREQ", "%lf", get_calfreq()) < 0)
@@ -590,5 +586,16 @@ void dsp::ASCIIObservation::unload (char* header)
   if (ascii_header_set (header, "INSTRUMENT", "%s", get_machine().c_str()) < 0)
     throw Error (InvalidState, "ASCIIObservation", "failed unload INSTRUMENT");
 
-}
+  // //////////////////////////////////////////////////////////////////////
+  //
+  // OS_FACTOR
+  //
+  Rational osfactor = get_oversampling_factor();
 
+  if (osfactor != 1)
+  {
+    string osf = tostring (osfactor);
+    if (ascii_header_set (header, "OS_FACTOR", "%s", osf.c_str() ) < 0 )
+      throw Error (InvalidState, "ASCIIObservation", "failed unload OS_FACTOR");
+  }
+}

@@ -145,6 +145,7 @@ namespace dsp {
   private:
 
     friend class Filterbank;
+    friend class InverseFilterbank;
     friend class TFPFilterbank;
     friend class SKFilterbank;
 

@@ -9,36 +9,27 @@
 
 // dspsr/Signal/General/dsp/InverseFilterbankEngineCPU.h
 
-#ifndef __InverseFilterbankCPU_h
-#define __InverseFilterbankCPU_h
+#ifndef __InverseFilterbankEngineCPU_h
+#define __InverseFilterbankEngineCPU_h
 
 #include "dsp/InverseFilterbankEngine.h"
-#include "dsp/LaunchConfig.h"
+
+#include "FTransform.h"
 
 namespace dsp
 {
-  class elapsed
-  {
-  public:
-    elapsed ();
-    void wrt (cudaEvent_t before);
-
-    double total;
-    cudaEvent_t after;
-  };
 
   class InverseFilterbankEngineCPU : public dsp::InverseFilterbank::Engine
   {
-    unsigned nstream;
 
   public:
 
     //! Default Constructor
-    InverseFilterbankEngine (cudaStream_t stream);
+    InverseFilterbankEngineCPU ();
 
-    ~InverseFilterbankEngine ();
+    ~InverseFilterbankEngineCPU ();
 
-    void setup (dsp::Filterbank*);
+    void setup (InverseFilterbank*);
     void set_scratch (float *);
 
     void perform (const dsp::TimeSeries* in, dsp::TimeSeries* out,
@@ -48,20 +39,14 @@ namespace dsp
 
   protected:
 
-    //! forward fft plan
-    cufftHandle plan_fwd;
+    //! plan for computing forward fourier transforms
+    FTransform::Plan* forward;
 
-    //! backward fft plan
-    cufftHandle plan_bwd;
+    //! plan for computing inverse fourier transforms
+    FTransform::Plan* backward;
 
     //! Complex-valued data
     bool real_to_complex;
-
-    //! inplace FFT in CUDA memory
-    float2* d_fft;
-
-    //! convolution kernel in CUDA memory
-    float2* d_kernel;
 
     //! device scratch sapce
     float* scratch;
@@ -70,10 +55,6 @@ namespace dsp
     unsigned freq_res;
     unsigned nfilt_pos;
     unsigned nkeep;
-
-    LaunchConfig1D multiply;
-
-    cudaStream_t stream;
 
     bool verbose;
 

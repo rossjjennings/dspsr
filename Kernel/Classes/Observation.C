@@ -63,6 +63,8 @@ void dsp::Observation::init ()
   dual_sideband = -1;
   require_equal_sources = true;
   require_equal_rates = true;
+
+  oversampling_factor = 1;
 }
 
 //! Set true if the data are dual sideband
@@ -119,7 +121,7 @@ void dsp::Observation::set_state (Signal::State _state)
   }
 }
 
-/*! 
+/*!
   \retval boolean true if the state of the Observation is valid
   \param reason If the return value is false, a string describing why
 */
@@ -127,13 +129,13 @@ bool dsp::Observation::state_is_valid (string& reason) const
 {
   return Signal::valid_state(get_state(),get_ndim(),get_npol(),reason);
 }
-  
+
 bool dsp::Observation::get_detected () const
 {
   return (state != Signal::Nyquist && state != Signal::Analytic);
 }
 
-/* this returns a flag that is true if the Observations may be combined 
+/* this returns a flag that is true if the Observations may be combined
    It doesn't check the start times- you have to do that yourself!
 */
 bool dsp::Observation::combinable (const Observation & obs) const
@@ -168,7 +170,7 @@ bool dsp::Observation::combinable (const Observation & obs) const
   if (fabs(centre_frequency-obs.centre_frequency) > eps)
   {
     reason += separator +
-	"different centre frequencies:" + tostring(centre_frequency) + 
+	"different centre frequencies:" + tostring(centre_frequency) +
          " != " + tostring(obs.centre_frequency);
     can_combine = false;
   }
@@ -176,7 +178,7 @@ bool dsp::Observation::combinable (const Observation & obs) const
   else if( fabs(bandwidth-obs.bandwidth) > eps )
   {
     reason += separator +
-	"different bandwidths:" + tostring(bandwidth) + 
+	"different bandwidths:" + tostring(bandwidth) +
          " != " + tostring(obs.bandwidth);
     can_combine = false;
   }
@@ -187,7 +189,7 @@ bool dsp::Observation::combinable (const Observation & obs) const
 	"different nchans:" + tostring(nchan) + " != " + tostring(obs.nchan);
     can_combine = false;
   }
- 
+
   if (npol != obs.npol)
   {
     reason += separator +
@@ -229,28 +231,28 @@ bool dsp::Observation::combinable (const Observation & obs) const
 	"different bases:" + tostring(basis) + " != " + tostring(obs.basis);
     can_combine = false;
   }
-  
+
   if (require_equal_rates && rate != obs.rate)
   {
     reason += separator +
 	"different rates:" + tostring(rate) + " != " + tostring(obs.rate);
     can_combine = false;
   }
-  
+
   if ( fabs(scale-obs.scale) > eps*fabs(scale) )
   {
     reason += separator +
 	"different scales:" + tostring(scale) + " != " + tostring(obs.scale);
     can_combine = false;
   }
-  
+
   if (swap != obs.swap)
   {
     reason += separator +
 	"different swaps:" + tostring(swap) + " != " + tostring(obs.swap);
     can_combine = false;
   }
-  
+
   if (nsub_swap != obs.nsub_swap)
   {
     reason += separator +
@@ -265,7 +267,7 @@ bool dsp::Observation::combinable (const Observation & obs) const
         " != " + tostring(obs.dc_centred);
     can_combine = false;
   }
-  
+
   if (mode != obs.mode )
   {
     string s1 = mode.substr(0,5);
@@ -278,7 +280,7 @@ bool dsp::Observation::combinable (const Observation & obs) const
       can_combine = false;
     }
   }
-  
+
   if (machine != obs.machine)
   {
     reason += separator +
@@ -300,12 +302,20 @@ bool dsp::Observation::combinable (const Observation & obs) const
         " != " + tostring(obs.dispersion_measure);
     can_combine = false;
   }
-  
+
   if( fabs(rotation_measure - obs.rotation_measure) > eps)
   {
     reason += separator +
-	"different rotation measures:" + tostring(rotation_measure) + 
+	"different rotation measures:" + tostring(rotation_measure) +
         " != " + tostring(obs.rotation_measure);
+    can_combine = false;
+  }
+
+  if (oversampling_factor != obs.oversampling_factor)
+  {
+    reason += separator +
+        "different oversampling numerators:" + tostring(oversampling_factor) +
+        " != " + tostring(obs.oversampling_factor);
     can_combine = false;
   }
 
@@ -339,7 +349,7 @@ bool dsp::Observation::contiguous (const Observation & obs) const
       "At sampling rate=" << rate/1e6 << "MHz, that.start_time is off by "
          << difference * rate << " samples" << endl;
 
-  } 
+  }
 #endif
 
   if (verbose)
@@ -412,6 +422,8 @@ const dsp::Observation& dsp::Observation::operator = (const Observation& in_obs)
   set_mode        ( in_obs.get_mode() );
   set_calfreq     ( in_obs.get_calfreq());
 
+  set_oversampling_factor ( in_obs.get_oversampling_factor() );
+
   return *this;
 }
 
@@ -419,8 +431,9 @@ const dsp::Observation& dsp::Observation::operator = (const Observation& in_obs)
 
 unsigned dsp::Observation::get_unswapped_ichan (unsigned ichan) const
 {
-  if (swap)
+  if (swap) {
     ichan = (ichan + get_nchan()/2) % get_nchan();
+  }
 
   if (nsub_swap)
   {
