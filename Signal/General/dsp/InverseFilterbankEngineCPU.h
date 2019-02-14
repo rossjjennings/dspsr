@@ -35,6 +35,8 @@ namespace dsp
     void perform (const dsp::TimeSeries* in, dsp::TimeSeries* out,
                   uint64_t npart, uint64_t in_step, uint64_t out_step);
 
+    double get_scalefac() const {return scalefac;}
+
     void finish ();
 
   protected:
@@ -51,12 +53,42 @@ namespace dsp
     //! device scratch sapce
     float* scratch;
 
-    unsigned nchan_subband;
-    unsigned freq_res;
-    unsigned nfilt_pos;
-    unsigned nkeep;
-
     bool verbose;
+
+    const Response* response;
+
+    double scalefac;
+
+  private:
+
+    //! This is the number of floats per sample. This could be 1 or 2,
+    //! depending on whether input is Analytic (complex) or Nyquist (real)
+    unsigned n_per_sample;
+
+    unsigned input_discard_neg;
+    unsigned input_discard_pos;
+    unsigned input_discard_total;
+
+    unsigned output_discard_neg;
+    unsigned output_discard_pos;
+    unsigned output_discard_total;
+
+    unsigned input_fft_length;
+    unsigned output_fft_length;
+
+    unsigned input_sample_step;
+    unsigned output_sample_step;
+
+    //! How much of the forward FFT to keep due to oversampling
+    unsigned input_os_keep;
+    //! How much of the forward FFT to discard due to oversampling
+    unsigned input_os_discard;
+
+    float* input_fft_scratch;
+    float* output_fft_scratch;
+    float* response_stitch_scratch;
+    float* fft_shift_scratch;
+    float* stitch_scratch;
 
   };
 

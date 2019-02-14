@@ -107,9 +107,30 @@ namespace dsp {
 
   private:
 
+    void optimize_discard_region(
+      int* input_discard_pos,
+      int* input_discard_neg,
+      int* output_discard_neg,
+      int* output_discard_pos);
+
+    void optimize_fft_length(
+      int* input_fft_length,
+      int* output_fft_length);
+
+    div_t calc_lcf (int n, int input_nchan, Rational osf);
+
     void make_preparations ();
     void prepare_output (uint64_t ndat = 0, bool set_ndat = false);
     void resize_output (bool reserve_extra = false);
+
+    unsigned input_fft_length;
+    unsigned output_fft_length;
+
+    unsigned input_discard_total;
+    unsigned input_sample_step;
+
+    unsigned output_discard_total;
+    unsigned output_sample_step;
 
   };
 
