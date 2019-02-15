@@ -300,21 +300,26 @@ void dsp::LoadToFold::construct () try
   TimeSeries* filterbanked = unpacked;
 
   if (config->is_inverse_filterbank) {
-    inverse_filterbanked = new_time_series();
+    TimeSeries* inverse_filterbanked = new_time_series();
     inverse_filterbank = new InverseFilterbank;
-
+    inverse_filterbank->set_output_nchan(1);
     if (!config->input_buffering) {
       inverse_filterbank->set_buffering_policy (NULL);
     }
     inverse_filterbank->set_input (unpacked);
-    inverse_filterbank->set_output (filterbanked);
+    inverse_filterbank->set_output (inverse_filterbanked);
     // default engine is the CPU engine
-    dsp::InverseFilterbankEngineCPU* inverse_filterbank_engine = new dsp::FilterbankEngineCPU;
+    dsp::InverseFilterbankEngineCPU* inverse_filterbank_engine = \
+      new dsp::InverseFilterbankEngineCPU;
     // for now, inverse filterbank does convolution during inversion.
     inverse_filterbank->set_response (response);
     inverse_filterbank->set_engine (inverse_filterbank_engine);
 
     filterbanked = inverse_filterbanked;
+
+    // temporary hack
+    config->filterbank.set_convolve_when(Filterbank::Config::During);
+    operations.push_back (inverse_filterbank.get());
   }
 
 

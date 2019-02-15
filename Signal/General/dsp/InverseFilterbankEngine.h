@@ -23,6 +23,9 @@ public:
   //! If kernel is not set, then the engine should set up for benchmark only
   virtual void setup (InverseFilterbank*) = 0;
 
+  //! setup fft plans outside of setup function. returns new scale factor
+  virtual double setup_fft_plans (InverseFilterbank* ) = 0;
+
   //! provide some scratch space for the engine
   virtual void set_scratch (float *) = 0;
 
@@ -36,7 +39,7 @@ public:
   //! Finish up
   virtual void finish () { }
 
-  virtual double get_scalefac ();
+  virtual double get_scalefac () const {return scalefac;};
 
 protected:
 
@@ -44,6 +47,8 @@ protected:
 
   float* output;
   unsigned output_span;
+
+  double scalefac;
 
 };
 

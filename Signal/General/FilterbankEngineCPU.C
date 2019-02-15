@@ -34,8 +34,6 @@ dsp::FilterbankEngineCPU::FilterbankEngineCPU ()
   response = nullptr;
   passband = nullptr;
   apodization = nullptr;
-
-
 }
 
 dsp::FilterbankEngineCPU::~FilterbankEngineCPU ()

@@ -80,6 +80,12 @@ const dsp::Response* dsp::Convolution::get_response() const
   return response;
 }
 
+dsp::Response* dsp::Convolution::get_response()
+{
+  return response;
+}
+
+
 bool dsp::Convolution::has_passband () const
 {
   return passband;
@@ -90,9 +96,19 @@ const dsp::Response* dsp::Convolution::get_passband() const
   return passband;
 }
 
+dsp::Response* dsp::Convolution::get_passband()
+{
+  return passband;
+}
+
 const dsp::Apodization* dsp::Convolution::get_apodization () const {
   return apodization;
 }
+
+dsp::Apodization* dsp::Convolution::get_apodization () {
+  return apodization;
+}
+
 
 bool dsp::Convolution::has_apodization () const {
   return apodization;

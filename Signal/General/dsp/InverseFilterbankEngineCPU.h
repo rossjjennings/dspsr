@@ -30,6 +30,9 @@ namespace dsp
     ~InverseFilterbankEngineCPU ();
 
     void setup (InverseFilterbank*);
+
+    double setup_fft_plans (InverseFilterbank*);
+
     void set_scratch (float *);
 
     void perform (const dsp::TimeSeries* in, dsp::TimeSeries* out,
@@ -56,8 +59,6 @@ namespace dsp
     bool verbose;
 
     Response* response;
-
-    double scalefac;
 
   private:
 
@@ -92,6 +93,8 @@ namespace dsp
     float* response_stitch_scratch;
     float* fft_shift_scratch;
     float* stitch_scratch;
+
+    bool fft_plans_setup;
 
   };
 

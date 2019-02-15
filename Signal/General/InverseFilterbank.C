@@ -24,6 +24,11 @@ dsp::InverseFilterbank::InverseFilterbank (const char* name, Behaviour behaviour
   : Convolution (name, behaviour)
 {
   set_buffering_policy (new InputBuffering (this));
+  input_discard_neg = 0;
+  input_discard_pos = 0;
+  output_discard_neg = 0;
+  output_discard_pos = 0;
+
 }
 
 void dsp::InverseFilterbank::prepare ()
@@ -78,7 +83,7 @@ void dsp::InverseFilterbank::transformation ()
   if (output_ndat == 0) {
     output->set_input_sample (0);
   } else if (input_sample >= 0) {
-    output->set_input_sample ((input_sample / nsamp_step) * nkeep);
+    output->set_input_sample ((input_sample / input_sample_step) * nkeep);
   }
 
   if (verbose) {
@@ -99,10 +104,8 @@ void dsp::InverseFilterbank::transformation ()
 
 void dsp::InverseFilterbank::filterbank()
 {
-  if (engine) {
-	  if (verbose) {
-		  cerr << "dsp::InverseFilterbank::filterbank: has engine" << endl;
-    }
+  if (verbose) {
+	  cerr << "dsp::InverseFilterbank::filterbank" << endl;
   }
 
   if (verbose){
@@ -121,15 +124,27 @@ void dsp::InverseFilterbank::filterbank()
 
 void dsp::InverseFilterbank::make_preparations ()
 {
+  if (verbose) {
+    cerr << "dsp::InverseFilterbank::make_preparations" << endl;
+  }
   bool real_to_complex = (input->get_state() == Signal::Nyquist);
   unsigned n_per_sample = real_to_complex ? 2: 1;
   // setup the dedispersion discard region for the forward and backward FFTs
+  input_nchan = input->get_nchan();
+
   if (has_response()) {
     response->match(input, output_nchan);
-
-    output_discard_pos = (int) response->get_impulse_pos();
-    output_discard_neg = (int) response->get_impulse_neg();
+    output_discard_pos = response->get_impulse_pos();
+    output_discard_neg = response->get_impulse_neg();
     output_fft_length = response->get_ndat();
+  }
+
+  if (verbose) {
+    cerr << "dsp::InverseFilterbank::make_preparations:"
+        << " output_discard_neg(before)=" << output_discard_neg
+        << " output_discard_pos(before)=" << output_discard_pos
+        << " output_fft_length(before)=" << output_fft_length
+        << endl;
   }
 
   optimize_discard_region(
@@ -137,6 +152,17 @@ void dsp::InverseFilterbank::make_preparations ()
     &output_discard_neg, &output_discard_pos
   );
   optimize_fft_length(&input_fft_length, &output_fft_length);
+
+  if (verbose) {
+    cerr << "dsp::InverseFilterbank::make_preparations:"
+        << " input_discard_neg(after)=" << input_discard_neg
+        << " input_discard_pos(after)=" << input_discard_pos
+        << " input_fft_length(after)=" << input_fft_length
+        << " output_discard_neg(after)=" << output_discard_neg
+        << " output_discard_pos(after)=" << output_discard_pos
+        << " output_fft_length(after)=" << output_fft_length
+        << endl;
+  }
 
   freq_res = output_fft_length;
 
@@ -153,9 +179,9 @@ void dsp::InverseFilterbank::make_preparations ()
     cerr << "dsp::InverseFilterbankEngineCPU::setup: done optimizing fft lengths and discard regions" << endl;
     cerr << "dsp::InverseFilterbankEngineCPU::setup: input_fft_length="
          << input_fft_length << " output_fft_length="
-         << output_fft_length << " input_discard neg/pos="
+         << output_fft_length << " input_discard_neg/pos="
          << input_discard_neg << "/" << input_discard_pos
-         << " output_discard neg/pos"
+         << " output_discard_neg/pos="
          << input_discard_neg << "/" << input_discard_pos
          << endl;
   }
@@ -176,18 +202,29 @@ void dsp::InverseFilterbank::make_preparations ()
     get_buffering_policy()->set_minimum_samples(output_fft_length);
   }
 
+  scalefac = engine->setup_fft_plans(this);
+
   prepare_output ();
 
-  if (engine) {
-    engine->setup (this);
+  if (verbose) {
+    cerr << "dsp::InverseFilterbank::make_preparations: "
+         << "calling engine setup" << endl;
   }
+  engine->setup (this);
 
-  scalefac = sqrt(engine->get_scalefac());
+  if (verbose) {
+    cerr << "dsp::InverseFilterbank::make_preparations:"
+         << " scalefac=" << scalefac
+         << endl;
+  }
 
 }
 
 void dsp::InverseFilterbank::prepare_output (uint64_t ndat, bool set_ndat)
 {
+  if (verbose)
+    cerr << "dsp::InverseFilterbank::prepare_output" << endl;
+
   if (set_ndat)
   {
     if (verbose)
@@ -222,6 +259,15 @@ void dsp::InverseFilterbank::prepare_output (uint64_t ndat, bool set_ndat)
   output->set_ndim( 2 );
   output->set_state( Signal::Analytic );
 
+  if (verbose) {
+    cerr << "dsp::InverseFilterbank::prepare_output"
+         << " output ndim=" << output->get_ndim()
+         << " output npol=" << output->get_npol()
+         << " output nchan=" << output->get_nchan()
+         << " output ndat=" << output->get_ndat()
+         << endl;
+  }
+
   custom_prepare ();
 
   if (weighted_output)
@@ -253,7 +299,7 @@ void dsp::InverseFilterbank::prepare_output (uint64_t ndat, bool set_ndat)
   output->rescale (scalefac);
 
   if (verbose) cerr << "dsp::InverseFilterbank::prepare_output scale="
-                    << output->get_scale() <<endl;
+                    << output->get_scale() << endl;
 
   /*
    * output data will have new sampling rate
@@ -261,11 +307,26 @@ void dsp::InverseFilterbank::prepare_output (uint64_t ndat, bool set_ndat)
    * when the input TimeSeries is Signal::Nyquist (real) sampled
    */
 
-
-  double ratechange = (double) input_nchan / (double) output_nchan;
+  double ratechange = static_cast<double>(input_nchan) / static_cast<double>(output_nchan);
+  if (verbose) {
+    cerr << "dsp::InverseFilterbank::prepare_output"
+         << " ratechange=" << ratechange
+         << " input_nchan=" << static_cast<double>(input_nchan)
+         << " output_nchan=" << static_cast<double>(output_nchan)
+         << endl;
+  }
 	ratechange /= input->get_oversampling_factor().doubleValue();
 
  	output->set_rate(input->get_rate() * ratechange);
+
+  if (verbose) {
+    cerr << "dsp::InverseFilterbank::prepare_output"
+         << " ratechange=" << ratechange
+         << " input rate=" << input->get_rate()
+         << " output rate=" << output->get_rate()
+         << endl;
+  }
+
 
   if (freq_res == 1){
     output->set_dual_sideband (true);
@@ -276,12 +337,12 @@ void dsp::InverseFilterbank::prepare_output (uint64_t ndat, bool set_ndat)
    */
   output->set_dc_centred (freq_res%2);
 
-#if 0
+// #if 0
   // the centre frequency of each sub-band will be offset
-  double channel_bandwidth = input->get_bandwidth() / nchan;
-  double shift = double(freq_res-1)/double(freq_res);
-  output->set_centre_frequency_offset ( 0.5*channel_bandwidth*shift );
-#endif
+  // double channel_bandwidth = input->get_bandwidth() / nchan;
+  // double shift = double(freq_res-1)/double(freq_res);
+  // output->set_centre_frequency_offset ( 0.5*channel_bandwidth*shift );
+// #endif
 
   // dual sideband data produces a band swapped result
   if (input->get_dual_sideband())
@@ -307,38 +368,47 @@ void dsp::InverseFilterbank::prepare_output (uint64_t ndat, bool set_ndat)
 
 void dsp::InverseFilterbank::resize_output (bool reserve_extra)
 {
+
+  if (verbose) {
+    cerr << "dsp::InverseFilterbank::resize_output"
+         << " reserve_extra=" << reserve_extra
+         << endl;
+  }
   const uint64_t ndat = input->get_ndat();
 
   // number of big FFTs (not including, but still considering, extra FFTs
   // required to achieve desired time resolution) that can fit into data
   npart = 0;
 
-  if (nsamp_step == 0)
+  if (input_sample_step == 0) {
     throw Error (InvalidState, "dsp::InverseFilterbank::resize_output",
-                 "nsamp_step == 0 ... not properly prepared");
+                 "input_sample_step == 0 ... not properly prepared");
+  }
 
-  if (ndat > input_discard_total)
+  if (ndat > input_discard_total) {
     npart = (ndat-input_discard_total)/input_sample_step;
+  }
 
   // on some iterations, ndat could be large enough to fit an extra part
   if (reserve_extra && has_buffering_policy()){
     npart += 2;
   }
-  uint64_t output_ndat = npart * (output_sample_step/2);
+  uint64_t output_ndat = npart * output_sample_step;
+  // uint64_t output_ndat = npart * (output_sample_step/2);
 
-  if (verbose)
+  if (verbose){
     cerr << "dsp::InverseFilterbank::reserve input ndat=" << ndat
-         << " overlap=" << nsamp_overlap << " step=" << nsamp_step
+         << " overlap=" << input_discard_total << " step=" << input_sample_step
          << " reserve=" << reserve_extra << " output_sample_step=" << output_sample_step
          << " npart=" << npart << " output ndat=" << output_ndat << endl;
-
+   }
 // #if DEBUGGING_OVERLAP
 //   // this exception is useful when debugging, but not at the end-of-file
 //   if ( !has_buffering_policy() && ndat > 0
-//        && (nsamp_step*npart + nsamp_overlap != ndat) )
+//        && (input_sample_step*npart + nsamp_overlap != ndat) )
 //     throw Error (InvalidState, "dsp::InverseFilterbank::reserve",
 //                  "npart=%u * step=%u + overlap=%u != ndat=%u",
-// 		 npart, nsamp_step, nsamp_overlap, ndat);
+// 		 npart, input_sample_step, nsamp_overlap, ndat);
 // #endif
 
   // prepare the output TimeSeries
@@ -352,34 +422,47 @@ div_t dsp::InverseFilterbank::calc_lcf (
 }
 
 void dsp::InverseFilterbank::optimize_fft_length (
-	unsigned* _input_fft_length, unsigned* _output_fft_length
+	int* _input_fft_length, int* _output_fft_length
 )
 {
+  if (verbose) {
+    cerr << "dsp::InverseFilterbank::optimize_fft_length" << endl;
+  }
 	const Rational os = get_oversampling_factor();
 	int n_input_channels = (int) input->get_nchan();
 
-	div_t max_input_fft_length_lcf = calc_lcf((int)*_output_fft_length, n_input_channels, os);
+	div_t max_input_fft_length_lcf = calc_lcf(*_output_fft_length, n_input_channels, os);
   while (max_input_fft_length_lcf.rem != 0 || fmod(log2(max_input_fft_length_lcf.quot), 1) != 0){
     if (max_input_fft_length_lcf.rem != 0) {
       (*_output_fft_length) -= max_input_fft_length_lcf.rem;
     } else {
       (*_output_fft_length) -= 2;
     }
-    max_input_fft_length_lcf = calc_lcf((int)*_output_fft_length, n_input_channels, os);
+    max_input_fft_length_lcf = calc_lcf(*_output_fft_length, n_input_channels, os);
   }
   *_input_fft_length = max_input_fft_length_lcf.quot * os.get_numerator();
 }
 
 void dsp::InverseFilterbank::optimize_discard_region(
-  unsigned* _input_discard_neg,
-  unsigned* _input_discard_pos,
-  unsigned* _output_discard_neg,
-  unsigned* _output_discard_pos
+  int* _input_discard_neg,
+  int* _input_discard_pos,
+  int* _output_discard_neg,
+  int* _output_discard_pos
 )
 {
+  if (verbose) {
+    cerr << "dsp::InverseFilterbank::optimize_discard_region" << endl;
+  }
 	const Rational os = get_oversampling_factor();
 	int n_input_channels = (int) input->get_nchan();
-	vector<int> n = {_output_discard_pos, _output_discard_neg};
+  // if (verbose) {
+  //   cerr << "dsp::InverseFilterbank::optimize_discard_region"
+  //         << " oversampling_factor=" << os
+  //         << " n_input_channels=" << n_input_channels
+  //         << endl;
+  // }
+
+	vector<int> n = {*_output_discard_pos, *_output_discard_neg};
   vector<div_t> lcfs(2);
   int min_n;
 	div_t lcf;
@@ -394,6 +477,7 @@ void dsp::InverseFilterbank::optimize_discard_region(
     lcfs[i] = lcf;
     n[i] = min_n;
   }
+
   *_output_discard_pos = n[0];
   *_output_discard_neg = n[1];
   *_input_discard_pos = lcfs[0].quot * os.get_numerator();

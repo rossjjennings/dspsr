@@ -47,12 +47,13 @@ namespace dsp {
     //! Set the number of channels into which the input will be divided
     // void set_nchan (unsigned _nchan) { nchan = _nchan; }
 
-    //! get input_nchan
+    //! set/get input_nchan
+    void set_input_nchan (unsigned _input_nchan) { input_nchan = _input_nchan; }
     unsigned get_input_nchan () const { return input_nchan; }
 
-    //! get output_nchan
+    //! set/get output_nchan
+    void set_output_nchan (unsigned _output_nchan) { output_nchan = _output_nchan; }
     unsigned get_output_nchan () const { return output_nchan; }
-
 
     unsigned get_nchan_subband () const {return nchan_subband; }
 
@@ -71,17 +72,17 @@ namespace dsp {
 
     const Rational& get_oversampling_factor () {return input->get_oversampling_factor();}
 
-    unsigned get_input_discard_neg() const {return input_discard_neg;}
+    int get_input_discard_neg() const {return input_discard_neg;}
 
-    unsigned get_input_discard_pos() const {return input_discard_pos;}
+    int get_input_discard_pos() const {return input_discard_pos;}
 
-    unsigned get_output_discard_neg() const {return output_discard_neg;}
+    int get_output_discard_neg() const {return output_discard_neg;}
 
-    unsigned get_output_discard_pos() const {return output_discard_pos;}
+    int get_output_discard_pos() const {return output_discard_pos;}
 
-    unsigned get_input_fft_length() const {return input_fft_length;}
+    int get_input_fft_length() const {return input_fft_length;}
 
-    unsigned get_output_fft_length() const {return output_fft_length;}
+    int get_output_fft_length() const {return output_fft_length;}
 
 
     //! Engine used to perform discrete convolution step
@@ -125,14 +126,14 @@ namespace dsp {
   private:
 
     void optimize_discard_region(
-      unsigned* _input_discard_pos,
-      unsigned* _input_discard_neg,
-      unsigned* _output_discard_neg,
-      unsigned* _output_discard_pos);
+      int* _input_discard_pos,
+      int* _input_discard_neg,
+      int* _output_discard_neg,
+      int* _output_discard_pos);
 
     void optimize_fft_length(
-      unsigned* _input_fft_length,
-      unsigned* _output_fft_length);
+      int* _input_fft_length,
+      int* _output_fft_length);
 
     div_t calc_lcf (int a, int b, Rational osf);
 
@@ -140,19 +141,19 @@ namespace dsp {
     void prepare_output (uint64_t ndat = 0, bool set_ndat = false);
     void resize_output (bool reserve_extra = false);
 
-    unsigned input_fft_length;
-    unsigned output_fft_length;
+    int input_fft_length;
+    int output_fft_length;
 
-    unsigned input_discard_total;
-    unsigned input_sample_step;
+    int input_discard_total;
+    int input_sample_step;
 
-    unsigned output_discard_total;
-    unsigned output_sample_step;
+    int output_discard_total;
+    int output_sample_step;
 
-    unsigned input_discard_pos;
-    unsigned input_discard_neg;
-    unsigned output_discard_neg;
-    unsigned output_discard_pos;
+    int input_discard_pos;
+    int input_discard_neg;
+    int output_discard_neg;
+    int output_discard_pos;
 
 
   };

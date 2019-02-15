@@ -345,8 +345,8 @@ void parse_options (int argc, char** argv) try
      " - during the filterbank with -F 256:D \n"
      " - before the filterbank with -F 256:B \n" );
 
-  arg = menu.add (config->is_inverse_filterbank, 'IF');
-  arg->set_help( "set use of Inverse Filterbank [default: false]")
+  arg = menu.add (config->is_inverse_filterbank, "IF");
+  arg->set_help( "set use of Inverse Filterbank [default: false]");
 
   arg = menu.add (config->plfb_nbin, 'G', "nbin");
   arg->set_help ("create phase-locked filterbank");
