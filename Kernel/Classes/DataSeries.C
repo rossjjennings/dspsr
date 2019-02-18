@@ -290,7 +290,7 @@ dsp::DataSeries& dsp::DataSeries::operator = (const DataSeries& copy)
     for (unsigned ipol=0; ipol<get_npol(); ipol++) {
       unsigned char* dest = get_udatptr (ichan, ipol);
       const unsigned char* src = copy.get_udatptr (ichan, ipol);
-      memcpy(dest,src,size_t(npt));
+      memory->do_copy (dest, src, size_t(npt));
     }
   }
   

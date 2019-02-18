@@ -7,6 +7,8 @@
  *
  ***************************************************************************/
 
+#define _DEBUG
+
 #include "dsp/TScrunchCUDA.h"
 
 #include <cuComplex.h>
@@ -19,221 +21,166 @@
 
 using namespace std;
 
-void check_error (const char*);
+void check_error_stream (const char*, cudaStream_t stream);
 
 CUDA::TScrunchEngine::TScrunchEngine (cudaStream_t _stream)
 {
   stream = _stream;
 }
 
-__global__ void fpt_ndim1_ndim1 (float* in_base, float* out_base,
+// to support templated kernels below
+__inline__ __device__ float warpSum(float val)
+{
+  for (int offset = warpSize/2; offset > 0; offset /= 2)
+    val += __shfl_down(val, offset);
+  return val;
+}
+
+__inline__ __device__ float2 warpSum(float2 val)
+{
+  for (int offset = warpSize/2; offset > 0; offset /= 2)
+  {
+    val.x += __shfl_down(val.x, offset);
+    val.y += __shfl_down(val.y, offset);
+  }
+  return val;
+}
+
+__inline__ __device__ float sumTwo(float v1, float v2)
+{
+  return v1 + v2;
+}
+
+__inline__ __device__ float2 sumTwo(float2 v1, float2 v2)
+{
+  return cuCaddf(v1, v2);
+}
+
+__inline__ __device__ void initVal(float * v)
+{
+  *v = 0;
+}
+
+__inline__ __device__ void initVal(float2 * v)
+{
+  (*v).x = 0;
+  (*v).y = 0;
+}
+
+// each warp writes 1 output sample via load + shuffle
+template<typename T>
+__global__ void fpt_warp (T* in_base, T* out_base,
     unsigned in_Fstride, unsigned in_Pstride,
     unsigned out_Fstride, unsigned out_Pstride,
-    unsigned output_ndat, unsigned sfactor)
+    unsigned ndat_out, unsigned odat_per_block, unsigned sfactor)
 {
+  __shared__ T ndim1_warp_shm[16];
 
-  unsigned i = blockIdx.x * blockDim.x + threadIdx.x;
-  if (i >= output_ndat)
-    return;
+  const unsigned warp_num = threadIdx.x / warpSize;
+  const unsigned warp_idx = threadIdx.x % warpSize;
+  const unsigned odat_block_offset = blockIdx.x * odat_per_block;
 
-  // blockIdx.y == channel index
-  // threadIdx.y == polarization index
-  // offset into buffer = the index of the output datum (i) * the scrunch factor
-  in_base += blockIdx.y * in_Fstride + threadIdx.y * in_Pstride + sfactor * i;
-  float result = *in_base;
-  for (int j=1; j < sfactor; ++j,++in_base)
+  uint64_t odat = odat_block_offset + warp_num;
+  T sum;
+  initVal(&sum);
+
+  if (odat < ndat_out)
   {
-    result += *in_base;
+    // offset into buffer = the index the first read sample for this block
+    in_base += (blockIdx.y*in_Fstride) + (blockIdx.z*in_Pstride) + (odat * sfactor);
+
+    unsigned isamp = warp_idx;
+
+    // first sum in each thread of the warp indpendently (good if sfactor > 32)
+    while (isamp < sfactor)
+    {
+      sum = sumTwo(sum, in_base[isamp]);
+      //sum = sum + in_base[isamp];
+      isamp += warpSize;
+    }
+
+    // sum across the warp
+    sum = warpSum(sum);
   }
 
-  out_base += blockIdx.y * out_Fstride +threadIdx.y * out_Pstride + i;
-  *out_base = result;
-}
-
-__global__ void fpt_ndim2_ndim2 (float2* in_base, float2* out_base,
-    unsigned in_Fstride, unsigned in_Pstride, 
-    unsigned out_Fstride, unsigned out_Pstride,
-    unsigned output_ndat, unsigned sfactor)
-{
-
-  unsigned i = blockIdx.x * blockDim.x + threadIdx.x;
-  if (i >= output_ndat)
-    return;
-
-  // blockIdx.y == channel index
-  // threadIdx.y == polarization index
-  // offset into buffer = the index of the output datum (i) * the scrunch factor
-  in_base += blockIdx.y * in_Fstride + threadIdx.y * in_Pstride + sfactor * i;
-  float2 result = *in_base;
-  for (int j=1; j < sfactor; ++j,++in_base)
+  // only the first thread in each warp sum writes out 
+  if (warp_idx == 0)
   {
-    result.x += (*in_base).x;
-    result.y += (*in_base).y;
+    ndim1_warp_shm[warp_num] = sum;
   }
 
-  out_base += blockIdx.y * out_Fstride + threadIdx.y * out_Pstride + i;
-  *out_base = result;
+  __syncthreads();
+
+
+  // only the first warp writes out the sums
+  if (warp_num == 0 && warp_idx < 16)
+  {
+    uint64_t odat = odat_block_offset + warp_idx;
+    if (odat < ndat_out)
+    {
+      out_base += blockIdx.y * out_Fstride + blockIdx.z * out_Pstride;
+      out_base[odat] = ndim1_warp_shm[warp_idx];
+    }
+  }
 }
 
-__global__ void fpt_ndim1_ndim1_shm (float* in_base, float* out_base,
+
+// each thread processes 1 output sample with all block samples loaded into SHM
+template<typename T>
+__global__ void fpt_scrunch_shared (T* in_base, T* out_base,
     unsigned in_Fstride, unsigned in_Pstride,
     unsigned out_Fstride, unsigned out_Pstride,
     unsigned ndat_out, unsigned sfactor)
 {
-  // shared memory for coalesced reads
-  extern __shared__ float ndim1_shm[];
+  // 512 threads x 8 samples
+  __shared__ T ndim1_shared_shm[4096];
 
-  // blockIdx.y == channel index
-  // threadIdx.y == polarization index
-  unsigned ndat_in = ndat_out * sfactor;
-
-  const unsigned block_offset = blockIdx.x * blockDim.x * sfactor;
-
-  // X dimension is indexed on output samples. This is the input sample each thread will start to read
-  unsigned isamp_thr = block_offset + threadIdx.x;
+  const uint64_t odat_block = blockIdx.x * blockDim.x;
 
   // offset into buffer = the index the first read sample for this block
-  in_base += (blockIdx.y*in_Fstride) + (threadIdx.y*in_Pstride) + block_offset;
+  in_base += (blockIdx.y*in_Fstride) + (blockIdx.z*in_Pstride) + (odat_block * sfactor);
 
-  float result = 0;
-  unsigned isamp = threadIdx.x * sfactor;
-  unsigned esamp = isamp + sfactor;
-  unsigned shm_start = 0;
-  unsigned shm_end = blockDim.x;
-
-  // ensure we don't overshoot the number of ndat
-  for (unsigned j=0; j<sfactor; j++)
+  // load data for all threads in coalesced manner
+  uint64_t idat = (odat_block * sfactor) + threadIdx.x;
+  unsigned sdx = threadIdx.x;
+  const uint64_t ndat = ndat_out * sfactor;
+  for (unsigned i=0; i<sfactor; i++)
   {
-    // just whole block to coalesce read into SHM
-    if (isamp_thr < ndat_in)
-      ndim1_shm[threadIdx.x] = in_base[isamp_thr];
-
-    __syncthreads();
-
-    // each thread adds time samples into its output result, wait for
-    // the right time samples to be located in shm
-
-    // if this thread's output value is located in SHM, add to result
-    while (isamp >= shm_start && isamp < shm_end && isamp < esamp)
-    {
-      //if (blockIdx.y == 0 && blockIdx.z == 0) 
-      //  printf ("[%d][%d] isamp=%u esamp=%u start=%u end=%u\n", blockIdx.x, threadIdx.x, isamp, esamp, shm_start, shm_end);
-      result = result + ndim1_shm[isamp-shm_start];
-      isamp++;
-    }
-
-    isamp_thr += blockDim.x;
-    shm_start += blockDim.x;
-    shm_end   += blockDim.x;
+    if (idat < ndat)
+      ndim1_shared_shm[sdx] = in_base[sdx];
+    else
+      initVal(ndim1_shared_shm + sdx);
+    sdx += blockDim.x;
+    idat += blockDim.x;
   }
 
-  unsigned i = blockIdx.x * blockDim.x + threadIdx.x;
-  if (i >= ndat_out)
-    return;
+  __syncthreads();
 
-  //if (blockIdx.y == 0 && blockIdx.z == 0)
-  //  printf ("[%d][%d] i=%u\n", blockIdx.x, threadIdx.x, i);
-
-  out_base += (blockIdx.y*out_Fstride) + (threadIdx.y*out_Pstride) + i;
-  *out_base = result;
-}
-
-
-__global__ void fpt_ndim2_ndim2_shm (float2* in_base, float2* out_base,
-    unsigned in_Fstride, unsigned in_Pstride,
-    unsigned out_Fstride, unsigned out_Pstride,
-    unsigned ndat_out, unsigned sfactor)
-{
-  // shared memory for coalesced reads
-  extern __shared__ cuFloatComplex ndim2_shm[];
-
-  // blockIdx.y == channel index
-  // threadIdx.y == polarization index
-  unsigned ndat_in = ndat_out * sfactor;
-
-  const unsigned block_offset = blockIdx.x * blockDim.x * sfactor;
-
-  // X dimension is indexed on output samples. This is the input sample each thread will start to read
-  unsigned isamp_thr = block_offset + threadIdx.x;
- 
-  // offset into buffer = the index the first read sample for this block
-  in_base += (blockIdx.y*in_Fstride) + (threadIdx.y*in_Pstride) + block_offset;
-
-  cuFloatComplex result = make_cuComplex(0,0);
-  unsigned isamp = threadIdx.x * sfactor;
-  unsigned esamp = isamp + sfactor;
-  unsigned shm_start = 0;
-  unsigned shm_end = blockDim.x;
-
-  // ensure we don't overshoot the number of ndat
-  for (unsigned j=0; j<sfactor; j++)
+  // output dat
+  const uint64_t odat = odat_block + threadIdx.x;
+  if (odat < ndat_out)
   {
-    // just whole block to coalesce read into SHM
-    if (isamp_thr < ndat_in)
-      ndim2_shm[threadIdx.x] = in_base[isamp_thr];
+  
+    // now each thread reads shm, bank conflicts are unavoidable
+    T sum;
+    initVal(&sum);
 
-    __syncthreads();
+    unsigned sdx_offset = threadIdx.x * sfactor;
+    for (unsigned i=0; i<sfactor; i++)
+      sum = sumTwo(sum, ndim1_shared_shm[sdx_offset + i]);
 
-    // each thread adds time samples into its output result, wait for
-    // the right time samples to be located in shm
-
-    // if this thread's output value is located in SHM, add to result
-    while (isamp >= shm_start && isamp < shm_end && isamp < esamp)
-    {
-      //if (blockIdx.y == 0 && blockIdx.z == 0) 
-      //  printf ("[%d][%d] isamp=%u esamp=%u start=%u end=%u\n", blockIdx.x, threadIdx.x, isamp, esamp, shm_start, shm_end);
-      result = cuCaddf (result, ndim2_shm[isamp-shm_start]);
-      isamp++;
-    }
-
-    isamp_thr += blockDim.x;
-    shm_start += blockDim.x;
-    shm_end   += blockDim.x;
+    // each thread writes the output
+    out_base += (blockIdx.y*out_Fstride) + (blockIdx.z*out_Pstride);
+    out_base[odat] = sum;
   }
- 
-  unsigned i = blockIdx.x * blockDim.x + threadIdx.x;
-  if (i >= ndat_out)
-    return;
-
-  //if (blockIdx.y == 0 && blockIdx.z == 0)
-  //  printf ("[%d][%d] i=%u\n", blockIdx.x, threadIdx.x, i);
-
-  out_base += (blockIdx.y*out_Fstride) + (threadIdx.y*out_Pstride) + i;
-  *out_base = result;
 }
-
 
 void CUDA::TScrunchEngine::fpt_tscrunch(const dsp::TimeSeries *in,
     dsp::TimeSeries* out, unsigned sfactor)
 {
-  // the "inner loop", which each thread does, is the tscrunch itself
-  
-  // the theory is that if one is time scrunching on the GPU, the 
-  // scrunch factor will be something of order 10-100, a reasonable
-  // amount of work for a thread to do
-
-  // this is not at all optimal in terms of cache access, and at some point
-  // this should be re-written with each thread accessing adjacent samples
-
-  // to manage restrictions on grid size in earlier compute capability,
-  // use a 2d thread block with one dimension corresponding to P,
-  // the other to the output T
-  // then launch on a 2d grid with one block handling the full output size, the
-  // other handling the channels
-
-  // each thread is assigned to a specific input F & input P
-  // and loops over input T to add sfactor data together 
-
-  // currently the only implementation uses float2s so we require
-  // ndim==2 for both input and output
-  //if (in->get_ndim() != 2)
-  //  throw Error (InvalidParam, "CUDA::TScrunchEngine::fpt_scrunch",
-  //   "cannot handle ndim=%u != 2", in->get_ndim());
-
-  //if (out->get_ndim() != 2)
-  //  throw Error (InvalidParam, "CUDA::TScrunchEngine::fpt_scrunch",
-  //		 "cannot handle ndim=%u != 2", in->get_ndim());
-
+  // split the the processing between 2 algorithms. If the tscrunch factor
+  // is > 8, then use warps to perform the required scrunching. If < 8 use
+  // shared memory with 1 thread per output sample
   if (in->get_ndim() != out->get_ndim())
   {
     throw Error (InvalidParam, "CUDA::TScrunchEngine::fpt_scrunch",
@@ -245,13 +192,23 @@ void CUDA::TScrunchEngine::fpt_tscrunch(const dsp::TimeSeries *in,
     throw Error (InvalidParam, "CUDA::TScrunchEngine::fpt_scrunch",
 		 "only out-of-place transformation implemented");
 
-  if (in->get_ndat() == 0)
+  if (in->get_ndat() == 0 || out->get_ndat() == 0)
+  {
+    if (dsp::Operation::verbose)
+      cerr << "CUDA::TScrunchEngine::fpt_scrunch in_ndat=" << in->get_ndat()
+           << " out_ndat=" << out->get_ndat() << ", skipping" << endl;
     return;
+  }
 
   unsigned ndim = in->get_ndim();
 
-  uint64_t in_Fstride = (in->get_datptr(1)-in->get_datptr(0)) / ndim;
-  uint64_t out_Fstride = (out->get_datptr(1)-out->get_datptr(0)) / ndim;
+  uint64_t in_Fstride = 0;
+  uint64_t out_Fstride = 0;
+  if (in->get_nchan() > 1)
+  {
+    in_Fstride = (in->get_datptr(1,0)-in->get_datptr(0,0)) / ndim;
+    out_Fstride = (out->get_datptr(1,0)-out->get_datptr(0,0)) / ndim;
+  }
 
   uint64_t in_Pstride = 0;
   uint64_t out_Pstride = 0;
@@ -261,59 +218,60 @@ void CUDA::TScrunchEngine::fpt_tscrunch(const dsp::TimeSeries *in,
     out_Pstride = (out->get_datptr(0,1)-out->get_datptr(0,0)) / ndim;
   }
 
-  // use a 2-dimensional thread block to eliminate 3rd grid dimension
+  if (dsp::Operation::verbose)
+    cerr << "CUDA::TScrunchEngine::fpt_scrunch ndim=" << ndim 
+         << " in_Fstride=" << in_Fstride << " out_Fstride=" << out_Fstride 
+         << " in_Pstride=" << in_Pstride << " out_Pstride=" << out_Pstride
+         << endl;
 
-// SHARED has a bug. AJ...
-
-//#define USE_SHARED
-#ifdef USE_SHARED
-  // set number of threads to be number of output samples, cap at 512
-  dim3 threads (512);
-  if (out->get_ndat() < 512)
-    threads.x = out->get_ndat();
-  dim3 blocks (out->get_ndat()/threads.x, in->get_nchan(), in->get_npol());
-  if (out->get_ndat() % threads.x)
-    blocks.x ++;
-
-  if (ndim == 2)
+  unsigned nthreads = 512;
+  if (sfactor >= 16)
   {
-    size_t shm_bytes = threads.x * sizeof(float2);
-    fpt_ndim2_ndim2_shm<<<blocks,threads,shm_bytes,stream>>> (
-      (float2*)(in->get_datptr(0)), (float2*)(out->get_datptr(0)), 
-      in_Fstride, in_Pstride, out_Fstride, out_Pstride, 
-      out->get_ndat(), sfactor);
+    unsigned odat_per_block = nthreads / 32;
+    dim3 blocks (out->get_ndat()/odat_per_block, in->get_nchan(), in->get_npol());
+    if (out->get_ndat() % odat_per_block)
+      blocks.x ++;
+
+    if (dsp::Operation::verbose)
+      cerr << "CUDA::TScrunchEngine::fpt_warp blocks=(" << blocks.x << "," 
+         << blocks.y << "," << blocks.z << ") nthreads=" << nthreads << endl;
+
+    if (ndim == 1)
+      fpt_warp<float><<<blocks,nthreads,0,stream>>> (
+        (float*)(in->get_datptr(0)), (float*)(out->get_datptr(0)),
+        in_Fstride, in_Pstride, out_Fstride, out_Pstride,
+        out->get_ndat(), odat_per_block, sfactor
+      );
+    else
+      fpt_warp<float2><<<blocks,nthreads,0,stream>>> (
+        (float2*)(in->get_datptr(0)), (float2*)(out->get_datptr(0)),
+        in_Fstride, in_Pstride, out_Fstride, out_Pstride,
+        out->get_ndat(), odat_per_block, sfactor
+      );
+    if (dsp::Operation::record_time || dsp::Operation::verbose)
+      check_error_stream ("CUDA::TScrunchEngine::fpt_scrunch_warp", stream);
   }
   else
   {
-    size_t shm_bytes = threads.x * sizeof(float);
-    fpt_ndim1_ndim1_shm<<<blocks,threads,shm_bytes,stream>>> (
-      (float*)(in->get_datptr(0)), (float*)(out->get_datptr(0)),
-      in_Fstride, in_Pstride, out_Fstride, out_Pstride,
-      out->get_ndat(), sfactor);
-  }
-#else
-  dim3 threads (128, in->get_npol());
-  dim3 blocks (out->get_ndat()/threads.x, in->get_nchan(), in->get_npol());
-  if (out->get_ndat() % threads.x)
-    blocks.x ++;
-  if (ndim == 2)
-  {
-    fpt_ndim2_ndim2<<<blocks,threads,0,stream>>> (
-      (float2*)(in->get_datptr(0)), (float2*)(out->get_datptr(0)), 
-      in_Fstride, in_Pstride, out_Fstride, out_Pstride, 
-      out->get_ndat(), sfactor);
-  }
-  else
-  {
-    fpt_ndim1_ndim1<<<blocks,threads,0,stream>>> (
-      (float*)(in->get_datptr(0)), (float*)(out->get_datptr(0)), 
-      in_Fstride, in_Pstride, out_Fstride, out_Pstride, 
-      out->get_ndat(), sfactor);
-  }
-#endif
+    dim3 blocks (out->get_ndat()/nthreads, in->get_nchan(), in->get_npol());
+    if (out->get_ndat() % nthreads)
+      blocks.x ++;
 
+    if (dsp::Operation::verbose)
+      cerr << "CUDA::TScrunchEngine::fpt_scrunch_shared blocks=(" << blocks.x << "," 
+         << blocks.y << "," << blocks.z << ") nthreads=" << nthreads << endl;
 
+    if (ndim == 1)
+      fpt_scrunch_shared<float><<<blocks,nthreads,0,stream>>> (
+        (float*)(in->get_datptr(0)), (float*)(out->get_datptr(0)),
+        in_Fstride, in_Pstride, out_Fstride, out_Pstride,
+        out->get_ndat(), sfactor);
+    else
+      fpt_scrunch_shared<float2><<<blocks,nthreads,0,stream>>> (
+        (float2*)(in->get_datptr(0)), (float2*)(out->get_datptr(0)),
+        in_Fstride, in_Pstride, out_Fstride, out_Pstride,
+        out->get_ndat(), sfactor);
+  }
   if (dsp::Operation::record_time || dsp::Operation::verbose)
-    check_error ("CUDA::TScrunchEngine::fpt_scrunch");
+    check_error_stream ("CUDA::TScrunchEngine::fpt_scrunch_shared", stream);
 }
-

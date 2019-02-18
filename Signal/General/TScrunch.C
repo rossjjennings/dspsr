@@ -84,16 +84,13 @@ void dsp::TScrunch::transformation ()
 {
   sfactor = get_factor();
 
+  if (factor == 1)
+    throw Error(InvalidState,"dsp::TScrunch::transformation",
+                "cannot support Tscrunch of 1");
+
   if (!sfactor)
     throw Error (InvalidState, "dsp::TScrunch::get_factor",
 		   "scrunch factor not set");
-
-  if (sfactor==1)
-  {
-    if( input.get() != output.get() )
-      output->operator=( *input );
-    return;
-  }
 
   if( !input->get_detected() )
     throw Error(InvalidState,"dsp::TScrunch::transformation()",
@@ -109,6 +106,16 @@ void dsp::TScrunch::transformation ()
 
   if (has_buffering_policy())
     get_buffering_policy()->set_next_start (output_ndat * sfactor);
+
+  if (sfactor==1)
+  {
+    if (verbose)
+      cerr << "dsp::TScrunch::transformation sfactor=1, using copy operator" << endl;
+    if( input.get() != output.get() )
+      output->operator=( *input );
+    output->set_input_sample(input->get_input_sample());
+    return;
+  }
 
   if (input.get() != output.get())
   {

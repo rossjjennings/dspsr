@@ -40,6 +40,8 @@
 #include "dsp/TScrunchCUDA.h"
 #include "dsp/MemoryCUDA.h"
 #include "dsp/TimeSeriesCUDA.h"
+#include "dsp/FITSDigitizerCUDA.h"
+#include "dsp/TransferBitSeriesCUDA.h"
 #endif
 
 
@@ -365,123 +367,55 @@ void dsp::LoadToFITS::construct () try
 
     if (verbose)
 	    cerr << "digifits: creating detection operation" << endl;
-      
     Detection* detection = new Detection;
     detection->set_input ( timeseries );
+    detection->set_output ( timeseries = new_TimeSeries() );
 
-    // always use coherence for GPU, pscrunch later if needed
+    // force out of place detection operation
+    if (config->npol == 1)
+      detection->set_output_state (Signal::Intensity);
+    else if (config->npol == 2)
+      detection->set_output_state (Signal::PPQQ);
+    else if (config->npol == 4)
+      detection->set_output_state (Signal::Coherence);
+    else
+      throw Error (InvalidState, "dsp::LoadToFITS::construct",
+                   "output polarisation invalid %d", config->npol);
+#ifdef HAVE_CUDA
     if (run_on_gpu)
     {
-#ifdef HAVE_CUDA
-      if (npol == 2)
-      {
-        detection->set_output_state (Signal::Coherence);
-        detection->set_engine (new CUDA::DetectionEngine(stream) );
-        detection->set_output_ndim (2);
-        detection->set_output (timeseries);
-      }
-      else
-      {
-        detection->set_output_state (Signal::Intensity);
-        detection->set_engine (new CUDA::DetectionEngine(stream) );
-        detection->set_output (timeseries = new_TimeSeries());
-        detection->set_output_ndim (1);
-        timeseries->set_memory (device_memory);
-      }
+      detection->set_engine (new CUDA::DetectionEngine(stream) );
+      timeseries->set_memory (device_memory); 
+    }
 #endif
-    }
-    else
-    {
-      switch (config->npol) 
-      {
-        case 1:
-          detection->set_output_state (Signal::Intensity);
-          //detected = new_TimeSeries();
-          break;
-        case 2:
-          detection->set_output_state (Signal::PPQQ);
-          //detected = new_TimeSeries();
-          break;
-        case 4:
-          detection->set_output_state (Signal::Coherence);
-          // use this to avoid copies -- seem to segfault in multi-threaded
-          //detection->set_output_ndim (2);
-          break;
-        default:
-          throw Error(InvalidParam,"dsp::LoadToFITS::construct",
-              "invalid polarization specified");
-      }
-      detection->set_output (timeseries);
-    }
 
-    operations.push_back ( detection );
+    operations.push_back( detection );
   }
 
 #if HAVE_CUDA
   if (run_on_gpu)
   {
-    // to support input buffering
+    // to support faster input buffering
     timeseries->set_engine (new CUDA::TimeSeriesEngine (device_memory));
   }
 #endif
 
-  TScrunch* tscrunch = new TScrunch;
-  tscrunch->set_factor ( tres_factor );
-  tscrunch->set_input ( timeseries );
-  tscrunch->set_output ( timeseries = new_TimeSeries() );
+  if (tres_factor > 1)
+  {
+    TScrunch* tscrunch = new TScrunch;
+    tscrunch->set_factor ( tres_factor );
+    tscrunch->set_input ( timeseries );
+    tscrunch->set_output ( timeseries = new_TimeSeries() );
 
 #if HAVE_CUDA
-  if ( run_on_gpu )
-  {
-    tscrunch->set_engine ( new CUDA::TScrunchEngine(stream) );
-    timeseries->set_memory (device_memory);
-  }
-#endif
-  operations.push_back( tscrunch );
-
-#if HAVE_CUDA
-  if (run_on_gpu)
-  {
-    TransferCUDA* transfer = new TransferCUDA (stream);
-    transfer->set_kind (cudaMemcpyDeviceToHost);
-    transfer->set_input( timeseries );
-    transfer->set_output( timeseries = new_TimeSeries() );
-    operations.push_back (transfer);
-  }
-#endif
-
-  // need to do PolnReshape if have done on GPU (because uses the
-  // hybrid npol=2, ndim=2 for the Stokes parameters)
-  if (run_on_gpu)
-  {
-    PolnReshape* reshape = new PolnReshape;
-    switch (config->npol)
+    if ( run_on_gpu )
     {
-      case 4:
-        reshape->set_state ( Signal::Coherence );
-        break;
-      case 2:
-        reshape->set_state ( Signal::PPQQ );
-        break;
-      case 1:
-        reshape->set_state ( Signal::Intensity );
-        break;
-      default: 
-        throw Error(InvalidParam,"dsp::LoadToFITS::construct",
-            "invalid polarization specified");
+      tscrunch->set_engine ( new CUDA::TScrunchEngine(stream) );
+      timeseries->set_memory (device_memory);
+      timeseries->set_engine (new CUDA::TimeSeriesEngine (device_memory));
     }
-    reshape->set_input (timeseries );
-    reshape->set_output ( timeseries = new_TimeSeries() );
-    operations.push_back(reshape);
-  }
-  //else if (config->npol == 4)
-  else if (false)
-  {
-    PolnReshape* reshape = new PolnReshape;
-    reshape->set_state ( Signal::Coherence );
-    reshape->set_input (timeseries );
-    reshape->set_output ( timeseries = new_TimeSeries() );
-    operations.push_back (reshape);
+#endif
+    operations.push_back( tscrunch );
   }
 
   if ( config->dedisperse )
@@ -498,22 +432,6 @@ void dsp::LoadToFITS::construct () try
     operations.push_back( delay );
   }
 
-
-  // only do pscrunch for detected data -- NB always goes to Intensity
-  bool do_pscrunch = (obs->get_npol() > 1) && (config->npol==1) 
-    && (obs->get_detected());
-  if (do_pscrunch)
-  {
-    //if (verbose)
-      cerr << "digifits: creating pscrunch transformation" << endl;
-
-    PScrunch* pscrunch = new PScrunch;
-    pscrunch->set_input (timeseries);
-    pscrunch->set_output (timeseries);
-
-    operations.push_back( pscrunch );
-  }
-
   if (verbose)
     cerr << "digifits: creating output bitseries container" << endl;
 
@@ -528,6 +446,18 @@ void dsp::LoadToFITS::construct () try
   digitizer->set_output (bitseries);
   digitizer->set_upper_sideband_output (config->upper_sideband_output);
 
+#if HAVE_CUDA
+  if (run_on_gpu)
+  {
+    Scratch* gpu_scratch = new Scratch;
+    gpu_scratch->set_memory (device_memory);
+    CUDA::FITSDigitizerEngine * fits_digitizer_engine = new CUDA::FITSDigitizerEngine(stream);
+    fits_digitizer_engine->set_scratch (gpu_scratch);
+    digitizer->set_engine ( fits_digitizer_engine );
+    bitseries->set_memory (device_memory);
+  }
+#endif
+  
   // PSRFITS allows us to save the reference spectrum in each output block
   // "subint", so we can take advantage of this to store the exect
   // reference spectrum for later use.  By default, we will rescale the 
@@ -553,6 +483,18 @@ void dsp::LoadToFITS::construct () try
   }
 
   operations.push_back( digitizer );
+
+#if HAVE_CUDA
+  if (run_on_gpu)
+  {
+    TransferBitSeriesCUDA* transfer = new TransferBitSeriesCUDA (stream);
+    transfer->set_kind (cudaMemcpyDeviceToHost);
+    transfer->set_input( bitseries );
+    transfer->set_output( bitseries = new BitSeries() );
+    bitseries->set_memory( new  CUDA::PinnedMemory() );
+    operations.push_back (transfer);
+  }
+#endif
 
   if (verbose)
     cerr << "digifits: creating PSRFITS output file" << endl;
