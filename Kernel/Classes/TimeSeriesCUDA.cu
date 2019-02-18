@@ -101,8 +101,8 @@ void CUDA::TimeSeriesEngine::copy_data_fpt (const dsp::TimeSeries* from,
   }
   else if (nchan > 1)
   {
-    ochanpol_stride = to->get_datptr (1,0) - to->get_datptr (1,0);
-    ichanpol_stride = from->get_datptr (1,0) - from->get_datptr (1,0);
+    ochanpol_stride = to->get_datptr (1,0) - to->get_datptr (0,0);
+    ichanpol_stride = from->get_datptr (1,0) - from->get_datptr (0,0);
   }
   else
   {

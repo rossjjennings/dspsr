@@ -460,14 +460,15 @@ void dsp::FITSOutputFile::operation ()
     initialize ();
   }
   if (verbose)
-    cerr << "dsp::FITSOutputFile::operation" << endl;
-
+    cerr << "dsp::FITSOutputFile::operation max_bytes=" << max_bytes << endl;
 
   // should handle both case where data block is larger than maximum file
   // size and more typical case where file ends within a data block
   if (max_bytes)
   {
     int64_t nbytes = get_input()->get_nbytes();
+    if (verbose)
+      cerr << "dsp::FITSOutputFile::operation nbytes=" << nbytes << endl;
     if (nbytes == 0) return;
     nbytes -= unload_bytes (get_input()->get_rawptr(), 
         std::min(max_bytes - written, nbytes));
@@ -480,13 +481,19 @@ void dsp::FITSOutputFile::operation ()
       nbytes -= unload_bytes (get_input()->get_rawptr(), 
           std::min(max_bytes - written, nbytes));
       samples_written += get_input()->get_ndat();
+      if (verbose)
+        cerr << "dsp::FITSOutputFile::operation samples_written=" << samples_written << endl;
     }
     return;
   }
 
+  if (verbose)
+    cerr << "dsp::FITSOutputFile::operation nbytes=" << get_input()->get_nbytes() << endl;
   unload_bytes (get_input()->get_rawptr(), get_input()->get_nbytes());
 
   samples_written += get_input()->get_ndat();
+  if (verbose)
+    cerr << "dsp::FITSOutputFile::operation samples_written=" << samples_written << endl;
 }
 
 int64_t dsp::FITSOutputFile::unload_bytes (const void* void_buffer, uint64_t bytes)

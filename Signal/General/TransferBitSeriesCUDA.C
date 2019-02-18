@@ -33,6 +33,7 @@ void dsp::TransferBitSeriesCUDA::transformation ()
 
   if (verbose)
     cerr << "dsp::TransferBitSeriesCUDA::transformation"
+         << " ndat=" << input->get_ndat()
          << " out=" << (void*)output->get_rawptr()
          << " size=" << output->get_size()
          << " in=" << (void*)input->get_rawptr()

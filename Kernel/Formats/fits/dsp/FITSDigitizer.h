@@ -56,6 +56,10 @@ namespace dsp
 
     Callback<FITSDigitizer*> update;
 
+    class Engine;
+
+    void set_engine (Engine*);
+
   protected:
 
     void set_nbit (unsigned);
@@ -83,9 +87,71 @@ namespace dsp
     //! arrays for accumulating and storing scales
     double *freq_totalsq, *freq_total, *scale, *offset;
 
+    Reference::To<Engine> engine;
+
+  protected:
+
     bool upper_sideband_output;
 
   };
+
+  class ChannelSort
+  {
+    const bool flip_band;
+    const bool swap_band;
+    const unsigned nchan;
+    const unsigned half_chan;
+    const dsp::Observation* input;
+
+  public:
+
+    ChannelSort (const dsp::Observation* input, bool upper_sideband) :
+      flip_band ((upper_sideband && input->get_bandwidth() < 0) ||
+                 (!upper_sideband && input->get_bandwidth() > 0)),
+      swap_band ( input->get_swap() ),
+      nchan ( input->get_nchan() ),
+      half_chan ( nchan / 2 ),
+      input ( input ) { }
+
+    //! Return the mapping from output channel to input channel
+    inline unsigned operator () (unsigned out_chan)
+    {
+      unsigned in_chan = out_chan;
+      if (flip_band)
+        in_chan = (nchan-in_chan-1);
+      if (input->get_nsub_swap() > 1)
+        in_chan = input->get_unswapped_ichan(out_chan);
+      else if (swap_band)
+        in_chan = (in_chan+half_chan)%nchan;
+      return in_chan;
+    }
+  };
+
+  class FITSDigitizer::Engine : public OwnStream
+  {
+  public:
+
+    virtual void set_scratch (dsp::Scratch *) = 0;
+
+    virtual void set_rescale_nblock (const dsp::TimeSeries * in, 
+                                     unsigned rescale_nblock) = 0;
+
+    virtual void set_mapping (const dsp::TimeSeries * in,
+                              dsp::ChannelSort& channel) = 0;
+
+    virtual void measure_scale (const dsp::TimeSeries * in,
+                                unsigned rescale_nsamp) = 0;
+
+    virtual void digitize (const dsp::TimeSeries * in,
+                           dsp::BitSeries * out, uint64_t ndat, unsigned nbit,
+                           float digi_mean, float digi_scale,
+                           int digi_min, int digi_max) = 0;
+
+    virtual void get_scale_offsets (double * scale, double * offset,
+                                    unsigned nchan, unsigned npol) = 0;
+
+  };
+
 }
 
 #endif
