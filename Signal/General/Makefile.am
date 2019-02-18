@@ -25,6 +25,7 @@ nobase_include_HEADERS = dsp/ACFilterbank.h dsp/Detection.h	       \
 	dsp/PolnSelect.h dsp/PolnReshape.h dsp/SpectralKurtosis.h \
   dsp/SKComputer.h dsp/ScalarFilter.h \
 	dsp/InverseFilterbank.h dsp/InverseFilterbankEngine.h \
+	dsp/InverseFilterbankConfig.h \
 	dsp/InverseFilterbankEngineCPU.h
 
 libdspdsp_la_SOURCES = optimize_fft.c cross_detect.c cross_detect.h  \
@@ -44,7 +45,9 @@ libdspdsp_la_SOURCES = optimize_fft.c cross_detect.c cross_detect.h  \
 	Resize.C SKDetector.C SKMasker.C \
 	SingleThread.C MultiThread.C dsp_verbosity.C \
 	PolnSelect.C PolnReshape.C SpectralKurtosis.C ScalarFilter.C \
-	InverseFilterbank.C InverseFilterbankEngineCPU.C
+	InverseFilterbank.C \
+	InverseFilterbankConfig.C \
+	InverseFilterbankEngineCPU.C
 
 
 bin_PROGRAMS = dmsmear digitxt digimon digihist filterbank_speed

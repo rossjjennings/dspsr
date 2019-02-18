@@ -299,15 +299,25 @@ void dsp::LoadToFold::construct () try
   // convolved and filterbank are out of place
   TimeSeries* filterbanked = unpacked;
 
+  Convolution::Config::When convolve_when;
+  unsigned filter_channels;
+
   if (config->is_inverse_filterbank) {
-    TimeSeries* inverse_filterbanked = new_time_series();
-    inverse_filterbank = new InverseFilterbank;
-    inverse_filterbank->set_output_nchan(1);
+    convole_when = config->inverse_filterbank.get_convolve_when();
+    filter_channels = config->inverse_filterbank.get_nchan();
+
+    filterbanked = new_time_series();
+    config->inverse_filterbank.set_device( device_memory.ptr() );
+    config->inverse_filterbank.set_stream( gpu_stream );
+
+    if (! inverse_filterbank) {
+      inverse_filterbank = config->inverse_filterbank.create();
+    }
     if (!config->input_buffering) {
       inverse_filterbank->set_buffering_policy (NULL);
     }
     inverse_filterbank->set_input (unpacked);
-    inverse_filterbank->set_output (inverse_filterbanked);
+    inverse_filterbank->set_output (filterbanked);
     // default engine is the CPU engine
     dsp::InverseFilterbankEngineCPU* inverse_filterbank_engine = \
       new dsp::InverseFilterbankEngineCPU;
@@ -315,63 +325,79 @@ void dsp::LoadToFold::construct () try
     inverse_filterbank->set_response (response);
     inverse_filterbank->set_engine (inverse_filterbank_engine);
 
-    filterbanked = inverse_filterbanked;
-
     // temporary hack
-    config->filterbank.set_convolve_when(Filterbank::Config::During);
     operations.push_back (inverse_filterbank.get());
-  }
-
-
-
-  // filterbank is performing channelisation
-  if (config->filterbank.get_nchan() > 1)
-  {
-    // new storage for filterbank output (must be out-of-place)
-    filterbanked = new_time_series ();
-
-#if HAVE_CUDA
-    if (run_on_gpu)
-      filterbanked->set_memory (device_memory);
-#endif
-
-    config->filterbank.set_device( device_memory.ptr() );
-    config->filterbank.set_stream( gpu_stream );
-
-    // software filterbank constructor
-    if (!filterbank)
-      filterbank = config->filterbank.create();
-
-    if (!config->input_buffering)
-      filterbank->set_buffering_policy (NULL);
-
-    filterbank->set_input (unpacked);
-    filterbank->set_output (filterbanked);
-    // default engine is the CPU engine
-    dsp::FilterbankEngineCPU* filterbank_engine = new dsp::FilterbankEngineCPU;
-
-    if (config->filterbank.get_convolve_when() == Filterbank::Config::During)
+    // filterbank = new_time_series();
+    // inverse_filterbank = new InverseFilterbank;
+    // inverse_filterbank->set_output_nchan(1);
+    // if (!config->input_buffering) {
+    //   inverse_filterbank->set_buffering_policy (NULL);
+    // }
+    // inverse_filterbank->set_input (unpacked);
+    // inverse_filterbank->set_output (filterbanked);
+    // // default engine is the CPU engine
+    // dsp::InverseFilterbankEngineCPU* inverse_filterbank_engine = \
+    //   new dsp::InverseFilterbankEngineCPU;
+    // // for now, inverse filterbank does convolution during inversion.
+    // inverse_filterbank->set_response (response);
+    // inverse_filterbank->set_engine (inverse_filterbank_engine);
+    //
+    // // temporary hack
+    // config->filterbank.set_convolve_when(Filterbank::Config::During);
+    // operations.push_back (inverse_filterbank.get());
+  } else {
+    // filterbank is performing channelisation
+    convolve_when = config->filterbank.get_convolve_when();
+    filter_channels = config->filterbank.get_nchan();
+    if (filter_channels > 1)
     {
-      filterbank->set_response (response);
-      if (!config->integration_turns)
-        filterbank_engine->set_passband(passband);
-        // filterbank->get_engine()->set_passband (passband);
-    }
-    filterbank->set_engine (filterbank_engine);
 
-    // Get order of operations correct
-    if (!config->filterbank.get_convolve_when() == Filterbank::Config::Before)
-      operations.push_back (filterbank.get());
+      // new storage for filterbank output (must be out-of-place)
+      filterbanked = new_time_series ();
+
+  #if HAVE_CUDA
+      if (run_on_gpu)
+        filterbanked->set_memory (device_memory);
+  #endif
+
+      config->filterbank.set_device( device_memory.ptr() );
+      config->filterbank.set_stream( gpu_stream );
+
+      // software filterbank constructor
+      if (!filterbank)
+        filterbank = config->filterbank.create();
+
+      if (!config->input_buffering)
+        filterbank->set_buffering_policy (NULL);
+
+      filterbank->set_input (unpacked);
+      filterbank->set_output (filterbanked);
+      // default engine is the CPU engine
+      dsp::FilterbankEngineCPU* filterbank_engine = new dsp::FilterbankEngineCPU;
+
+      if (convolve_when == Filterbank::Config::During)
+      {
+        filterbank->set_response (response);
+        if (!config->integration_turns)
+          filterbank_engine->set_passband(passband);
+          // filterbank->get_engine()->set_passband (passband);
+      }
+      filterbank->set_engine (filterbank_engine);
+
+      // Get order of operations correct
+      if (!convolve_when == Filterbank::Config::Before)
+        operations.push_back (filterbank.get());
+    }
   }
 
   // output of convolved will be filterbanked|unpacked
   TimeSeries* convolved = filterbanked;
 
   bool filterbank_after_dedisp
-    = config->filterbank.get_convolve_when() == Filterbank::Config::Before;
+    = convole_when == Filterbank::Config::Before;
 
   if (config->coherent_dedispersion &&
-      config->filterbank.get_convolve_when() != Filterbank::Config::During)
+      convole_when != Filterbank::Config::During)
   {
     if (!convolution)
       convolution = new Convolution;
@@ -401,7 +427,7 @@ void dsp::LoadToFold::construct () try
     {
       convolved->set_memory (device_memory);
       convolution->set_device (device_memory.ptr());
-      unsigned nchan = manager->get_info()->get_nchan() * config->filterbank.get_nchan();
+      unsigned nchan = manager->get_info()->get_nchan() * filter_channels;
       if (nchan >= 16)
         convolution->set_engine (new CUDA::ConvolutionEngineSpectral (stream));
       else
@@ -561,7 +587,7 @@ void dsp::LoadToFold::construct () try
 #endif
 
     skestimator->set_thresholds (config->sk_m, config->sk_std_devs);
-    if (config->sk_chan_start > 0 && config->sk_chan_end < config->filterbank.get_nchan())
+    if (config->sk_chan_start > 0 && config->sk_chan_end < filter_channels)
       skestimator->set_channel_range (config->sk_chan_start, config->sk_chan_end);
     skestimator->set_options (config->sk_no_fscr, config->sk_no_tscr, config->sk_no_ft);
 

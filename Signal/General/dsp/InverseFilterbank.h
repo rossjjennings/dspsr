@@ -26,7 +26,7 @@ namespace dsp {
 
   public:
 
-    // //! Configuration options
+    //! Configuration options
     class Config;
 
     //! Null constructor

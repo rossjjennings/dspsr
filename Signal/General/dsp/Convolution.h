@@ -56,6 +56,8 @@ namespace dsp {
 
   public:
 
+    class Config;
+
     //! Null constructor
     Convolution (const char* name = "Convolution", Behaviour type = outofplace);
 

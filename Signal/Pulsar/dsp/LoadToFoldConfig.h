@@ -146,7 +146,7 @@ namespace dsp {
     Filterbank::Config filterbank;
 
     // Inverse Filterbank configuration options
-    // InverseFilterbank::Config inverse_filterbank;
+    InverseFilterbank::Config inverse_filterbank;
 
     bool is_inverse_filterbank;
 
