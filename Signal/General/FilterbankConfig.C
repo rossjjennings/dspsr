@@ -22,7 +22,6 @@
 #include <iostream>
 using namespace std;
 
-using dsp::Filterbank;
 
 dsp::Filterbank::Config::Config ()
 {

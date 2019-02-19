@@ -13,6 +13,7 @@
 
 #include "dsp/LoadToFold1.h"
 #include "dsp/FilterbankConfig.h"
+#include "dsp/InverseFilterbankConfig.h"
 
 namespace Pulsar
 {

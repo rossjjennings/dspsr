@@ -30,7 +30,7 @@ dsp::InverseFilterbank::Config::Config ()
 
   nchan = 1;
   freq_res = 0;  // unspecified
-  when = During;  // not good, but the original default
+  when = During;
 }
 
 std::ostream& dsp::operator << (std::ostream& os,

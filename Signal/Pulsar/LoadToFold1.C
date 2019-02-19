@@ -303,7 +303,7 @@ void dsp::LoadToFold::construct () try
   unsigned filter_channels;
 
   if (config->is_inverse_filterbank) {
-    convole_when = config->inverse_filterbank.get_convolve_when();
+    convolve_when = config->inverse_filterbank.get_convolve_when();
     filter_channels = config->inverse_filterbank.get_nchan();
 
     filterbanked = new_time_series();
@@ -394,10 +394,10 @@ void dsp::LoadToFold::construct () try
   TimeSeries* convolved = filterbanked;
 
   bool filterbank_after_dedisp
-    = convole_when == Filterbank::Config::Before;
+    = convolve_when == Filterbank::Config::Before;
 
   if (config->coherent_dedispersion &&
-      convole_when != Filterbank::Config::During)
+      convolve_when != Filterbank::Config::During)
   {
     if (!convolution)
       convolution = new Convolution;

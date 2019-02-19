@@ -30,7 +30,7 @@ namespace dsp
       Never
     };
 
-    Config ();
+    Config () {};
 
     virtual void set_nchan (unsigned n) { nchan = n; }
     virtual unsigned get_nchan () const { return nchan; }
@@ -48,7 +48,7 @@ namespace dsp
     virtual void set_stream (void*) = 0;
 
     //! Return a new Convolution instance and configure it
-    virtual Convolution* create ();
+    virtual Convolution* create () = 0;
 
   protected:
 
