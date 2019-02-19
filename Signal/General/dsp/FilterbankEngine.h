@@ -34,8 +34,8 @@ namespace dsp {
     //! Finish up
     virtual void finish () { }
 
-    // virtual void set_passband (dsp::Response* _passband);
-    //
+    virtual void set_passband (dsp::Response* _passband) { passband = _passband; }
+
     // virtual const dsp::Response* get_passband () const ;
 
   protected:

@@ -38,6 +38,12 @@ void dsp::Filterbank::set_engine (Engine* _engine)
   engine = _engine;
 }
 
+dsp::Filterbank::Engine* dsp::Filterbank::get_engine ()
+{
+  return engine;
+}
+
+
 void dsp::Filterbank::prepare ()
 {
   if (verbose)

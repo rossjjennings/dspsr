@@ -123,6 +123,8 @@ namespace dsp {
 
     void set_engine (Engine*);
 
+    Engine* get_engine();
+
 
   protected:
 

@@ -72,6 +72,7 @@ namespace dsp {
     //! Engine used to perform discrete convolution step
     class Engine;
     void set_engine (Engine*);
+    Engine* get_engine();
 
   protected:
 

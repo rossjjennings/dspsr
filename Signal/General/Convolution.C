@@ -64,6 +64,10 @@ void dsp::Convolution::set_engine (Engine * _engine)
   engine = _engine;
 }
 
+dsp::Convolution::Engine* dsp::Convolution::get_engine () {
+  return engine;
+}
+
 //! Set the frequency response function
 void dsp::Convolution::set_response (Response* _response)
 {

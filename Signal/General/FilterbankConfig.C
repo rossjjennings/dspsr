@@ -59,6 +59,8 @@ dsp::Filterbank* dsp::Filterbank::Config::create ()
     gpu_scratch->set_memory (device_memory);
     filterbank->set_scratch (gpu_scratch);
   }
+#else
+  filterbank->set_engine (new FilterbankEngineCPU);
 #endif
 
   return filterbank.release();

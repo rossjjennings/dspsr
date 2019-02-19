@@ -27,10 +27,10 @@ namespace dsp
     Filterbank* create ();
 
     //! Set the device on which the unpacker will operate
-    void set_device (Memory*);
+    // void set_device (Memory*);
 
     //! Set the stream information for the device
-    void set_stream (void*);
+    // void set_stream (void*);
 
   };
 

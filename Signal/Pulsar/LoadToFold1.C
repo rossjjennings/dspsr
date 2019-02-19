@@ -358,16 +358,16 @@ void dsp::LoadToFold::construct () try
       filterbank->set_input (unpacked);
       filterbank->set_output (filterbanked);
       // default engine is the CPU engine
-      dsp::FilterbankEngineCPU* filterbank_engine = new dsp::FilterbankEngineCPU;
+      // dsp::FilterbankEngineCPU* filterbank_engine = filterbank->get_engine();
 
       if (convolve_when == Convolution::Config::During)
       {
         filterbank->set_response (response);
         if (!config->integration_turns)
-          filterbank_engine->set_passband(passband);
-          // filterbank->get_engine()->set_passband (passband);
+          // filterbank_engine->set_passband(passband);
+          filterbank->get_engine()->set_passband (passband);
       }
-      filterbank->set_engine (filterbank_engine);
+      // filterbank->set_engine (filterbank_engine);
       // Get order of operations correct
       if (!convolve_when == Convolution::Config::Before){
         operations.push_back (filterbank.get());
