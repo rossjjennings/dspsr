@@ -24,7 +24,7 @@ using namespace std;
 
 using dsp::Filterbank;
 
-Filterbank::Config::Config ()
+dsp::Filterbank::Config::Config ()
 {
   memory = 0;
   stream = 0; //(void*)-1;
@@ -35,7 +35,7 @@ Filterbank::Config::Config ()
 }
 
 std::ostream& dsp::operator << (std::ostream& os,
-				const Filterbank::Config& config)
+				const dsp::Filterbank::Config& config)
 {
   os << config.get_nchan();
   if (config.get_convolve_when() == Filterbank::Config::Before)
@@ -49,7 +49,7 @@ std::ostream& dsp::operator << (std::ostream& os,
 }
 
 //! Extraction operator
-std::istream& dsp::operator >> (std::istream& is, Filterbank::Config& config)
+std::istream& dsp::operator >> (std::istream& is, dsp::Filterbank::Config& config)
 {
   unsigned value;
   is >> value;

@@ -17,13 +17,28 @@
 namespace dsp
 {
   class Filterbank::Config : public Convolution::Config
-  {};
+  {
 
+  public:
+
+    Config();
+
+    //! Return a new Filterbank instance and configure it
+    Filterbank* create ();
+
+    //! Set the device on which the unpacker will operate
+    void set_device (Memory*);
+
+    //! Set the stream information for the device
+    void set_stream (void*);
+
+  };
   //! Insertion operator
   std::ostream& operator << (std::ostream&, const Filterbank::Config&);
 
   //! Extraction operator
   std::istream& operator >> (std::istream&, Filterbank::Config&);
+
 }
 
 #endif

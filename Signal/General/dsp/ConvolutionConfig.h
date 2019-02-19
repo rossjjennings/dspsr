@@ -17,15 +17,11 @@ namespace dsp
 {
   class Convolution::Config
   {
-    //! Insertion operator
-    friend std::ostream& operator << (std::ostream&, const Convolution::Config&);
 
-    //! Extraction operator
-    friend std::istream& operator >> (std::istream&, Convolution::Config&);
 
   public:
 
-    //! When dedispersion takes place with respect to filterbank
+    //! When dedispersion takes place
     enum When
     {
       Before,
@@ -36,23 +32,23 @@ namespace dsp
 
     Config ();
 
-    void set_nchan (unsigned n) { nchan = n; }
-    unsigned get_nchan () const { return nchan; }
+    virtual void set_nchan (unsigned n) { nchan = n; }
+    virtual unsigned get_nchan () const { return nchan; }
 
-    void set_freq_res (unsigned n) { freq_res = n; }
-    unsigned get_freq_res () const { return freq_res; }
+    virtual void set_freq_res (unsigned n) { freq_res = n; }
+    virtual unsigned get_freq_res () const { return freq_res; }
 
-    void set_convolve_when (When w) { when = w; }
-    When get_convolve_when () const { return when; }
+    virtual void set_convolve_when (When w) { when = w; }
+    virtual When get_convolve_when () const { return when; }
 
     //! Set the device on which the unpacker will operate
-    void set_device (Memory*);
+    virtual void set_device (Memory*) = 0;
 
     //! Set the stream information for the device
-    void set_stream (void*);
+    virtual void set_stream (void*) = 0;
 
     //! Return a new Convolution instance and configure it
-    Convolution* create ();
+    virtual Convolution* create ();
 
   protected:
 
@@ -64,7 +60,11 @@ namespace dsp
 
   };
 
+  //! Insertion operator
+  std::ostream& operator << (std::ostream&, const Convolution::Config&);
 
+  //! Extraction operator
+  std::istream& operator >> (std::istream&, Convolution::Config&);
 }
 
 #endif

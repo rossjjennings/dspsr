@@ -34,7 +34,7 @@ dsp::InverseFilterbank::Config::Config ()
 }
 
 std::ostream& dsp::operator << (std::ostream& os,
-				const InverseFilterbank::Config& config)
+				const dsp::InverseFilterbank::Config& config)
 {
   os << config.get_nchan();
   if (config.get_convolve_when() == InverseFilterbank::Config::Before)
@@ -48,7 +48,7 @@ std::ostream& dsp::operator << (std::ostream& os,
 }
 
 //! Extraction operator
-std::istream& dsp::operator >> (std::istream& is, InverseFilterbank::Config& config)
+std::istream& dsp::operator >> (std::istream& is, dsp::InverseFilterbank::Config& config)
 {
   unsigned value;
   is >> value;
