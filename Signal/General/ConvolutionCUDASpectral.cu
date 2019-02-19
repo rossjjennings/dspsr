@@ -90,7 +90,11 @@ CUDA::ConvolutionEngineSpectral::ConvolutionEngineSpectral (cudaStream_t _stream
   work_area_size = 0;
 
   buf = 0;
+  buf_size = 0;
   d_kernels = 0;
+
+  input_stride = 0;
+  output_stride = 0;
 }
 
 CUDA::ConvolutionEngineSpectral::~ConvolutionEngineSpectral()
@@ -319,10 +323,16 @@ void CUDA::ConvolutionEngineSpectral::setup_batched (const dsp::TimeSeries* inpu
   size_t batched_buffer_size = npart * npt_bwd * nchan * npol * sizeof (cufftComplex);
   if (batched_buffer_size > buf_size)
   {
-    error = cudaFree (buf);
-    if (error != cudaSuccess)
-      throw Error (FailedCall, "CUDA::ConvolutionEngineSpectral::setup_batched",
-                   "cudaFree(%x): %s", &buf, cudaGetErrorString (error));
+    if (dsp::Operation::verbose)
+      cerr << "CUDA::ConvolutionEngineSpectral::setup_batched batched_buffer_"
+           << " size=" << batched_buffer_size << " buf_size=" << buf_size << endl;
+    if (buf)
+    {
+      error = cudaFree (buf);
+      if (error != cudaSuccess)
+        throw Error (FailedCall, "CUDA::ConvolutionEngineSpectral::setup_batched",
+                     "cudaFree(%x): %s", &buf, cudaGetErrorString (error));
+    }
 
     error = cudaMalloc ((void **) &buf, batched_buffer_size);
     if (error != cudaSuccess)
