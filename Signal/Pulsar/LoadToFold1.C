@@ -301,8 +301,11 @@ void dsp::LoadToFold::construct () try
 
   Convolution::Config::When convolve_when;
   unsigned filter_channels;
+  bool using_inverse_filterbank = false;
 
-  if (config->is_inverse_filterbank) {
+  if (config->inverse_filterbank.get_nchan() != 0) {
+    // using inverse filterbank
+    using_inverse_filterbank = true;
     convolve_when = config->inverse_filterbank.get_convolve_when();
     filter_channels = config->inverse_filterbank.get_nchan();
 
@@ -319,39 +322,21 @@ void dsp::LoadToFold::construct () try
     inverse_filterbank->set_input (unpacked);
     inverse_filterbank->set_output (filterbanked);
     // default engine is the CPU engine
-    dsp::InverseFilterbankEngineCPU* inverse_filterbank_engine = \
-      new dsp::InverseFilterbankEngineCPU;
-    // for now, inverse filterbank does convolution during inversion.
-    inverse_filterbank->set_response (response);
-    inverse_filterbank->set_engine (inverse_filterbank_engine);
-
-    // temporary hack
-    operations.push_back (inverse_filterbank.get());
-    // filterbank = new_time_series();
-    // inverse_filterbank = new InverseFilterbank;
-    // inverse_filterbank->set_output_nchan(1);
-    // if (!config->input_buffering) {
-    //   inverse_filterbank->set_buffering_policy (NULL);
-    // }
-    // inverse_filterbank->set_input (unpacked);
-    // inverse_filterbank->set_output (filterbanked);
-    // // default engine is the CPU engine
     // dsp::InverseFilterbankEngineCPU* inverse_filterbank_engine = \
     //   new dsp::InverseFilterbankEngineCPU;
-    // // for now, inverse filterbank does convolution during inversion.
-    // inverse_filterbank->set_response (response);
+    // for now, inverse filterbank does convolution during inversion.
+    inverse_filterbank->set_response (response);
     // inverse_filterbank->set_engine (inverse_filterbank_engine);
-    //
-    // // temporary hack
-    // config->filterbank.set_convolve_when(Filterbank::Config::During);
-    // operations.push_back (inverse_filterbank.get());
+
+    if (!convolve_when == Convolution::Config::Before){
+      operations.push_back (inverse_filterbank.get());
+    }
   } else {
     // filterbank is performing channelisation
     convolve_when = config->filterbank.get_convolve_when();
     filter_channels = config->filterbank.get_nchan();
     if (filter_channels > 1)
     {
-
       // new storage for filterbank output (must be out-of-place)
       filterbanked = new_time_series ();
 
@@ -375,7 +360,7 @@ void dsp::LoadToFold::construct () try
       // default engine is the CPU engine
       dsp::FilterbankEngineCPU* filterbank_engine = new dsp::FilterbankEngineCPU;
 
-      if (convolve_when == Filterbank::Config::During)
+      if (convolve_when == Convolution::Config::During)
       {
         filterbank->set_response (response);
         if (!config->integration_turns)
@@ -383,21 +368,22 @@ void dsp::LoadToFold::construct () try
           // filterbank->get_engine()->set_passband (passband);
       }
       filterbank->set_engine (filterbank_engine);
-
       // Get order of operations correct
-      if (!convolve_when == Filterbank::Config::Before)
+      if (!convolve_when == Convolution::Config::Before){
         operations.push_back (filterbank.get());
+      }
     }
   }
+
 
   // output of convolved will be filterbanked|unpacked
   TimeSeries* convolved = filterbanked;
 
   bool filterbank_after_dedisp
-    = convolve_when == Filterbank::Config::Before;
+    = convolve_when == Convolution::Config::After;
 
   if (config->coherent_dedispersion &&
-      convolve_when != Filterbank::Config::During)
+      convolve_when != Convolution::Config::During)
   {
     if (!convolution)
       convolution = new Convolution;
@@ -443,8 +429,13 @@ void dsp::LoadToFold::construct () try
   else
     prepare_interchan (convolved);
 
-  if (filterbank_after_dedisp && filterbank)
-    operations.push_back (filterbank.get());
+  if (filterbank_after_dedisp && filterbank) {
+    if (! using_inverse_filterbank) {
+      operations.push_back (filterbank.get());
+    } else {
+      operations.push_back (inverse_filterbank.get());
+    }
+  }
 
   if (config->plfb_nbin)
   {

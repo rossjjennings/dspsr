@@ -28,76 +28,11 @@ dsp::InverseFilterbank::Config::Config ()
   memory = 0;
   stream = 0; //(void*)-1;
 
-  nchan = 1;
+  nchan = 0; // unspecified. If this stays 0, then no inverse filterbank is applied.
   freq_res = 0;  // unspecified
   when = During;
 }
 
-std::ostream& dsp::operator << (std::ostream& os,
-				const dsp::InverseFilterbank::Config& config)
-{
-  os << config.get_nchan();
-  if (config.get_convolve_when() == InverseFilterbank::Config::Before)
-    os << ":B";
-  else if (config.get_convolve_when() == InverseFilterbank::Config::During)
-    os << ":D";
-  else if (config.get_freq_res() != 1)
-    os << ":" << config.get_freq_res();
-
-  return os;
-}
-
-//! Extraction operator
-std::istream& dsp::operator >> (std::istream& is, dsp::InverseFilterbank::Config& config)
-{
-  unsigned value;
-  is >> value;
-
-  config.set_nchan (value);
-  config.set_convolve_when (InverseFilterbank::Config::After);
-
-  if (is.eof())
-    return is;
-
-  if (is.peek() != ':')
-  {
-    is.fail();
-    return is;
-  }
-
-  // throw away the colon
-  is.get();
-
-  if (is.peek() == 'D' || is.peek() == 'd')
-  {
-    is.get();  // throw away the D
-    config.set_convolve_when (InverseFilterbank::Config::During);
-  }
-  else if (is.peek() == 'B' || is.peek() == 'b')
-  {
-    is.get();  // throw away the B
-    config.set_convolve_when (InverseFilterbank::Config::Before);
-  }
-  else
-  {
-    unsigned nfft;
-    is >> nfft;
-    config.set_freq_res (nfft);
-  }
-
-  return is;
-}
-
-//! Set the device on which the unpacker will operate
-void dsp::InverseFilterbank::Config::set_device (Memory* mem)
-{
-  memory = mem;
-}
-
-void dsp::InverseFilterbank::Config::set_stream (void* ptr)
-{
-  stream = ptr;
-}
 
 //! Return a new InverseFilterbank instance and configure it
 dsp::InverseFilterbank* dsp::InverseFilterbank::Config::create ()
@@ -125,8 +60,9 @@ dsp::InverseFilterbank* dsp::InverseFilterbank::Config::create ()
     gpu_scratch->set_memory (device_memory);
     filterbank->set_scratch (gpu_scratch);
   }
-// #else
-//   filterbank->set_engine (new dsp::InverseFilterbankEngineCPU);
+#else
+  // default engine is the CPU engine.
+  filterbank->set_engine (new dsp::InverseFilterbankEngineCPU);
 #endif
 
   return filterbank.release();

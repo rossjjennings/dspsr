@@ -33,11 +33,6 @@ namespace dsp
     void set_stream (void*);
 
   };
-  //! Insertion operator
-  std::ostream& operator << (std::ostream&, const Filterbank::Config&);
-
-  //! Extraction operator
-  std::istream& operator >> (std::istream&, Filterbank::Config&);
 
 }
 

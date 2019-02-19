@@ -33,12 +33,6 @@ namespace dsp
 
 
   };
-  //! Insertion operator
-  std::ostream& operator << (std::ostream&, const InverseFilterbank::Config&);
-
-  //! Extraction operator
-  std::istream& operator >> (std::istream&, InverseFilterbank::Config&);
-
 }
 
 #endif
