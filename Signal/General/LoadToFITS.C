@@ -40,6 +40,7 @@
 #include "dsp/TScrunchCUDA.h"
 #include "dsp/MemoryCUDA.h"
 #include "dsp/TimeSeriesCUDA.h"
+#include "dsp/SampleDelayCUDA.h"
 #include "dsp/FITSDigitizerCUDA.h"
 #include "dsp/TransferBitSeriesCUDA.h"
 #endif
@@ -426,8 +427,17 @@ void dsp::LoadToFITS::construct () try
     SampleDelay* delay = new SampleDelay;
 
     delay->set_input (timeseries);
-    delay->set_output (timeseries);
+    delay->set_output (timeseries = new_TimeSeries());
     delay->set_function (new Dedispersion::SampleDelay);
+
+#if HAVE_CUDA
+    if (run_on_gpu)
+    {
+      delay->set_engine (new CUDA::SampleDelayEngine (stream));
+      timeseries->set_memory (device_memory);
+      timeseries->set_engine (new CUDA::TimeSeriesEngine (device_memory));
+    }
+#endif
 
     operations.push_back( delay );
   }
@@ -480,6 +490,11 @@ void dsp::LoadToFITS::construct () try
     if (nblock < 1) nblock = 1;
     digitizer->set_rescale_nblock (nblock);
     cerr << "digifits: using "<<nblock<<" blocks running mean for scales and constant ("<<tblock*nblock<<") seconds"<<endl;
+#if HAVE_CUDA
+    if (run_on_gpu)
+      Error (InvalidParam, "dsp::LoadToFITS::construct",
+             "rescale seconds not supported in CUDA engine");
+#endif
   }
 
   operations.push_back( digitizer );

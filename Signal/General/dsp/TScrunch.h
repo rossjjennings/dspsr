@@ -42,6 +42,9 @@ namespace dsp {
     //! Prepare input buffer
     void prepare ();
 
+    //! Prepare output timeseries
+    void prepare_output ();
+
     //! Perform decimation
     void transformation ();
     void tfp_tscrunch ();

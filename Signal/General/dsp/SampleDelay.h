@@ -33,6 +33,9 @@ namespace dsp {
     //! Computes the total delay and prepares the input buffer
     void prepare ();
 
+    //! Prepares the output data buffer
+    void prepare_output ();
+
     //! Get the minimum number of samples required for operation
     uint64_t get_minimum_samples () { return total_delay; }
 
@@ -45,6 +48,10 @@ namespace dsp {
     //! Get the zero delay (in samples)
     int64_t get_zero_delay () const;
 
+    //! Engine used to perform application of delays
+    class Engine;
+    void set_engine (Engine*);
+
   protected:
 
     //! The total delay (in samples)
@@ -52,6 +59,9 @@ namespace dsp {
 
     //! The zero delay (in samples)
     int64_t zero_delay;
+
+    //! Interface to alternate processing engine (e.g. GPU)
+    Reference::To<Engine> engine;
 
     //! Flag set when delays have been initialized
     bool built;
@@ -61,6 +71,16 @@ namespace dsp {
 
     //! The sample delay function
     Reference::To<SampleDelayFunction> function;
+
+  };
+
+  class SampleDelay::Engine : public Reference::Able
+  {
+  public:
+
+    virtual void set_delays (unsigned npol, unsigned nchan, int64_t zero_delay, SampleDelayFunction * function) = 0;
+
+    virtual void retard(const TimeSeries* in, TimeSeries* out) = 0;
 
   };
 

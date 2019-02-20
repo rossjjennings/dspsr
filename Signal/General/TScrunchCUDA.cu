@@ -225,7 +225,7 @@ void CUDA::TScrunchEngine::fpt_tscrunch(const dsp::TimeSeries *in,
          << endl;
 
   unsigned nthreads = 512;
-  if (sfactor >= 16)
+  if (sfactor >= 8)
   {
     unsigned odat_per_block = nthreads / 32;
     dim3 blocks (out->get_ndat()/odat_per_block, in->get_nchan(), in->get_npol());
