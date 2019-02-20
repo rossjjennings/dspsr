@@ -18,6 +18,8 @@
 #include "MJD.h"
 #include "Rational.h"
 
+#include <vector>
+
 // forward declaration of text interface
 namespace TextInterface
 {
@@ -32,17 +34,28 @@ namespace dsp
 
   public:
 
+    struct fir_filter {
+      // number of taps in FIR filter
+      unsigned ntaps;
+      // number of output channels from PFB step
+      unsigned nchan_pfb;
+      // PFB oversampling ratio
+      Rational oversamp;
+      // FIR coefficients
+      std::vector<float> coeff;
+    };
+
     //! Verbosity flag
     static bool verbose;
 
     //! Null constructor
-    Observation (); 
+    Observation ();
 
     Observation (const Observation&);
     const Observation& operator = (const Observation&);
 
     //! Virtual destructor (see Effective C++ Item 14)
-    virtual ~Observation(); 
+    virtual ~Observation();
 
     //! Same as operator= but takes a pointer
     virtual void copy (const Observation* obs) { operator=( *obs ); }
@@ -71,7 +84,7 @@ namespace dsp
     virtual void set_nchan (unsigned _nchan) { nchan = _nchan; }
     //! Return the number of channels into which the band is divided
     unsigned get_nchan () const { return nchan; }
-    
+
     //! Set the number of polarizations
     virtual void set_npol (unsigned _npol) { npol = _npol; }
     //! Return the number of polarizations
@@ -135,7 +148,7 @@ namespace dsp
     virtual void set_start_time (MJD _start_time) { start_time = _start_time; }
     //! Return the start time of the leading edge of the first time sample
     MJD get_start_time () const { return start_time; }
-    
+
     //! Set the sampling rate (time samples per second in Hz)
     virtual void set_rate (double _rate) { rate = _rate; }
     //! Return the sampling rate (time samples per second in Hz)
@@ -202,8 +215,8 @@ namespace dsp
     //! Set the calibrator frequency
     virtual void set_calfreq (double _calfreq) {calfreq = _calfreq;}
     //! get the calibrator frequency
-    double get_calfreq() const {return calfreq;} 
-    
+    double get_calfreq() const {return calfreq;}
+
     //! Set the oversampling factor
     virtual void set_oversampling_factor (const Rational& _osf)
     { oversampling_factor = _osf; }
@@ -211,6 +224,22 @@ namespace dsp
     //! Get the oversampling factor
     const Rational& get_oversampling_factor () const
     { return oversampling_factor; }
+
+    virtual void set_deripple (const std::vector<fir_filter> _deripple)
+    {
+      deripple = _deripple;
+    }
+
+    const std::vector<fir_filter> get_deripple () const
+    {
+      return deripple;
+    }
+
+    const unsigned get_deripple_stages () const
+    {
+      return deripple.size();
+    }
+
 
     //! Change the state and correct other attributes accordingly
     virtual void change_state (Signal::State new_state);
@@ -240,7 +269,7 @@ namespace dsp
       { return get_nbytes (get_ndat()); }
 
     uint64_t verbose_nbytes (uint64_t nsamples) const;
-    
+
     //! Return the size in bytes of one time sample
     float get_nbyte () const
       { return float(nbit*get_npol()*get_nchan()*get_ndim()) / 8.0; }
@@ -301,7 +330,7 @@ namespace dsp
 
     //! Start time of the leading edge of the first time sample
     MJD start_time;
-    
+
     //! Observation identifier
     std::string identifier;
 
@@ -343,6 +372,10 @@ namespace dsp
 
     //! oversampling factor
     Rational oversampling_factor;
+
+    //! information about deripple correction
+
+    std::vector<fir_filter> deripple;
 
   private:
 
@@ -396,7 +429,7 @@ int mpiPack (const dsp::Observation&,
 	     void* outbuf, int outcount, int* position, MPI_Comm comm);
 
 //! Unpack an Observation from inbuf
-int mpiUnpack (void* inbuf, int insize, int* position, 
+int mpiUnpack (void* inbuf, int insize, int* position,
 	       dsp::Observation*, MPI_Comm comm);
 
 #endif

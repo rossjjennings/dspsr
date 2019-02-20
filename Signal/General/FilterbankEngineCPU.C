@@ -40,14 +40,6 @@ dsp::FilterbankEngineCPU::~FilterbankEngineCPU ()
 {
 }
 
-// void dsp::FilterbankEngineCPU::set_passband (dsp::Response* _passband) {
-//   passband = _passband;
-// }
-//
-// const dsp::Response* dsp::FilterbankEngineCPU::get_passband () const {
-//   return passband;
-// }
-
 void dsp::FilterbankEngineCPU::setup (dsp::Filterbank* filterbank)
 {
   verbose = filterbank->verbose;

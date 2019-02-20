@@ -32,8 +32,8 @@ dsp::InverseFilterbankEngineCPU::~InverseFilterbankEngineCPU ()
 }
 
 double dsp::InverseFilterbankEngineCPU::setup_fft_plans (
-  dsp::InverseFilterbank* filterbank
-) {
+  dsp::InverseFilterbank* filterbank )
+{
 
   const TimeSeries* input = filterbank->get_input();
   TimeSeries* output = filterbank->get_output();
