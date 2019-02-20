@@ -25,6 +25,11 @@ dsp::SampleDelay::SampleDelay ()
   set_buffering_policy (new InputBuffering (this));
 }
 
+void dsp::SampleDelay::set_engine (Engine* _engine)
+{
+  engine = _engine;
+}
+
 uint64_t dsp::SampleDelay::get_total_delay () const
 {
   if (!built)
@@ -65,8 +70,8 @@ void dsp::SampleDelay::build ()
 
     for (unsigned ipol=0; ipol < input_npol; ipol++)
       for (unsigned ichan=0; ichan < input_nchan; ichan++)
-	if (function->get_delay (ichan, ipol) > total_delay)
-	  total_delay = function->get_delay (ichan, ipol);
+        if (function->get_delay (ichan, ipol) > total_delay)
+          total_delay = function->get_delay (ichan, ipol);
     
     return;
   }
@@ -76,11 +81,11 @@ void dsp::SampleDelay::build ()
   for (unsigned ipol=0; ipol < input_npol; ipol++)
     for (unsigned ichan=0; ichan < input_nchan; ichan++)
       if (function->get_delay (ichan, ipol) > zero_delay)
-	zero_delay = function->get_delay (ichan, ipol);
+        zero_delay = function->get_delay (ichan, ipol);
 
   if (verbose)
     cerr << "dsp::SampleDelay::build zero delay = " << zero_delay 
-	 << " samples" << endl;
+         << " samples" << endl;
 
   total_delay = 0;
 
@@ -90,16 +95,25 @@ void dsp::SampleDelay::build ()
       uint64_t relative_delay = zero_delay - function->get_delay(ichan, ipol);
       // cerr << "relative_delay=" << relative_delay << endl;
       if (relative_delay > total_delay)
-	total_delay = relative_delay;
+        total_delay = relative_delay;
     }
 
   if (verbose)
     cerr << "dsp::SampleDelay::build total delay = " << total_delay 
-	 << " samples" << endl;
+         << " samples" << endl;
+
+  if (engine)
+  {
+    if (verbose)
+      cerr << "dsp::SampleDelay::build engine->set_delays(" << input_npol
+           << "," << input_nchan << "," << zero_delay << ", function)" << endl;
+    engine->set_delays(input_npol, input_nchan, zero_delay, function);
+  }
 
   built = true;
 }
 
+//! prepare the transformation
 void dsp::SampleDelay::prepare ()
 {
   if (function->match(input) || !built)
@@ -112,6 +126,46 @@ void dsp::SampleDelay::prepare ()
     cerr << "dsp::SampleDelay::prepare reserve=" << total_delay << endl;
 
   get_buffering_policy()->set_minimum_samples (total_delay);
+
+  prepare_output ();
+}
+
+//! prepare the output timeseries
+void dsp::SampleDelay::prepare_output ()
+{
+  const uint64_t input_ndat  = input->get_ndat();
+  uint64_t output_ndat = 0;
+  if (input_ndat < total_delay)
+  {
+    if (verbose)
+      cerr << "dsp::SampleDelay::prepare_output insufficient data\n"
+        "  input ndat=" << input_ndat << " total delay=" << total_delay  << endl;
+  }
+  else
+    output_ndat = input_ndat - total_delay;
+
+  if (verbose)
+    cerr << "dsp::SampleDelay::prepare_output input_ndat=" << input_ndat
+         << " output_ndat=" << output_ndat << " total_delay=" << total_delay
+         << endl;
+
+  // prepare the output timeseries
+  if (verbose)
+    cerr << "dsp::SampleDelay::prepare_output output->copy_configuration(input)" << endl;
+  get_output()->copy_configuration (get_input());
+
+  if (input.get() != output.get())
+  {
+    output->resize (output_ndat);
+    get_output()->set_input_sample (get_input()->get_input_sample());
+  }
+  else
+  {
+    output->set_ndat (output_ndat);
+  }
+
+  // zero_delay
+  output->change_start_time (zero_delay);
 }
 
 /*!
@@ -140,56 +194,54 @@ void dsp::SampleDelay::transformation ()
   else
     output_ndat = input_ndat - total_delay;
 
+  if (verbose)
+    cerr << "dsp::SampleDelay::transformation set_next_start(" << output_ndat << ")" << endl;
   get_buffering_policy()->set_next_start (output_ndat);
-
-  // prepare the output TimeSeries
-  output->copy_configuration (input);
-
-  if (output != input)
-    output->resize (output_ndat);
-  else
-    output->set_ndat (output_ndat);
-
-  // zero_delay
-  output->change_start_time (zero_delay);
 
   if (!output_ndat)
     return;
 
-  uint64_t output_nfloat = output_ndat * input_ndim;
+  if (engine)
+  {
+    if (verbose)
+      cerr << "dsp::SampleDelay::transformation engine->retard (input, output)" << endl;
+    engine->retard (input, output);
+  }
+  else
+  {
+    uint64_t output_nfloat = output_ndat * input_ndim;
 
-  for (unsigned ipol=0; ipol < input_npol; ipol++) {
+    for (unsigned ipol=0; ipol < input_npol; ipol++) {
 
-    for (unsigned ichan=0; ichan < input_nchan; ichan++) {
+      for (unsigned ichan=0; ichan < input_nchan; ichan++) {
 
-      const float* in_data = input->get_datptr (ichan, ipol);
+        const float* in_data = input->get_datptr (ichan, ipol);
 
-      int64_t applied_delay = 0;
+        int64_t applied_delay = 0;
 
-      if (zero_delay)
-	// delays are relative to maximum delay
-	applied_delay = zero_delay - function->get_delay(ichan, ipol);
-      else
-	// delays are absolute and guaranteed positive
-	applied_delay = function->get_delay(ichan, ipol);
+        if (zero_delay)
+          // delays are relative to maximum delay
+          applied_delay = zero_delay - function->get_delay(ichan, ipol);
+        else
+          // delays are absolute and guaranteed positive
+          applied_delay = function->get_delay(ichan, ipol);
 
-      assert (applied_delay >= 0);
+        assert (applied_delay >= 0);
 
 #ifdef _DEBUG
-      cerr << "ipol=" << ipol << " ichan=" << ichan 
-	   << " delay=" << applied_delay << endl;
+        cerr << "ipol=" << ipol << " ichan=" << ichan
+             << " delay=" << applied_delay << endl;
 #endif
 
-      in_data += applied_delay * input_ndim;
+        in_data += applied_delay * input_ndim;
 
-      float* out_data = output->get_datptr (ichan, ipol);
+        float* out_data = output->get_datptr (ichan, ipol);
 
-      for (uint64_t idat=0; idat < output_nfloat; idat++)
-	out_data[idat] = in_data[idat];
+        for (uint64_t idat=0; idat < output_nfloat; idat++)
+          out_data[idat] = in_data[idat];
 
+      }
     }
-
   }
-
   function -> mark (output);
 }
