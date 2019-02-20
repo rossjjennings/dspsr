@@ -158,6 +158,9 @@ void dsp::Detection::resize_output ()
   bool inplace = input.get() == output.get();
   bool reshape = true;
 
+  if (verbose)
+    cerr << "dsp::Detection::resize_output inplace=" << inplace << endl;
+
   unsigned output_ndim = 1;
   unsigned output_npol = input->get_npol();
 
@@ -176,7 +179,11 @@ void dsp::Detection::resize_output ()
     output_npol = 1;
 
   if (!inplace)
+  {
+    if (verbose)
+      cerr << "dsp::Detection::resize_output output->copy_configuration (input)" << endl;
     get_output()->copy_configuration( get_input() );
+  }
 
   if (!inplace)
   {

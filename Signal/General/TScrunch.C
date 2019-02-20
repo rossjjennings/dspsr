@@ -69,59 +69,80 @@ void dsp::TScrunch::set_engine( Engine* _engine )
 
 void dsp::TScrunch::prepare ()
 {
-  if (!has_buffering_policy())
-    return;
-
-  unsigned sfactor = get_factor();
-
+  sfactor = get_factor();
   if (verbose)
     cerr << "dsp::TScrunch::prepare factor=" << sfactor << endl;
 
-  get_buffering_policy()->set_minimum_samples ( sfactor );
+  if (has_buffering_policy())
+  {
+    if (verbose)
+      cerr << "dsp::TScrunch::prepare set_minimum_samples(" << sfactor << ")" << endl;
+    get_buffering_policy()->set_minimum_samples (sfactor);
+  }
+
+  if (verbose)
+    cerr << "dsp::TScrunch::prepare prepare_output()" << endl;
+  prepare_output ();
+}
+
+void dsp::TScrunch::prepare_output ()
+{
+  output_ndat = input->get_ndat() / sfactor;
+  if (verbose)
+    cerr << "dsp::TScrunch::prepare_output output_ndat=" << output_ndat << endl;
+
+  if (input.get() != output.get())
+  {
+    if (verbose)
+      cerr << "dsp::TScrunch::prepare_output copying configuration" << endl;
+    get_output()->copy_configuration (get_input());
+    get_output()->resize (output_ndat);
+    // this is necessary if we buffer further down the line otherwise, samples are misaligned
+    get_output()->set_input_sample (get_input()->get_input_sample() / sfactor);
+  }
+
+  output->rescale (sfactor);
+  output->set_rate (input->get_rate() / sfactor);
+  if (verbose)
+    cerr << "dsp::TScrunch::prepare_output done" << endl;
 }
 
 void dsp::TScrunch::transformation ()
 {
   sfactor = get_factor();
+  if (verbose)
+    cerr << "dsp::TScrunch::transformation" << endl;
+  prepare ();
+
+  if (sfactor == 1)
+    throw Error(InvalidState,"dsp::TScrunch::transformation",
+                "cannot support Tscrunch of 1");
 
   if (!sfactor)
     throw Error (InvalidState, "dsp::TScrunch::get_factor",
 		   "scrunch factor not set");
 
-  if (sfactor==1)
-  {
-    if( input.get() != output.get() )
-      output->operator=( *input );
-    return;
-  }
-
   if( !input->get_detected() )
     throw Error(InvalidState,"dsp::TScrunch::transformation()",
 		"invalid input state: " + tostring(input->get_state()));
 
-  output_ndat = input->get_ndat()/sfactor;
 
   if (verbose)
     cerr << "dsp::TScrunch::transformation input ndat=" << input->get_ndat()
          << " output ndat=" << output_ndat << " sfactor=" << sfactor << endl;
 
-  prepare ();
-
   if (has_buffering_policy())
     get_buffering_policy()->set_next_start (output_ndat * sfactor);
 
-  if (input.get() != output.get())
+  if (sfactor==1)
   {
-    get_output()->copy_configuration( get_input() );
-    get_output()->resize( output_ndat );
-    // this is necessary if we buffer further down the line
-    // otherwise, samples are misaligned
-    get_output()->set_input_sample (
-        get_input()->get_input_sample() / sfactor );
+    if (verbose)
+      cerr << "dsp::TScrunch::transformation sfactor=1, using copy operator" << endl;
+    if( input.get() != output.get() )
+      output->operator=( *input );
+    output->set_input_sample(input->get_input_sample());
+    return;
   }
-
-  output->rescale( sfactor );
-  output->set_rate( input->get_rate()/sfactor );
 
   switch (input->get_order())
   {

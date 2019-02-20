@@ -53,14 +53,16 @@ nobase_include_HEADERS += CUFFTError.h dsp/LaunchConfig.h \
   dsp/PScrunchCUDA.h dsp/PolnSelectCUDA.h \
   dsp/ConvolutionCUDA.h dsp/ConvolutionCUDASpectral.h \
   dsp/ConvolutionCUDACallbacks.h dsp/SpectralKurtosisCUDA.h \
-  dsp/SKComputerCUDA.h dsp/SKDetectorCUDA.h dsp/SKFilterbankCUDA.h
+  dsp/SKComputerCUDA.h dsp/SKDetectorCUDA.h dsp/SKFilterbankCUDA.h \
+  dsp/SampleDelayCUDA.h
 
 libdspdsp_la_SOURCES += CUFFTError.C LaunchConfig.C FilterbankCUDA.cu \
   TransferCUDA.C TransferBitSeriesCUDA.C DetectionCUDA.cu             \
   SKMaskerCUDA.cu FZoomCUDA.cu FScrunchCUDA.cu TScrunchCUDA.cu        \
   PScrunchCUDA.cu PolnSelectCUDA.cu SpectralKurtosisCUDA.cu \
   SKComputerCUDA.cu SKDetectorCUDA.cu SKFilterbankCUDA.cu \
-  ConvolutionCUDA.cu ConvolutionCUDASpectral.cu ConvolutionCUDACallbacks.cu
+  ConvolutionCUDA.cu ConvolutionCUDASpectral.cu ConvolutionCUDACallbacks.cu \
+  SampleDelayCUDA.cu
 
 bin_PROGRAMS += fftbatch_speed
 fftbatch_speed_SOURCES = fftbatch_speed.C
