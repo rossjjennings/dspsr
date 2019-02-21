@@ -62,7 +62,7 @@ namespace dsp {
         const char *format, T result);
 
     template <typename T>
-    void load_str_into_vector (std::string from, std::vector<T>& res);
+    void load_str_into_array (std::string from, T* buffer, int bufsize);
 
     //! Number of bytes offset from the beginning of acquisition
     uint64_t offset_bytes;
@@ -72,17 +72,15 @@ namespace dsp {
 
 }
 
-// res should already be of the length we want.
-// load_str_into_vector consumes the input string.
 template <typename T>
-void dsp::ASCIIObservation::load_str_into_vector ( std::string from, std::vector<T>& res ) {
+void dsp::ASCIIObservation::load_str_into_array ( std::string from, T* buffer, int bufsize ) {
   std::string val;
   std::string delimiter = ",";
   size_t pos=0;
-  for (unsigned i=0; i<res.size(); i++) {
+  for (unsigned i=0; i<bufsize; i++) {
     pos = from.find(delimiter);
     val = from.substr(0, pos);
-    res[i] = fromstring<T>(val);
+    buffer[i] = fromstring<T>(val);
     from.erase(0, pos + delimiter.length());
   }
 }

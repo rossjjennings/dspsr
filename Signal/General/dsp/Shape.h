@@ -67,7 +67,7 @@ namespace dsp {
 
     //! Borrow the data from the specified channel of another Shape
     void borrow (const Shape&, unsigned ichan=0);
-   
+
     //! Divide each point by factor
     const Shape& operator /= (float factor);
 
@@ -118,7 +118,7 @@ namespace dsp {
     void destroy ();
 
 #if PGPLOT
-    void plot (float centre, float width, const char* label, 
+    void plot (float centre, float width, const char* label,
 		bool swap=false, int dimension=0, bool one_poln=false);
 #endif
 
@@ -133,7 +133,7 @@ int mpiPack_size (const dsp::Shape&,
 		  MPI_Comm comm, int* size);
 int mpiPack      (const dsp::Shape&, void* outbuf,
 		  int outcount, int* position, MPI_Comm comm);
-int mpiUnpack    (void* inbuf, int insize, int* position, 
+int mpiUnpack    (void* inbuf, int insize, int* position,
 		  dsp::Shape*, MPI_Comm comm);
 #endif
 

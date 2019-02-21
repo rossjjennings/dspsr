@@ -180,7 +180,7 @@ fi
 AM_CONDITIONAL([HAVE_PYTHON], [test "$PYTHON" != :])
 
 #
-# Initialize variables used by Makefile.include 
+# Initialize variables used by Makefile.include
 #
 INCLUDE_CPPFLAGS="$PSRCHIVE_CPPFLAGS"
 AC_SUBST(INCLUDE_CPPFLAGS)
@@ -244,7 +244,8 @@ AC_CONFIG_FILES([Makefile
     More/Makefile
     More/Plotting/Makefile
     More/Applications/Makefile
-		python/Makefile])
+		python/Makefile
+    test/Makefile])
 
 AC_OUTPUT
 
@@ -254,7 +255,7 @@ if test x"$selected_formats" = x; then
   echo "WARNING: no file formats have been selected"
   echo "Please see http://dspsr.sourceforge.net/formats for details"
 else
-  echo "DSPSR will support these formats: $selected_formats" 
+  echo "DSPSR will support these formats: $selected_formats"
 fi
 
 echo

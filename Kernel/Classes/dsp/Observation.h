@@ -17,6 +17,7 @@
 #include "Types.h"
 #include "MJD.h"
 #include "Rational.h"
+#include "dsp/FIRFilter.h"
 
 #include <vector>
 
@@ -34,16 +35,16 @@ namespace dsp
 
   public:
 
-    struct fir_filter {
-      // number of taps in FIR filter
-      unsigned ntaps;
-      // number of output channels from PFB step
-      unsigned nchan_pfb;
-      // PFB oversampling ratio
-      Rational oversamp;
-      // FIR coefficients
-      std::vector<float> coeff;
-    };
+    // struct fir_filter {
+    //   // number of taps in FIR filter
+    //   unsigned ntaps;
+    //   // number of output channels from PFB step
+    //   unsigned nchan_pfb;
+    //   // PFB oversampling ratio
+    //   Rational oversamp;
+    //   // FIR coefficients
+    //   std::vector<float> coeff;
+    // };
 
     //! Verbosity flag
     static bool verbose;
@@ -225,21 +226,14 @@ namespace dsp
     const Rational& get_oversampling_factor () const
     { return oversampling_factor; }
 
-    virtual void set_deripple (const std::vector<fir_filter> _deripple)
-    {
-      deripple = _deripple;
-    }
+    virtual void set_deripple (const std::vector<FIRFilter>& _deripple)
+    { deripple = _deripple; }
 
-    const std::vector<fir_filter> get_deripple () const
-    {
-      return deripple;
-    }
+    const std::vector<FIRFilter> get_deripple () const { return deripple; }
 
-    const unsigned get_deripple_stages () const
-    {
-      return deripple.size();
-    }
-
+    // get the number of derippling stages,
+    // or the number of upsteam layers of channelization
+    const unsigned get_deripple_stages () const { return deripple.size(); }
 
     //! Change the state and correct other attributes accordingly
     virtual void change_state (Signal::State new_state);
@@ -374,8 +368,7 @@ namespace dsp
     Rational oversampling_factor;
 
     //! information about deripple correction
-
-    std::vector<fir_filter> deripple;
+    std::vector<FIRFilter> deripple;
 
   private:
 

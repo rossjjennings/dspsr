@@ -33,7 +33,8 @@ nobase_include_HEADERS = environ.h ascii_header.h Rational.h \
 	dsp/GenericEightBitUnpacker.h \
 	dsp/GenericFourBitUnpacker.h \
 	dsp/GenericTwoBitCorrection.h \
-	dsp/CommandLineHeader.h dsp/OutputFileShare.h
+	dsp/CommandLineHeader.h dsp/OutputFileShare.h \
+	dsp/FIRFilter.h
 
 libClasses_la_SOURCES = ascii_header.c Rational.C ASCIIObservation.C \
 	InputBufferingShare.C Reserve.C \
@@ -55,7 +56,8 @@ libClasses_la_SOURCES = ascii_header.c Rational.C ASCIIObservation.C \
 	GenericEightBitUnpacker.C \
 	GenericFourBitUnpacker.C \
 	GenericTwoBitCorrection.C \
-	CommandLineHeader.C OutputFileShare.C
+	CommandLineHeader.C OutputFileShare.C \
+	FIRFilter.C
 
 if HAVE_MPI
 libClasses_la_SOURCES += MPIRoot.C MPITrans.C MPIServer.C mpi_Observation.C

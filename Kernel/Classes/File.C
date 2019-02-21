@@ -32,8 +32,8 @@ using std::cerr;
 
 //! Constructor
 dsp::File::File (const char* name) : Seekable (name)
-{ 
-  init(); 
+{
+  init();
 }
     
 /*! The destructor is defined in the .C file so that the
@@ -65,7 +65,7 @@ void dsp::File::init()
 
 //! Return a pointer to a new instance of the appropriate sub-class
 dsp::File* dsp::File::create (const char* filename)
-{ 
+{
   if (verbose)
     std::cerr << "dsp::File::create filename='" << filename << endl;
 
@@ -78,13 +78,13 @@ dsp::File* dsp::File::create (const char* filename)
   File::Register& registry = get_register();
 
   if (verbose)
-    std::cerr << "dsp::File::create with " << registry.size() 
+    std::cerr << "dsp::File::create with " << registry.size()
 	      << " registered sub-classes" << std::endl;
 
   for (unsigned ichild=0; ichild < registry.size(); ichild++) try
   {
     if (verbose)
-      std::cerr << "dsp::File::create testing " 
+      std::cerr << "dsp::File::create testing "
                 << registry[ichild]->get_name() << endl;;
 
     if ( registry[ichild]->is_valid (filename) )
@@ -94,8 +94,8 @@ dsp::File* dsp::File::create (const char* filename)
                   << "::is_valid() returned true" << endl;
 
       File* child = registry.create (ichild);
-      child->open( filename );	
-      return child;	
+      child->open( filename );
+      return child;
     }
   }
   catch (Error& error)
@@ -105,7 +105,7 @@ dsp::File* dsp::File::create (const char* filename)
                 << registry[ichild]->get_name() << endl
                 << error.get_message() << endl;
   }
-  
+
   string msg = filename;
 
   msg += " not a recognized file format\n\t"
@@ -128,12 +128,12 @@ void dsp::File::open (const char* filename)
   close();
 
   open_file (filename);
-      
+
   if (get_info()->get_ndat() == 0)
     set_total_samples ();
   else if (verbose)
     cerr << "dsp::File::open ndat=" << get_info()->get_ndat() << endl;
- 
+
   current_filename = filename;
 
   // ensure that file is set to load the first sample after the header
@@ -146,7 +146,7 @@ void dsp::File::close ()
 {
   if (fd < 0)
     return;
-    
+
   int err = ::close (fd);
   if (err < 0)
     throw Error (FailedSys, "dsp::File::close", "failed close(%d)", fd);
@@ -186,7 +186,7 @@ int64_t dsp::File::load_bytes (unsigned char* buffer, uint64_t bytes)
   int64_t old_pos = lseek(fd,0,SEEK_CUR);
 
   ssize_t bytes_read = read (fd, buffer, size_t(bytes));
- 
+
   if (bytes_read < 0)
     perror ("dsp::File::load_bytes read error");
 
@@ -195,7 +195,7 @@ int64_t dsp::File::load_bytes (unsigned char* buffer, uint64_t bytes)
 
   if (verbose)
     cerr << "dsp::File::load_bytes bytes_read=" << bytes_read
-	 << " old_pos=" << old_pos << " new_pos=" << new_pos 
+	 << " old_pos=" << old_pos << " new_pos=" << new_pos
 	 << " end_pos=" << end_pos << endl;
 
   if( uint64_t(new_pos) >= end_pos ){
@@ -215,7 +215,7 @@ int64_t dsp::File::load_bytes_device (unsigned char* buffer, uint64_t bytes, voi
   cudaStream_t stream = (cudaStream_t) device_handle;
 
   if (verbose)
-    cerr << "dsp::File::load_bytes_device (" << (void *) buffer << ", " 
+    cerr << "dsp::File::load_bytes_device (" << (void *) buffer << ", "
          << bytes << ", " << (void *) stream << ")" << endl;
 
   cudaError_t result;
@@ -238,7 +238,7 @@ int64_t dsp::File::load_bytes_device (unsigned char* buffer, uint64_t bytes, voi
     }
 
     if (verbose)
-      cerr << "dsp::File::load_bytes_device cudaMallocHost() " <<  bytes 
+      cerr << "dsp::File::load_bytes_device cudaMallocHost() " <<  bytes
            << "bytes  for host_buffer" << endl;
     result = cudaMallocHost (&host_buffer, bytes);
     if (result != cudaSuccess)
@@ -258,9 +258,9 @@ int64_t dsp::File::load_bytes_device (unsigned char* buffer, uint64_t bytes, voi
   if (bytes_read > 0)
   {
     if (verbose)
-      cerr << "dsp::File::load_bytes_device cudaMemcpyAsync (" 
+      cerr << "dsp::File::load_bytes_device cudaMemcpyAsync ("
            << (void *) buffer << ", " << (void *) host_buffer
-           << ", " << bytes << ", cudaMemcpyHostToDevice, " 
+           << ", " << bytes << ", cudaMemcpyHostToDevice, "
            << (void *) stream << ")" << endl;
     result = cudaMemcpyAsync (buffer, host_buffer, bytes, cudaMemcpyHostToDevice, stream);
     if (result != cudaSuccess)
@@ -277,9 +277,9 @@ int64_t dsp::File::load_bytes_device (unsigned char* buffer, uint64_t bytes, voi
 int64_t dsp::File::seek_bytes (uint64_t bytes)
 {
   if (verbose)
-    cerr << "dsp::File::seek_bytes nbytes=" << bytes 
+    cerr << "dsp::File::seek_bytes nbytes=" << bytes
          << " header_bytes=" << header_bytes << endl;
-  
+
   if (fd < 0)
     throw Error (InvalidState, "dsp::File::seek_bytes", "invalid fd");
 
@@ -317,7 +317,7 @@ int64_t dsp::File::fstat_file_ndat (uint64_t tailer_bytes)
 
   if( verbose )
     cerr << "dsp::File::fstat_file_ndat(): buf=" << buf.st_size
-	 << " header_bytes=" << header_bytes 
+	 << " header_bytes=" << header_bytes
 	 << " tailer_bytes=" << tailer_bytes
 	 << " total_bytes=" << total_bytes << endl;
 
@@ -330,8 +330,3 @@ int64_t dsp::File::pad_bytes(unsigned char* buffer, int64_t bytes){
 	      "This class (%s) doesn't have a pad_bytes() function",get_name().c_str());
   return -1;
 }
-
-
-
-
-

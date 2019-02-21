@@ -6,6 +6,7 @@
  ***************************************************************************/
 
 #include "dsp/ASCIIObservation.h"
+#include "dsp/FIRFilter.h"
 #include "strutil.h"
 #include "coord.h"
 #include "tempo++.h"
@@ -425,36 +426,42 @@ void dsp::ASCIIObservation::load (const char* header)
     if (verbose) {
       std::cerr << "dsp::ASCIIObservation::load: deripple stages=" << _deripple_stages << std::endl;
     }
-    std::vector<fir_filter> _deripple(_deripple_stages);
-    fir_filter filter_i;
+    std::vector<dsp::FIRFilter> _deripple(_deripple_stages);
+    dsp::FIRFilter filter_i;
     std::string oversamp_str = "OVERSAMP_";
     std::string ntap_str = "NTAP_";
     std::string coeff_str = "COEFF_";
     std::string nchan_pfb_str = "NCHAN_PFB_";
     std::string istage_str;
+    int ntaps;
+    int pfb_nchan;
     char coeff_buffer[hdr_size];
+
     for (int istage=0; istage < _deripple_stages; istage++) {
       istage_str = std::to_string(istage);
-      ascii_header_check (header, ntap_str + istage_str, "%d", &(filter_i.ntaps));
-      ascii_header_check (header, nchan_pfb_str + istage_str, "%d", &(filter_i.nchan_pfb));
+
+      ascii_header_check (header, ntap_str + istage_str, "%d", &(ntaps));
+      ascii_header_check (header, nchan_pfb_str + istage_str, "%d", &(pfb_nchan));
       ascii_header_check (header, oversamp_str + istage_str, "%s", buffer);
-      filter_i.oversamp = fromstring<Rational>(buffer);
-      filter_i.coeff = std::vector<float>(filter_i.ntaps);
+
+      filter_i.set_ntaps(ntaps);
+      filter_i.set_pfb_nchan(pfb_nchan);
+      filter_i.set_oversamp(fromstring<Rational>(buffer));
+
       ascii_header_check (header, coeff_str + istage_str, "%s", coeff_buffer);
-      load_str_into_vector(coeff_buffer, filter_i.coeff);
+      load_str_into_array(coeff_buffer, filter_i.get_coeff()->data(), ntaps);
       _deripple[istage] = filter_i;
       if (verbose) {
         std::cerr << "dsp::ASCIIObservation::load: deripple stage " << istage
-                  << " filter taps=" << _deripple[istage].ntaps
-                  << " nchan=" << _deripple[istage].nchan_pfb
-                  << " oversampling factor =" << _deripple[istage].oversamp
-                  << " coeff.size()=" << _deripple[istage].coeff.size()
+                  << " filter taps=" << _deripple[istage].get_ntaps()
+                  << " nchan=" << _deripple[istage].get_pfb_nchan()
+                  << " oversampling factor =" << _deripple[istage].get_oversamp()
                   << std::endl;
-        // std::cerr << "dsp::ASCIIObservation::load: coeff ";
-        // for (unsigned i=0; i<filter_i.coeff.size()-1; i++) {
-        //   std::cerr << filter_i.coeff[i] << " ";
-        // }
-        // std::cerr << filter_i.coeff[filter_i.coeff.size() - 1] << std::endl;
+        std::cerr << "dsp::ASCIIObservation::load: coeff ";
+        for (unsigned i=0; i<filter_i.get_ntaps()-1; i++) {
+          std::cerr << filter_i[i] << " ";
+        }
+        std::cerr << filter_i[filter_i.get_ntaps() - 1] << std::endl;
       }
     }
     set_deripple(_deripple);

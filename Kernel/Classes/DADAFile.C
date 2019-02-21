@@ -25,8 +25,8 @@ using namespace std;
 dsp::DADAFile::DADAFile (const char* filename) : File ("DADA")
 {
   separate_header_file = false;
-  
-  if (filename) 
+
+  if (filename)
     open (filename);
 }
 
@@ -75,7 +75,7 @@ string dsp::DADAFile::get_header (const char* filename) const
       hdr_fname = filename + hdr_ext;
       hdr_ptr = fopen (hdr_fname.c_str(), "r");
     }
-    
+
     if (!hdr_ptr)
       throw Error (InvalidState, "dsp::DADAFile::get_header",
 		   "file has no header and no matching header file found");
@@ -102,7 +102,7 @@ string dsp::DADAFile::get_header (const char* filename) const
     header[ hdr_size-1 ] = '\0';
     separate_header_file = true;
   }
-  
+
   if (!header)
     return string();
 
@@ -148,17 +148,17 @@ bool dsp::DADAFile::is_valid (const char* filename) const try
    }
 
 void dsp::DADAFile::open_file (const char* filename)
-{  
+{
   string header = get_header (filename);
 
   if (header.empty())
     throw Error (FailedCall, "dsp::DADAFile::open_file",
 		 "get_header(%s) failed", filename);
-  
+
   info = new ASCIIObservation (header.c_str());
 
   const char* hdr = header.c_str();
-  
+
   if (separate_header_file)
     header_bytes = 0;
   else if (ascii_header_get (hdr, "HDR_SIZE", "%u", &header_bytes) < 0)
@@ -178,5 +178,3 @@ void dsp::DADAFile::open_file (const char* filename)
   if (verbose)
     cerr << "DADAFile::open exit" << endl;
 }
-
-
