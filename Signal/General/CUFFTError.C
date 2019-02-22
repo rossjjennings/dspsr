@@ -11,6 +11,7 @@
 #include <stdarg.h>
 #include <iostream>
 #include <cstdio>
+#include <cuda.h>
 
 using namespace std;
 

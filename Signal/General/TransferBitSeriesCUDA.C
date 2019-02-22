@@ -26,10 +26,13 @@ void dsp::TransferBitSeriesCUDA::transformation ()
 {
   prepare ();
 
-  if (stream)
-    cudaStreamSynchronize(stream);
-  else
-    cudaThreadSynchronize();
+  if (kind == cudaMemcpyHostToDevice)
+  {
+    if (stream)
+      cudaStreamSynchronize(stream);
+    else
+      cudaThreadSynchronize();
+  }
 
   if (verbose)
     cerr << "dsp::TransferBitSeriesCUDA::transformation"
@@ -56,6 +59,14 @@ void dsp::TransferBitSeriesCUDA::transformation ()
   if (error != cudaSuccess)
     throw Error (InvalidState, "dsp::TransferBitSeriesCUDA::transformation",
                  cudaGetErrorString (error));
+
+  if (kind == cudaMemcpyDeviceToHost)
+  {
+    if (stream)
+      cudaStreamSynchronize(stream);
+    else
+      cudaThreadSynchronize();
+  }
 }
 
 void dsp::TransferBitSeriesCUDA::prepare ()
