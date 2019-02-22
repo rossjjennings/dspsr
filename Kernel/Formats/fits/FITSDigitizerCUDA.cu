@@ -79,7 +79,9 @@ void CUDA::FITSDigitizerEngine::set_rescale_nblock (const dsp::TimeSeries * inpu
   unsigned nchan = input->get_nchan();
   unsigned npol = input->get_npol();
 
-  cerr << "CUDA::FITSDigitizerEngine::set_rescale_nblock nchan=" << nchan << " npol=" << npol << endl;
+  if (dsp::Operation::verbose)
+    cerr << "CUDA::FITSDigitizerEngine::set_rescale_nblock nchan=" << nchan
+          << " npol=" << npol << endl;
 
   size_t req_size = npol * nchan * rescale_nblock * sizeof(float);
   if (req_size > freq_total_size)
@@ -280,6 +282,10 @@ void CUDA::FITSDigitizerEngine::measure_scale (const dsp::TimeSeries *in, unsign
   unsigned npol = in->get_npol();
 
   unsigned nchanpol = nchan * npol;
+  if (dsp::Operation::verbose)
+    cerr << "CUDA::FITSDigitizerEngine::measure_scale ndim=" << ndim 
+         << " nchan=" << nchan << " npol=" << npol << " ndat=" << rescale_nsamp
+         << endl;
 
   if (ndim != 1)
     throw Error (InvalidState, "CUDA::FITSDigitizerEngine::measure_scale",
@@ -314,9 +320,8 @@ void CUDA::FITSDigitizerEngine::measure_scale (const dsp::TimeSeries *in, unsign
 
 #ifdef _DEBUG
       cerr << "CUDA::FITSDigitizerEngine::measure_scale fde_tsum_ftp nblocks="
-           << nblocks << " nthreads=" << nthreads << " chanpol_stride=" 
-           << chanpol_stride << " ndat=" << rescale_nsamp << " recip="
-           << recip << endl;
+           << nblocks << " nthreads=" << nthreads << " ndat=" << rescale_nsamp 
+           << " recip=" << recip << endl;
 #endif
       fde_tsum_tfp<<<nblocks, nthreads, 0, stream>>>(in_ptr, 
                                                      freq_total, freq_totalsq, 
@@ -456,7 +461,7 @@ __global__ void fde_digitize_nbit (int * input, unsigned char * output, uint64_t
   uint64_t odx = blockIdx.x * blockDim.x + threadIdx.x;
   uint64_t idx = odx * samples_per_byte;
 
-  if (idx >= nval)
+  if (odx >= nval)
     return;
 
   unsigned char out = 0;
@@ -499,11 +504,10 @@ void CUDA::FITSDigitizerEngine::digitize(const dsp::TimeSeries *input,
     dsp::BitSeries* output, uint64_t ndat, unsigned nbit, float digi_mean, 
     float digi_scale, int digi_min, int digi_max)
 {
-#ifdef _DEBUG
-  cerr << "CUDA::FITSDigitizerEngine::digitize ndat=" << ndat << " nbit=" 
-      << nbit << " mean=" << digi_mean << " digi_scale=" << digi_scale
-      << " digi_min=" << digi_min << " digi_max=" << digi_max << endl;
-#endif
+  if (dsp::Operation::verbose)
+    cerr << "CUDA::FITSDigitizerEngine::digitize ndat=" << ndat << " nbit=" 
+        << nbit << " mean=" << digi_mean << " digi_scale=" << digi_scale
+        << " digi_min=" << digi_min << " digi_max=" << digi_max << endl;
 
   unsigned ndim = input->get_ndim();
   unsigned nchan = input->get_nchan();
@@ -578,7 +582,7 @@ void CUDA::FITSDigitizerEngine::digitize(const dsp::TimeSeries *input,
                    "Requires data in TFP or FPT order");
   }
 
-  uint64_t nval = ndat * nchan * npol;
+  uint64_t nval = (ndat * nchan * npol * nbit) / 8;
   unsigned nthreads = 1024;
   unsigned nblocks = nval / nthreads;
   if (nval % nthreads != 0)
@@ -606,9 +610,9 @@ void CUDA::FITSDigitizerEngine::digitize(const dsp::TimeSeries *input,
          << nchan << " npol=" << npol << " digi_min=" << digi_min 
          << " digi_max=" << digi_max << endl;
 #endif
+    fde_digitize_nbit<<<nblocks, nthreads, 0, stream>>>(d_scratch, out, nval, nbit, digi_min, digi_max);
     if (dsp::Operation::record_time || dsp::Operation::verbose)
-      fde_digitize_nbit<<<nblocks, nthreads, 0, stream>>>(d_scratch, out, nval, nbit, digi_min, digi_max);
-    check_error_stream( "CUDA::FITSDigitizerEngine::digitize fde_digitize_nbit", stream );
+      check_error_stream( "CUDA::FITSDigitizerEngine::digitize fde_digitize_nbit", stream );
   }
 }
 

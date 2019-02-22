@@ -7,17 +7,11 @@
  *
  ***************************************************************************/
 
-#define _DEBUG
-
 #include "dsp/TScrunchCUDA.h"
 
 #include <cuComplex.h>
 #include "Error.h"
 #include "debug.h"
-
-//#include <memory>
-
-//#include <string.h>
 
 using namespace std;
 
@@ -132,7 +126,7 @@ __global__ void fpt_scrunch_shared (T* in_base, T* out_base,
     unsigned out_Fstride, unsigned out_Pstride,
     unsigned ndat_out, unsigned sfactor)
 {
-  // 512 threads x 8 samples
+  // 256 threads x 16 samples
   __shared__ T ndim1_shared_shm[4096];
 
   const uint64_t odat_block = blockIdx.x * blockDim.x;
@@ -224,9 +218,9 @@ void CUDA::TScrunchEngine::fpt_tscrunch(const dsp::TimeSeries *in,
          << " in_Pstride=" << in_Pstride << " out_Pstride=" << out_Pstride
          << endl;
 
-  unsigned nthreads = 512;
-  if (sfactor >= 8)
+  if (sfactor >= 16)
   {
+    unsigned nthreads = 512;
     unsigned odat_per_block = nthreads / 32;
     dim3 blocks (out->get_ndat()/odat_per_block, in->get_nchan(), in->get_npol());
     if (out->get_ndat() % odat_per_block)
@@ -253,6 +247,7 @@ void CUDA::TScrunchEngine::fpt_tscrunch(const dsp::TimeSeries *in,
   }
   else
   {
+    unsigned nthreads = 256;
     dim3 blocks (out->get_ndat()/nthreads, in->get_nchan(), in->get_npol());
     if (out->get_ndat() % nthreads)
       blocks.x ++;
