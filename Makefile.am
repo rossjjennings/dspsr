@@ -1,5 +1,5 @@
 
-SUBDIRS	= config Kernel Signal Management
+SUBDIRS	= config Kernel Signal Management test
 
 if HAVE_PYTHON
 SUBDIRS += python

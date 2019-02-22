@@ -20,7 +20,7 @@ using namespace std;
 
 //#define _DEBUG
 
-/*! If specified, this attribute restricts the value for ndat chosen by 
+/*! If specified, this attribute restricts the value for ndat chosen by
   the set_optimal_ndat method, enabling the amount of RAM used by the calling
   process to be limited. */
 unsigned dsp::Response::ndat_max = 0;
@@ -80,7 +80,7 @@ const dsp::Response& dsp::Response::operator *= (const Response& response)
   if (npol < response.npol)
     throw Error (InvalidParam, "dsp::Response::operator *=",
 		 "npol=%d < *.npol=%d", npol, response.npol);
-   
+
   /*
     perform A = A * B where
     A = this->buffer
@@ -115,11 +115,11 @@ void dsp::Response::prepare (const Observation* input, unsigned channels)
 
 
 
-/*! The ordering of frequency channels in the response function depends 
+/*! The ordering of frequency channels in the response function depends
   upon:
   <UL>
   <LI> the state of the input Observation (real or complex); and </LI>
-  <LI> Operations to be performed upon the Observation 
+  <LI> Operations to be performed upon the Observation
        (e.g. simultaneous filterbank) </LI>
   </UL>
   As well, sub-classes of Response may need to dynamically check, refine, or
@@ -149,7 +149,7 @@ void dsp::Response::match (const Observation* input, unsigned channels)
 	cerr << "dsp::Response::match swap whole" << endl;
       doswap ();
     }
-  }      
+  }
   else  {
 
     // if the filterbank channels are centred on DC
@@ -209,17 +209,17 @@ void dsp::Response::match (const Response* response)
 
   resize (npol, response->get_nchan(),
 	  response->get_ndat(), ndim);
-  
+
   whole_swapped = response->whole_swapped;
   swap_divisions = response->swap_divisions;
   dc_centred = response->dc_centred;
-  
+
   zero();
 }
 
 void dsp::Response::mark (Observation* output)
 {
-  
+
 }
 
 //! Set the flag for a bin-centred spectrum
@@ -246,7 +246,7 @@ void dsp::Response::naturalize ()
       cerr << "dsp::Response::naturalize sub-bandpass swap" << endl;
     doswap ( swap_divisions );
   }
-  
+
   if ( dc_centred )
   {
     if (verbose)
@@ -263,7 +263,7 @@ void dsp::Response::naturalize ()
 unsigned dsp::Response::get_minimum_ndat () const
 {
   double impulse_tot = impulse_pos + impulse_neg;
-  
+
   if (impulse_tot == 0)
     return 0;
 
@@ -272,13 +272,13 @@ unsigned dsp::Response::get_minimum_ndat () const
     min *= 2;
 
   if (verbose)
-    cerr << "dsp::Response::get_minimum_ndat impulse_tot=" << impulse_tot 
+    cerr << "dsp::Response::get_minimum_ndat impulse_tot=" << impulse_tot
 	 << " min power of two=" << min << endl;
 
   return min;
 }
 
-extern "C" uint64_t 
+extern "C" uint64_t
 optimal_fft_length (uint64_t nbadperfft, uint64_t nfft_max, char verbose);
 
 /*!  Using the get_minimum_ndat method and the max_ndat static attribute,
@@ -287,9 +287,9 @@ void dsp::Response::set_optimal_ndat ()
 {
   unsigned ndat_min = get_minimum_ndat ();
 
-  if (verbose) 
+  if (verbose)
     cerr << "Response::set_optimal_ndat minimum ndat=" << ndat_min << endl;
-  
+
   if (ndat_max && ndat_max < ndat_min)
     throw Error (InvalidState, "Response::set_optimal_ndat",
 		  "specified maximum ndat (%d) < required minimum ndat (%d)",
@@ -338,15 +338,15 @@ void dsp::Response::check_ndat () const
 
   unsigned ndat_min = get_minimum_ndat ();
 
-  if (verbose) 
+  if (verbose)
     cerr << "Response::check_ndat minimum ndat=" << ndat_min << endl;
-  
+
   if (ndat < ndat_min)
     throw Error (InvalidState, "dsp::Response::check_ndat",
 		 "specified ndat (%d) < required minimum ndat (%d)",
 		 ndat, ndat_min);
 }
-  
+
 //! Get the passband
 vector<float> dsp::Response::get_passband (unsigned ipol, int ichan) const
 {
@@ -374,7 +374,7 @@ vector<float> dsp::Response::get_passband (unsigned ipol, int ichan) const
 
   \param ipol the polarization of the data (Response may optionally
   contain a different frequency response function for each polarization)
-  
+
   \param data an array of nchan*ndat complex numbers */
 
 void dsp::Response::operate (float* data, unsigned ipol, int ichan) const
@@ -414,9 +414,9 @@ dsp::Response::operate (float* spectrum, unsigned poln, int ichan_start, unsigne
     A = spectrum
     B = this->buffer
   */
-    
+
 #ifdef _DEBUG
-  cerr << "dsp::Response::operate nchan=" << nchan << " ipol=" << ipol 
+  cerr << "dsp::Response::operate nchan=" << nchan << " ipol=" << ipol
        << " buf=" << buffer << " f_p=" << f_p
        << " off=" << offset(ipol) << endl;
 #endif
@@ -451,11 +451,11 @@ dsp::Response::operate (float* spectrum, unsigned poln, int ichan_start, unsigne
 
 /*! Adds the square of each complex point to the current power spectrum
 
-  \param data an array of nchan*ndat complex numbers 
+  \param data an array of nchan*ndat complex numbers
 
   \param ipol the polarization of the data (Response may optionally
   integrate a different power spectrum for each polarization)
-  
+
 */
 void dsp::Response::integrate (float* data, unsigned ipol, int ichan)
 {
@@ -472,12 +472,12 @@ void dsp::Response::integrate (float* data, unsigned ipol, int ichan)
     npts *= nchan;
     ichan = 0;
   }
-   
+
   register float* d_p = data;
   register float* f_p = buffer + offset * ipol + ichan * ndat * ndim;
 
 #ifdef _DEBUG
-  cerr << "dsp::Response::integrate ipol=" << ipol 
+  cerr << "dsp::Response::integrate ipol=" << ipol
        << " buf=" << buffer << " f_p=" << f_p
        << "off=" << offset(ipol) << endl;
 #endif
@@ -513,7 +513,7 @@ void dsp::Response::set (const vector<complex<float> >& filt)
 
 // /////////////////////////////////////////////////////////////////////////
 //
-// Response::operate - multiplies two complex arrays by complex matrix Response 
+// Response::operate - multiplies two complex arrays by complex matrix Response
 // ndat = number of complex points
 //
 void dsp::Response::operate (float* data1, float* data2, int ichan) const
@@ -548,12 +548,12 @@ void dsp::Response::operate (float* data1, float* data2, int ichan) const
 
     // ///////////////////////
     // multiply: r1 = f11 * d1
-    d_r = *d1_rp; 
+    d_r = *d1_rp;
     d_i = *d1_ip;
     f_r = *f_p; f_p ++;
     f_i = *f_p; f_p ++;
 
-    r1_r = f_r * d_r - f_i * d_i; 
+    r1_r = f_r * d_r - f_i * d_i;
     r1_i = f_i * d_r + f_r * d_i;
 
     // ///////////////////////
@@ -561,7 +561,7 @@ void dsp::Response::operate (float* data1, float* data2, int ichan) const
     f_r = *f_p; f_p ++;
     f_i = *f_p; f_p ++;
 
-    r2_r = f_r * d_r - f_i * d_i; 
+    r2_r = f_r * d_r - f_i * d_i;
     r2_i = f_i * d_r + f_r * d_i;
 
     // ////////////////////////////
@@ -581,7 +581,7 @@ void dsp::Response::operate (float* data1, float* data2, int ichan) const
     f_r = *f_p; f_p ++;
     f_i = *f_p; f_p ++;
 
-    *d1_rp = r1_r + f_r * d_r - f_i * d_i; 
+    *d1_rp = r1_r + f_r * d_r - f_i * d_i;
     d1_rp += 2;
     *d1_ip = r1_i + f_i * d_r + f_r * d_i;
     d1_ip += 2;
@@ -611,7 +611,7 @@ void dsp::Response::integrate (float* data1, float* data2, int ichan)
     cerr << "dsp::Response::integrate::cross_detect_int" << endl;
 
   cross_detect_int (npts, data1, data2,
-		    data, data + offset, 
+		    data, data + offset,
 		    data + 2*offset, data + 3*offset, 1);
 }
 
@@ -627,7 +627,7 @@ void dsp::Response::set (const vector<Jones<float> >& response)
 
   for (unsigned idat=0; idat<response.size(); idat++) {
 
-    // for efficiency, the elements of a Jones matrix Response 
+    // for efficiency, the elements of a Jones matrix Response
     // are ordered as: f11, f21, f22, f12
 
     for (int j=0; j<2; j++)
