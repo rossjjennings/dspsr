@@ -878,7 +878,7 @@ void dsp::LoadToFold::prepare ()
 
   uint64_t block_size = ( minimum_samples - block_overlap )
     * config->get_times_minimum_ndat() + block_overlap;
-
+  cerr << "block_size=" << block_size << endl;
   // set the block size to at least minimum_samples
   manager->set_maximum_RAM( config->get_maximum_RAM() );
   manager->set_minimum_RAM( config->get_minimum_RAM() );

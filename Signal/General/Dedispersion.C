@@ -88,6 +88,9 @@ void dsp::Dedispersion::set_bandwidth (double _bandwidth)
 //! Set the dispersion measure in \f${\rm pc\,cm}^{-3}\f$
 void dsp::Dedispersion::set_dispersion_measure (double _dispersion_measure)
 {
+  if (verbose) {
+    cerr << "dsp::Dedispersion::set_dispersion_measure " << _dispersion_measure << endl;
+  }
   if (dispersion_measure != _dispersion_measure)
     built = false;
 
