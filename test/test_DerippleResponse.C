@@ -23,8 +23,9 @@ class TestDerippleResponse {
 public:
 	void setup ();
 	void test_ctor ();
-	void test_set_optimal_ndat ();
 	void test_calc_freq_response ();
+	void test_set_ndat();
+	void test_set_nchan();
 
 private:
 
@@ -64,25 +65,22 @@ void TestDerippleResponse::test_ctor ()
   dsp::DerippleResponse deripple_response;
 }
 
-void TestDerippleResponse::test_set_optimal_ndat ()
+void TestDerippleResponse::test_set_ndat ()
 {
-	std::cerr << "TestDerippleResponse::test_set_optimal_ndat " << std::endl;
+	std::cerr << "TestDerippleResponse::test_set_ndat " << std::endl;
 	dsp::DerippleResponse deripple_response;
-	unsigned start_freq_res = static_cast<unsigned>(pow(2, 14));
-	deripple_response.set_frequency_resolution(start_freq_res);
-	std::vector<float> coeff = {0.0};
-	// critically sampled case
-	deripple_response.set_fir_filter(
-		dsp::FIRFilter(coeff, Rational(1,1), 1)
-	);
-	deripple_response.set_optimal_ndat();
-	assert(deripple_response.get_ndat() == start_freq_res);
-	// oversampled case
-	deripple_response.set_fir_filter(
-		dsp::FIRFilter(coeff, Rational(4, 3), 1)
-	);
-	deripple_response.set_optimal_ndat();
-	assert(deripple_response.get_ndat() == start_freq_res * 3 / 4);
+	unsigned new_ndat = 128;
+	deripple_response.set_ndat(new_ndat);
+	assert(deripple_response.get_ndat() == new_ndat);
+}
+
+void TestDerippleResponse::test_set_nchan ()
+{
+	std::cerr << "TestDerippleResponse::test_set_nchan " << std::endl;
+	dsp::DerippleResponse deripple_response;
+	unsigned new_nchan = 3;
+	deripple_response.set_nchan(new_nchan);
+	assert(deripple_response.get_nchan() == new_nchan);
 }
 
 void TestDerippleResponse::test_calc_freq_response () {
@@ -120,7 +118,8 @@ int main () {
 
 	tester.setup();
 	tester.test_ctor();
-	tester.test_set_optimal_ndat();
+	tester.test_set_ndat();
+	tester.test_set_nchan();
 	tester.test_calc_freq_response();
 
 	return 0;

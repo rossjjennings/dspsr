@@ -14,38 +14,20 @@
 
 dsp::DerippleResponse::DerippleResponse ()
 {
-  built = false;
-  frequency_resolution_set = false;
-  times_minimum_nfft = 0;
-
+  if (verbose) {
+    std::cerr << "dsp::DerippleResponse::DerippleResponse()" << std::endl;
+  }
   ndim = 2;
   nchan = 1;
   npol = 1;
-  ndat = 0;
+  ndat = 1;
+
+  built = false;
 }
 
-void dsp::DerippleResponse::prepare (
-  const dsp::Observation* input, unsigned channels)
+dsp::DerippleResponse::~DerippleResponse ()
 {
 
-  if (ndat == 0) {
-    // ndat = input->get_frequency_resolution();
-    throw std::runtime_error ("Need to set ndat before calling DerippleResponse::prepare");
-  }
-  set_nchan (channels);
-  if (! built) {
-    set_optimal_ndat();
-    resize (1, nchan, ndat, 2);
-    build();
-  }
-}
-
-void dsp::DerippleResponse::match (
-  const dsp::Observation* input, unsigned channels)
-{
-  prepare(input, channels);
-
-  Response::match (input, channels);
 }
 
 void dsp::DerippleResponse::build ()
@@ -53,11 +35,13 @@ void dsp::DerippleResponse::build ()
   if (built) {
     return;
   }
+  resize (npol, nchan, ndat, ndim);
+
   std::vector<float> freq_response;
 
   calc_freq_response(freq_response, ndat);
 
-  uint64_t npt = ndat*2;
+  uint64_t npt = ndat * ndim * nchan;
 
   for (uint64_t ipt=0; ipt<npt; ipt++) {
     buffer[ipt] = freq_response[ipt];
@@ -66,55 +50,38 @@ void dsp::DerippleResponse::build ()
 
 }
 
-void dsp::DerippleResponse::set_optimal_ndat ()
+//! Set the dimensions of the data and update the built attribute
+void dsp::DerippleResponse::resize (unsigned _npol, unsigned _nchan,
+        unsigned _ndat, unsigned _ndim)
 {
-  // if (frequency_resolution_set) {
-  //   set_frequency_resolution(get_minimum_ndat());
-  // } else {
-  //   if (optimal_fft) {
-  //     optimal_fft->set_simultaneous (nchan > 1);
-  //   }
-  //   Response::set_optimal_ndat ();
-  // }
-  if (verbose) {
-    std::cerr << "dsp::DerippleResponse::set_optimal_ndat" << std::endl;
-  }
-  Rational os = fir_filter.get_oversampling_factor();
-  if (verbose) {
-    std::cerr << "dsp::DerippleResponse::set_optimal_ndat: fir_filter oversampling factor=" << os << std::endl;
-  }
-  // need to incorporate the fir_filter.pfb_nchan attribute
-  ndat = os.normalize(ndat) * nchan;
-}
-
-void dsp::DerippleResponse::set_nchan (unsigned _nchan)
-{
-  if (verbose) {
-    std::cerr << "dsp::DerippleResponse::set_nchan ("<<_nchan<<")"<< std::endl;
-  }
-  if (_nchan != nchan) {
+  if (verbose)
+    std::cerr << "dsp::DerippleResponse::resize(" << _npol << "," << _nchan
+         << "," << _ndat << "," << _ndim << ")" << std::endl;
+  if (npol != _npol || nchan != _nchan || ndat != _ndat || ndim != _ndim)
+  {
     built = false;
   }
+  Shape::resize (_npol, _nchan, _ndat, _ndim);
+}
+
+
+//! Set the length of the frequnecy response in each channel
+void dsp::DerippleResponse::set_ndat (unsigned _ndat)
+{
+  if (ndat != _ndat)
+    built = false;
+  ndat = _ndat;
+}
+
+//! Set the number of input channels
+void dsp::DerippleResponse::set_nchan (unsigned _nchan)
+{
+  if (nchan != _nchan)
+    built = false;
   nchan = _nchan;
 }
 
-void dsp::DerippleResponse::set_frequency_resolution (unsigned nfft)
-{
-  if (verbose)
-    std::cerr << "dsp::DerippleResponse::set_frequency_resolution ("<<nfft<<")"<< std::endl;
-  resize (npol, nchan, nfft, ndim);
 
-  frequency_resolution_set = true;
-}
-
-void dsp::DerippleResponse::set_times_minimum_nfft (unsigned times)
-{
-  if (verbose)
-    std::cerr << "dsp::DerippleResponse::set_times_minimum_nfft ("<<times<<")"<<std::endl;
-
-  times_minimum_nfft = times;
-  frequency_resolution_set = true;
-}
 
 void dsp::DerippleResponse::calc_freq_response (
   std::vector<float>& freq_response, unsigned n_freq)
@@ -150,4 +117,45 @@ void dsp::DerippleResponse::calc_freq_response (
   //     2*n_freq*sizeof(float)
   // );
   // freq_response_file.close();
+}
+
+//! Create an Scalar Filter with nchan channels
+void dsp::DerippleResponse::match (const Observation* obs, unsigned channels)
+{
+  if (verbose)
+    std::cerr << "dsp::DerippleResponse::match channels=" << channels << std::endl;
+
+  if (!channels)
+    channels = obs->get_nchan();
+
+  if (verbose)
+    std::cerr << "dsp::DerippleResponse::match set_nchan(" << channels << ")" << std::endl;
+  set_nchan (channels);
+
+  if (!built)
+  {
+    build();
+  }
+}
+
+//! Create a DerippleResponse with the same number of channels as Response
+void dsp::DerippleResponse::match (const Response* response)
+{
+  if (verbose)
+    std::cerr << "dsp::DerippleResponse::match Response nchan=" << response->get_nchan()
+         << " ndat=" << response->get_ndat() << std::endl;
+
+  if ( get_nchan() == response->get_nchan() &&
+       get_ndat() == response->get_ndat() )
+  {
+
+    if (verbose)
+      std::cerr << "dsp::DerippleResponse::match Response already matched" << std::endl;
+    return;
+  }
+
+  resize (npol, response->get_nchan(), response->get_ndat(), ndim);
+
+  if (!built)
+    build();
 }
