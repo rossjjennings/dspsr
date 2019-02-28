@@ -20,21 +20,17 @@ using namespace std;
 
 void check_error_stream (const char*, cudaStream_t);
 
-/*
-  The input data are pairs of arrays of ndat complex numbers:
-  The output are 4 pol, one for each coherency product
-*/
 template<typename T>
 __global__ void retard_fpt_kernel (const T * input, unsigned input_span,
                                    T * output, unsigned output_span,
                                    int64_t * delays, uint64_t ndat)
 {
-  unsigned i = blockIdx.x * blockDim.x + threadIdx.x;
+  const unsigned i = blockIdx.x * blockDim.x + threadIdx.x;
   if (i >= ndat)
     return;
 
-  //                  ichan      * npol      + ipol
-  unsigned ichanpol = blockIdx.y * gridDim.z + blockIdx.z;
+  //                        ichan      * npol      + ipol
+  const unsigned ichanpol = blockIdx.y * gridDim.z + blockIdx.z;
 
   // offsets for input and output
   const uint64_t idx = (ichanpol * input_span) + i + delays[ichanpol];
@@ -126,6 +122,8 @@ void CUDA::SampleDelayEngine::set_delays (unsigned npol, unsigned nchan,
                  "cudaMemcpyAsync(%xu,%xu,%ld): %s", (void *) d_delays,
                   (void *)h_delays, delays_size, cudaGetErrorString (error));
 
+  cudaStreamSynchronize(stream);
+
   // don't retain the host delays
   error = cudaFreeHost (h_delays);
   if (error != cudaSuccess)
@@ -135,9 +133,9 @@ void CUDA::SampleDelayEngine::set_delays (unsigned npol, unsigned nchan,
 }
 
 void CUDA::SampleDelayEngine::retard(const dsp::TimeSeries* input, 
-					                           dsp::TimeSeries* output)
+					                           dsp::TimeSeries* output,
+                                     uint64_t output_ndat)
 {
-  uint64_t ndat = input->get_ndat ();
   unsigned nchan = input->get_nchan ();
   unsigned npol = input->get_npol ();
   unsigned ndim = input->get_ndim ();
@@ -168,38 +166,38 @@ void CUDA::SampleDelayEngine::retard(const dsp::TimeSeries* input,
 
   if (dsp::Operation::verbose)
     cerr << "CUDA::SampleDelayEngine::retard ndim=" << ndim
-         << " ndat=" << ndat 
+         << " output_ndat=" << output_ndat 
          << " input.base=" << input_base
          << " input.span=" << input_span
          << " output.base=" << output_base 
          << " output.span=" << output_span
          << endl;
 
-  if (ndat == 0)
+  if (output_ndat == 0)
     return;
 
   unsigned nthreads = 1024;
-  dim3 blocks (ndat / nthreads, nchan, npol);
-  if (ndat % nthreads != 0)
+  dim3 blocks (output_ndat / nthreads, nchan, npol);
+  if (output_ndat % nthreads != 0)
     blocks.x ++;
 
   if (ndim == 1)
   {
     retard_fpt_kernel<float><<<blocks,nthreads,0,stream>>>((const float *) input_base, input_span,
                                                            (float *) output_base, output_span,
-                                                           d_delays, ndat);
+                                                           d_delays, output_ndat);
   }
   else if (ndim == 2)
   {
     retard_fpt_kernel<float2><<<blocks,nthreads,0,stream>>>((const float2 *) input_base, input_span,
                                                             (float2 *) output_base, output_span,
-                                                            d_delays, ndat);
+                                                            d_delays, output_ndat);
   }
   else if (ndim == 4)
   {
     retard_fpt_kernel<float4><<<blocks,nthreads,0,stream>>>((const float4 *) input_base, input_span,
                                                             (float4 *) output_base, output_span,
-                                                            d_delays, ndat);
+                                                            d_delays, output_ndat);
   }
   if (dsp::Operation::record_time || dsp::Operation::verbose)
     check_error_stream ("CUDA::SampleDelayEngine::retard retard_fpt_kernel", stream);

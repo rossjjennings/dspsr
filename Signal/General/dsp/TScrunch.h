@@ -39,10 +39,13 @@ namespace dsp {
     
   protected:
 
-    //! Prepare input buffer
+    //! Prepare all relevant attributes
     void prepare ();
 
-    //! Prepare output timeseries
+    //! Reserve the maximum amount of output space required
+    void reserve ();
+
+    //! Prepare the output TimeSeries
     void prepare_output ();
 
     //! Perform decimation

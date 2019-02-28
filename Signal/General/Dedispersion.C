@@ -5,6 +5,7 @@
  *
  ***************************************************************************/
 
+#include "config.h"
 #include "dsp/Dedispersion.h"
 #include "dsp/Observation.h"
 #include "dsp/OptimalFFT.h"
@@ -316,6 +317,9 @@ void dsp::Dedispersion::build ()
   complex<float>* phasors = reinterpret_cast< complex<float>* > ( buffer );
   uint64_t npt = ndat * nchan;
 
+#if HAVE_OPENMP
+  #pragma omp parallel for
+#endif
   for (unsigned ipt=0; ipt<npt; ipt++)
     phasors[ipt] = polar (float(1.0), phases[ipt]);
 

@@ -67,6 +67,7 @@ void dsp::TScrunch::set_engine( Engine* _engine )
   engine = _engine;
 }
 
+// Prepare all relevant attributes
 void dsp::TScrunch::prepare ()
 {
   sfactor = get_factor();
@@ -85,18 +86,32 @@ void dsp::TScrunch::prepare ()
   prepare_output ();
 }
 
+// reserve the maximum required output space
+void dsp::TScrunch::reserve ()
+{
+  prepare_output();
+
+  if (verbose)
+    cerr << "dsp::TScrunch::reserve input ndat=" << get_input()->get_ndat()
+         << " scrunch=" << sfactor << " output ndat=" << output_ndat << endl;
+
+  // only resize if output of place
+  if (input.get() != output.get())
+    output->resize (output_ndat);
+}
+
+// preapre the output TimeSeries
 void dsp::TScrunch::prepare_output ()
 {
-  output_ndat = input->get_ndat() / sfactor;
-  if (verbose)
-    cerr << "dsp::TScrunch::prepare_output output_ndat=" << output_ndat << endl;
+  sfactor = get_factor();
+  output_ndat = get_input()->get_ndat() / sfactor;
 
   if (input.get() != output.get())
   {
     if (verbose)
       cerr << "dsp::TScrunch::prepare_output copying configuration" << endl;
     get_output()->copy_configuration (get_input());
-    get_output()->resize (output_ndat);
+
     // this is necessary if we buffer further down the line otherwise, samples are misaligned
     get_output()->set_input_sample (get_input()->get_input_sample() / sfactor);
   }
@@ -109,10 +124,13 @@ void dsp::TScrunch::prepare_output ()
 
 void dsp::TScrunch::transformation ()
 {
-  sfactor = get_factor();
   if (verbose)
     cerr << "dsp::TScrunch::transformation" << endl;
+
   prepare ();
+
+  // ensure the output TimeSeries is large enough
+  reserve ();
 
   if (sfactor == 1)
     throw Error(InvalidState,"dsp::TScrunch::transformation",
@@ -125,7 +143,6 @@ void dsp::TScrunch::transformation ()
   if( !input->get_detected() )
     throw Error(InvalidState,"dsp::TScrunch::transformation()",
 		"invalid input state: " + tostring(input->get_state()));
-
 
   if (verbose)
     cerr << "dsp::TScrunch::transformation input ndat=" << input->get_ndat()

@@ -26,47 +26,58 @@ void dsp::TransferBitSeriesCUDA::transformation ()
 {
   prepare ();
 
-  if (kind == cudaMemcpyHostToDevice)
+  uint64_t ndat = input->get_ndat();
+  uint64_t in_size = input->get_size();
+  uint64_t out_size = output->get_size();
+
+  // only transfer data if there is valid data to transfer
+  if (ndat > 0)
   {
+    if (kind == cudaMemcpyHostToDevice)
+    {
+      if (stream)
+        cudaStreamSynchronize(stream);
+      else
+        cudaThreadSynchronize();
+    }
+
+    if (verbose)
+      cerr << "dsp::TransferBitSeriesCUDA::transformation"
+           << " ndat=" << ndat
+           << " out=" << (void*)output->get_rawptr() << " size=" << out_size 
+           << " in=" << (void*)input->get_rawptr() << " size=" << in_size
+           << endl;
+
+    cudaError error;
+
+    assert (output->get_rawptr() != 0);
+    assert (output->get_size() >= input->get_size());
+
     if (stream)
-      cudaStreamSynchronize(stream);
+      error = cudaMemcpyAsync (output->get_rawptr(), 
+                               input->get_rawptr(), 
+                               input->get_size(), kind, stream);
     else
-      cudaThreadSynchronize();
+      error = cudaMemcpy (output->get_rawptr(), 
+                          input->get_rawptr(), 
+                          input->get_size(), kind);
+
+    if (error != cudaSuccess)
+      throw Error (InvalidState, "dsp::TransferBitSeriesCUDA::transformation",
+                   cudaGetErrorString (error));
+
+    if (kind == cudaMemcpyDeviceToHost)
+    {
+      if (stream)
+        cudaStreamSynchronize(stream);
+      else
+        cudaThreadSynchronize();
+    }
   }
-
-  if (verbose)
-    cerr << "dsp::TransferBitSeriesCUDA::transformation"
-         << " ndat=" << input->get_ndat()
-         << " out=" << (void*)output->get_rawptr()
-         << " size=" << output->get_size()
-         << " in=" << (void*)input->get_rawptr()
-         << " size=" << input->get_size() << endl;
-
-  cudaError error;
-
-  assert (output->get_rawptr() != 0);
-  assert (output->get_size() >= input->get_size());
-
-  if (stream)
-    error = cudaMemcpyAsync (output->get_rawptr(), 
-                             input->get_rawptr(), 
-                             input->get_size(), kind, stream);
   else
-    error = cudaMemcpy (output->get_rawptr(), 
-                        input->get_rawptr(), 
-                        input->get_size(), kind);
-
-  if (error != cudaSuccess)
-    throw Error (InvalidState, "dsp::TransferBitSeriesCUDA::transformation",
-                 cudaGetErrorString (error));
-
-  if (kind == cudaMemcpyDeviceToHost)
-  {
-    if (stream)
-      cudaStreamSynchronize(stream);
-    else
-      cudaThreadSynchronize();
-  }
+    if (verbose)
+      cerr << "dsp::TransferBitSeriesCUDA::transformation skipping transfer as ndat=" 
+           << ndat << endl;
 }
 
 void dsp::TransferBitSeriesCUDA::prepare ()

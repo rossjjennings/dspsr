@@ -104,6 +104,24 @@ void dsp::DataSeries::resize (uint64_t nsamples)
 
 #define INTERACTIVE_MEMORY 0
 
+uint64_t dsp::DataSeries::get_ndat_allocated()
+{
+  uint64_t nval = get_ndim() * get_npol() * get_nchan ();
+  uint64_t bytes_per_dat = (get_nbit() * nval) / 8;
+  if (bytes_per_dat == 0)
+    throw Error (InvalidParam, "dsp::DataSeries::get_ndat_allocated",
+                 "bytes_per_dat==0");
+  uint64_t allocated_ndat = size / bytes_per_dat;
+
+  if (verbose)
+    cerr << "dsp::DataSeries::get_ndat_allocated nval=" << nval 
+         << " bytes_per_dat=" << bytes_per_dat << " allocated_ndat="
+         << allocated_ndat << endl;
+
+  return allocated_ndat;
+}
+
+
 void dsp::DataSeries::resize (uint64_t nsamples, unsigned char*& old_buffer)
 {
   if (verbose)

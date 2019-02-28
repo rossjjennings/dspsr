@@ -28,7 +28,7 @@ namespace CUDA
     void set_delays (unsigned npol, unsigned nchan, int64_t zero_delay,
                      dsp::SampleDelayFunction * function);
 
-    void retard (const dsp::TimeSeries* in, dsp::TimeSeries* out);
+    void retard (const dsp::TimeSeries* in, dsp::TimeSeries* out, uint64_t output_ndat);
 
   protected:
 

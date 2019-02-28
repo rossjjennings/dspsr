@@ -167,8 +167,15 @@ void dsp::TimeSeries::resize (uint64_t nsamples)
     cerr << "dsp::TimeSeries::resize reserve_ndat="
 	 << reserve_ndat << " fake_ndat=" << fake_ndat << endl;
 
+  // change in the required number of samples
+  int64_t ndat_change = int64_t(nsamples+fake_ndat) - int64_t(get_ndat_allocated());
+
   if (nsamples || auto_delete)
-    DataSeries::resize (nsamples+fake_ndat);
+  {
+    // only resize the data series when additional space is required
+    if (ndat_change > 0 || auto_delete)
+      DataSeries::resize (nsamples+fake_ndat);
+  }
 
   // offset the data pointer and reset the number of samples
   data = (float*)buffer + reserve_nfloat;

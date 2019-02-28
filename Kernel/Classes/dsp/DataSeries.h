@@ -71,6 +71,9 @@ namespace dsp {
     //! Enforces that ndat*ndim must be an integer number of bytes
     virtual void set_ndim(uint64_t _ndim);
 
+    //! return the number of samples the current buffer can hold
+    uint64_t get_ndat_allocated();
+
     //! Allocate the space required to store nsamples time samples.
     //! Note that the space used in each chan/pol group must be an integer
     //! number of bytes.

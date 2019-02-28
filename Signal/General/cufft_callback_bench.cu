@@ -55,7 +55,7 @@ __global__ void k_multiply (float2* d_fft, const __restrict__ float2 * kernel, u
 //
 // store with multiplication by dedispersion kernel
 //
-__device__ void CB_convolve_and_storeC (void * dataOut, size_t offset, cufftComplex d, void * callerInfo, void *sharedPtr)
+static __device__ void CB_convolve_and_storeC (void * dataOut, size_t offset, cufftComplex d, void * callerInfo, void *sharedPtr)
 {
   // the dedispersion kernel value for this element of the FFT
   const cufftComplex k = ((cufftComplex *) callerInfo)[offset];
@@ -69,7 +69,7 @@ __device__ cufftCallbackStoreC d_store_fwd_C = CB_convolve_and_storeC;
 //
 // convert an 8bit number to 32 bit
 //
-__device__ cufftComplex cufft_callback_load_8bit(
+static __device__ cufftComplex cufft_callback_load_8bit(
     void *dataIn, 
     size_t offset, 
     void *callerInfo, 
@@ -94,7 +94,7 @@ __device__ cufftCallbackLoadC d_load_8bit_fwd_C = cufft_callback_load_8bit;
 //
 // convert an 16bit number to 32 bit
 //
-__device__ cufftComplex cufft_callback_load_half2(
+static __device__ cufftComplex cufft_callback_load_half2(
     void *dataIn,
     size_t offset,
     void *callerInfo,
@@ -111,7 +111,7 @@ __device__ cufftCallbackLoadC d_load_half2_fwd_C = cufft_callback_load_half2;
 //
 // store with output filtering on
 //
-__device__ void CB_filtered_store (void * dataOut, size_t offset, cufftComplex d, void * callerInfo, void *sharedPtr)
+static __device__ void CB_filtered_store (void * dataOut, size_t offset, cufftComplex d, void * callerInfo, void *sharedPtr)
 {
   unsigned nfilt_pos = ((unsigned *) callerInfo)[0];
   unsigned nsamp_filt = ((unsigned *) callerInfo)[1];
@@ -275,7 +275,6 @@ void Speed::runTest ()
   if (result != CUFFT_SUCCESS)
     CUFFTError (result, "Speed::runTest", "cufftSetStream (plan_batch)");
 
-
   cufftHandle plan_callback;
   result = cufftCreate (&plan_callback);
   if (result != CUFFT_SUCCESS)
@@ -332,18 +331,18 @@ void Speed::runTest ()
   if (result != CUFFT_SUCCESS)
     CUFFTError (result, "Speed::runTest", "cufftSetStream (plan_bwd_cb)");
 
-
-
-
   RealTimer timer_batch;
   RealTimer timer_callback;
   RealTimer timer_half;
   RealTimer timer_;
  
+  // The host needs to get a copy of the device pointer to the callback
   cufftCallbackLoadC  h_load_8bit_fwd_C;
   cufftCallbackLoadC  h_load_half2_fwd_C;
   cufftCallbackStoreC h_store_fwd_C;
   cufftCallbackStoreC h_store_bwd_C;
+
+
   cudaError_t error;
 
   error = cudaMemcpyFromSymbolAsync(&h_load_8bit_fwd_C,

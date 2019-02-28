@@ -134,8 +134,8 @@ void parse_options (int argc, char** argv) try
   arg = menu.add (config->dedisperse, 'K');
   arg->set_help ("remove inter-channel dispersion delays");
 
-  //arg = menu.add (config->fscrunch_factor, 'f', "nchan");
-  //arg->set_help ("decimate in frequency");
+  arg = menu.add (config->fscrunch_factor, 'f', "nchan");
+  arg->set_help ("decimate in frequency by this factor");
 
   arg = menu.add (config->output_filename, 'o', "file");
   arg->set_help ("output filename");

@@ -37,6 +37,7 @@
 #include "dsp/OptimalFilterbank.h"
 #include "dsp/TransferCUDA.h"
 #include "dsp/DetectionCUDA.h"
+#include "dsp/FScrunchCUDA.h"
 #include "dsp/TScrunchCUDA.h"
 #include "dsp/MemoryCUDA.h"
 #include "dsp/TimeSeriesCUDA.h"
@@ -440,6 +441,26 @@ void dsp::LoadToFITS::construct () try
 #endif
 
     operations.push_back( delay );
+  }
+
+  if ( config->fscrunch_factor )
+  {
+    FScrunch* fscrunch = new FScrunch;
+
+    fscrunch->set_factor( config->fscrunch_factor );
+    fscrunch->set_input( timeseries );
+    fscrunch->set_output( timeseries );
+
+#if HAVE_CUDA
+    if (run_on_gpu)
+    {
+      fscrunch->set_engine (new CUDA::FScrunchEngine (stream));
+      timeseries->set_memory (device_memory);
+      timeseries->set_engine (new CUDA::TimeSeriesEngine (device_memory));
+    }
+#endif
+
+    operations.push_back( fscrunch );
   }
 
   if (verbose)

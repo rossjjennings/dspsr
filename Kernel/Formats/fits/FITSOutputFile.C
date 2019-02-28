@@ -338,9 +338,10 @@ void dsp::FITSOutputFile::write_header ()
     output_filename = filename + get_extension();
     if (mangle_output)
     {
-      char buff [L_tmpnam];
-      tmpnam(buff);
-      mangled_output_filename = output_filename + (buff+strlen(buff)-6);
+      char buff[1024];
+      sprintf (buff, "%sXXXXXX", output_filename.c_str());
+      mkstemp(buff);
+      mangled_output_filename = buff;
     }
   }
   if (mangle_output)

@@ -204,8 +204,8 @@ void dsp::SampleDelay::transformation ()
   if (engine)
   {
     if (verbose)
-      cerr << "dsp::SampleDelay::transformation engine->retard (input, output)" << endl;
-    engine->retard (input, output);
+      cerr << "dsp::SampleDelay::transformation engine->retard (input, output, " << output_ndat << ")" << endl;
+    engine->retard (input, output, output_ndat);
   }
   else
   {

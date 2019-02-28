@@ -68,11 +68,8 @@ bin_PROGRAMS += fftbatch_speed
 fftbatch_speed_SOURCES = fftbatch_speed.C
 
 if HAVE_CUFFT_CALLBACKS
+
 bin_PROGRAMS += cufft_callback_bench
-
-
-cufft_callback_bench_DC.o: cufft_callback_bench.o
-	$(CUDA_NVCC) -o cufft_callback_bench_DC.o -dlink cufft_callback_bench.o -lcufft_static
 
 ConvolutionCUDACallbacks.lo: ConvolutionCUDACallbacks.cu
 	$(top_srcdir)/config/cudalt.py $(top_builddir)/libtool $@ $(CUDA_NVCC) -dc -c $<
@@ -81,8 +78,6 @@ ConvolutionCUDACallbacks.lo: ConvolutionCUDACallbacks.cu
 cufft_callback_bench.lo: cufft_callback_bench.cu
 	$(top_srcdir)/config/cudalt.py $(top_builddir)/libtool $@ $(CUDA_NVCC) -dc -c $<
 	$(CUDA_NVCC) -o cufft_callback_bench_DC.o -dlink cufft_callback_bench.o -lcufft_static
-
-cufft_callback_bench_LDADD = $(LDADD) cufft_callback_bench_DC.o -lcudart -lcufft_static -lculibos
 
 endif
 endif
@@ -118,10 +113,6 @@ if HAVE_PGPLOT
   passband_SOURCES = passband.C
   passband_LDADD = @PSRPLOT_LIBS@ $(LDADD)
 
-if HAVE_CUFFT_CALLBACKS
-	digistat_LDADD += ConvolutionCUDACallbacks_DC.o -lcudart -lcufft_static -lculibos
-	passband_LDADD += ConvolutionCUDACallbacks_DC.o -lcudart -lcufft_static -lculibos
-endif
   #
   # end PGPLOT-specific code
   #
@@ -170,11 +161,6 @@ if HAVE_dada
   the_decimator_SOURCES = the_decimator.C
   the_decimator_LDADD = $(LDADD) @OPENSSL_LIBS@ @PSRXML_LIBS@ @PSRDADA_LIBS@
   the_decimator_CPPFLAGS = $(AM_CPPFLAGS) $(CPPFLAGS) @PSRXML_CFLAGS@ @PSRDADA_CFLAGS@
-
-if HAVE_CUFFT_CALLBACKS
-  the_decimator_LDADD += ConvolutionCUDACallbacks_DC.o -lcudart -lcufft_static -lculibos
-endif
-
 endif
 
   #
@@ -193,8 +179,15 @@ include $(top_srcdir)/config/Makefile.cuda
 LDADD = libdspdsp.la \
 	$(top_builddir)/Kernel/libdspbase.la \
 	$(top_builddir)/Signal/Statistics/libdspstats.la \
-	@PGPLOT_LIBS@ @CUDA_LIBS@ @CUFFT_LIBS@
+	@PGPLOT_LIBS@ @CUDA_LIBS@
 
 AM_CPPFLAGS += @PGPLOT_CFLAGS@ @CUFFT_CFLAGS@ @CFITSIO_CFLAGS@
 AM_CXXFLAGS = @OPENMP_CFLAGS@
 
+if HAVE_CUFFT
+if HAVE_CUFFT_CALLBACKS
+LDADD += ConvolutionCUDACallbacks_DC.o @CUFFT_CALLBACKS_LIBS@
+else
+LDADD += @CUFFT_LIBS@
+endif
+endif
