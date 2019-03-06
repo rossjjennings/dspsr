@@ -652,7 +652,8 @@ void dsp::LoadToFITS::prepare () try
     * config->get_times_minimum_ndat() + block_overlap;
 
   // set the block size to at least minimum_samples
-  manager->set_maximum_RAM( config->get_maximum_RAM() );
+  if (block_size == 0)
+    manager->set_maximum_RAM( config->get_maximum_RAM() );
   manager->set_copies( config->get_nbuffers() );
 
   manager->set_overlap( block_overlap );

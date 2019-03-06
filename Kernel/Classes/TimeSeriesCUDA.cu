@@ -17,7 +17,7 @@ void check_error_stream (const char*, cudaStream_t);
 using namespace std;
 
 template<typename T>
-__global__ void copy_data_fpt_kernel(T * to, T * from,
+__global__ void copy_data_fpt_kernel(T * to, const T * __restrict__ from,
                                      uint64_t to_stride, uint64_t from_stride,
                                      uint64_t ndat)
 {
