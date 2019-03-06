@@ -348,6 +348,9 @@ void parse_options (int argc, char** argv) try
   arg = menu.add (config->inverse_filterbank, "IF", "<N>[:D]");
   arg->set_help( "create inverse filterbank with N output channels");
 
+  arg = menu.add (config->do_deripple, "dr");
+  arg->set_help( "Apply deripple correction to inverse filterbank");
+
   arg = menu.add (config->plfb_nbin, 'G', "nbin");
   arg->set_help ("create phase-locked filterbank");
 

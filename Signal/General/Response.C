@@ -35,7 +35,7 @@ dsp::Response::Response ()
   npol = 2;
   ndim = 1;
   nchan = 1;
-  step  = 1;
+  step = 1;
 }
 
 //! Destructor

@@ -73,21 +73,37 @@ namespace dsp {
     const Rational& get_oversampling_factor () {return input->get_oversampling_factor();}
 
     int get_input_discard_neg() const {return input_discard_neg;}
+    void set_input_discard_neg(int _input_discard_neg) { input_discard_neg = _input_discard_neg;}
 
     int get_input_discard_pos() const {return input_discard_pos;}
+    void set_input_discard_pos(int _input_discard_pos) { input_discard_pos = _input_discard_pos;}
 
     int get_output_discard_neg() const {return output_discard_neg;}
+    void set_output_discard_neg(int _output_discard_neg) { output_discard_neg = _output_discard_neg;}
 
     int get_output_discard_pos() const {return output_discard_pos;}
+    void set_output_discard_pos(int _output_discard_pos) { output_discard_pos = _output_discard_pos;}
 
     int get_input_fft_length() const {return input_fft_length;}
+    void set_input_fft_length(int _input_fft_length) { input_fft_length = _input_fft_length;}
 
     int get_output_fft_length() const {return output_fft_length;}
+    void set_output_fft_length(int _output_fft_length) { output_fft_length = _output_fft_length;}
 
 
     //! Engine used to perform discrete convolution step
     class Engine;
     void set_engine (Engine*);
+
+    void optimize_discard_region(
+      int* _input_discard_pos,
+      int* _input_discard_neg,
+      int* _output_discard_neg,
+      int* _output_discard_pos);
+
+    void optimize_fft_length(
+      int* _input_fft_length,
+      int* _output_fft_length);
 
   protected:
 
@@ -123,17 +139,9 @@ namespace dsp {
     //! Interface to alternate processing engine (e.g. GPU)
     Reference::To<Engine> engine;
 
+
+
   private:
-
-    void optimize_discard_region(
-      int* _input_discard_pos,
-      int* _input_discard_neg,
-      int* _output_discard_neg,
-      int* _output_discard_pos);
-
-    void optimize_fft_length(
-      int* _input_fft_length,
-      int* _output_fft_length);
 
     div_t calc_lcf (int a, int b, Rational osf);
 

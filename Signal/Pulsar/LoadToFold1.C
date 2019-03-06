@@ -313,6 +313,7 @@ void dsp::LoadToFold::construct () try
     config->inverse_filterbank.set_device( device_memory.ptr() );
     config->inverse_filterbank.set_stream( gpu_stream );
 
+
     if (! inverse_filterbank) {
       inverse_filterbank = config->inverse_filterbank.create();
     }
@@ -321,13 +322,18 @@ void dsp::LoadToFold::construct () try
     }
     inverse_filterbank->set_input (unpacked);
     inverse_filterbank->set_output (filterbanked);
-    // default engine is the CPU engine
-    // dsp::InverseFilterbankEngineCPU* inverse_filterbank_engine = \
-    //   new dsp::InverseFilterbankEngineCPU;
-    // for now, inverse filterbank does convolution during inversion.
     inverse_filterbank->set_response (response);
-    // inverse_filterbank->set_engine (inverse_filterbank_engine);
 
+    // set up derippling response
+
+    if (manager->get_info()->get_deripple_stages() > 0 && config->do_deripple) {
+      std::cerr << "dspsr: setting up deripple" << std::endl;
+      Reference::To<dsp::DerippleResponse> deripple_response = new dsp::DerippleResponse;
+      deripple_response->set_fir_filter(manager->get_info()->get_deripple()[0]);
+      inverse_filterbank->set_deripple (deripple_response);
+    }
+
+    // for now, inverse filterbank does convolution during inversion.
     if (!convolve_when == Convolution::Config::Before){
       operations.push_back (inverse_filterbank.get());
     }

@@ -9,6 +9,7 @@
 #include "dsp/OptimalFFT.h"
 
 #include <exception>
+#include <fstream>
 #include <iostream>
 #include <vector>
 
@@ -27,7 +28,6 @@ dsp::DerippleResponse::DerippleResponse ()
 
 dsp::DerippleResponse::~DerippleResponse ()
 {
-
 }
 
 void dsp::DerippleResponse::build ()
@@ -37,15 +37,50 @@ void dsp::DerippleResponse::build ()
   }
   resize (npol, nchan, ndat, ndim);
 
+  if (verbose) {
+    std::cerr << "dsp::DerippleResponse::build: bufsize=" << bufsize << std::endl;
+    std::cerr << "dsp::DerippleResponse::build: whole_swapped=" << whole_swapped << std::endl;
+    std::cerr << "dsp::DerippleResponse::build: swap_divisions=" << swap_divisions << std::endl;
+  }
+
   std::vector<float> freq_response;
 
-  calc_freq_response(freq_response, ndat);
+  calc_freq_response(freq_response, ndat*nchan/2);
+  // calc_freq_response(freq_response, ndat*nchan);
+  // calc_freq_response(freq_response, ndat*2);
 
-  uint64_t npt = ndat * ndim * nchan;
+  std::complex<float>* freq_response_complex = reinterpret_cast< std::complex<float>* >(freq_response.data());
+  std::complex<float>* phasors = reinterpret_cast< std::complex<float>* > ( buffer );
 
-  for (uint64_t ipt=0; ipt<npt; ipt++) {
-    buffer[ipt] = freq_response[ipt];
+  uint64_t npt = ndat/2;
+  // uint64_t npt = ndat;
+  int step = 0;
+  for (int ichan=0; ichan < nchan; ichan++) {
+    for (uint64_t ipt=0; ipt < npt; ipt++) {
+      // std::cerr << freq_response_complex[ipt] << std::endl;
+      // phasors[ipt + step] = std::complex<float>(1.0/std::abs(freq_response_complex[ipt]), 0.0);
+      // std::cerr << std::abs(freq_response_complex[ipt]) << std::endl;
+
+      // this is correct.. but why?
+      phasors[ipt + step] = std::complex<float>(1.0/std::abs(freq_response_complex[ipt]), 0.0);
+      phasors[npt + ipt + step] = std::complex<float>(1.0/std::abs(freq_response_complex[npt - ipt + 1]), 0.0);
+
+      // phasors[ipt + step] = std::complex<float>(1.0/std::abs(freq_response_complex[npt - ipt + 1]), 0.0);
+      // phasors[npt + ipt + step] = std::complex<float>(1.0/std::abs(freq_response_complex[ipt]), 0.0);
+
+      // phasors[ipt + step] = std::complex<float>(std::abs(freq_response_complex[ipt]), 0.0);
+      // phasors[npt + ipt + step] = std::complex<float>(std::abs(freq_response_complex[ipt]), 0.0);
+    }
+    step += ndat;
   }
+  std::ofstream freq_response_file("freq_response.buffer.dat", std::ios::out | std::ios::binary);
+
+  freq_response_file.write(
+      reinterpret_cast<const char*>(buffer),
+      ndat*nchan*ndim*npol*sizeof(float)
+  );
+
+  freq_response_file.close();
   built = true;
 
 }
@@ -86,7 +121,7 @@ void dsp::DerippleResponse::set_nchan (unsigned _nchan)
 void dsp::DerippleResponse::calc_freq_response (
   std::vector<float>& freq_response, unsigned n_freq)
 {
-  // std::ofstream freq_response_file("freq_response.dat", std::ios::out | std::ios::binary);
+  std::ofstream freq_response_file("freq_response.dat", std::ios::out | std::ios::binary);
   if (verbose) {
     std::cerr << "dsp::DerippleResponse::calc_freq_response" << std::endl;
   }
@@ -112,11 +147,11 @@ void dsp::DerippleResponse::calc_freq_response (
     freq_response[i] = freq_response_temp[i];
   }
 
-  // freq_response_file.write(
-  //     reinterpret_cast<const char*>(freq_response.data()),
-  //     2*n_freq*sizeof(float)
-  // );
-  // freq_response_file.close();
+  freq_response_file.write(
+      reinterpret_cast<const char*>(freq_response.data()),
+      2*n_freq*sizeof(float)
+  );
+  freq_response_file.close();
 }
 
 //! Create an Scalar Filter with nchan channels

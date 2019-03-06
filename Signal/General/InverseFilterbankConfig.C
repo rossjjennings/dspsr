@@ -11,6 +11,8 @@
 
 #include "dsp/InverseFilterbankConfig.h"
 #include "dsp/Scratch.h"
+#include "dsp/Dedispersion.h"
+#include "dsp/Response.h"
 
 #include "dsp/InverseFilterbankEngineCPU.h"
 
@@ -33,18 +35,12 @@ dsp::InverseFilterbank::Config::Config ()
   when = During;
 }
 
-
 //! Return a new InverseFilterbank instance and configure it
 dsp::InverseFilterbank* dsp::InverseFilterbank::Config::create ()
 {
   Reference::To<InverseFilterbank> filterbank = new InverseFilterbank;
 
   filterbank->set_output_nchan( get_nchan() );
-
-  if (freq_res){
-    filterbank->set_frequency_resolution ( freq_res );
-  }
-
 
 #if HAVE_CUDA
   CUDA::DeviceMemory* device_memory =

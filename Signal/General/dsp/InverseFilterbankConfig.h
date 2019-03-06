@@ -13,6 +13,8 @@
 
 #include "dsp/ConvolutionConfig.h"
 #include "dsp/InverseFilterbank.h"
+#include "dsp/Response.h"
+#include "dsp/TimeSeries.h"
 
 namespace dsp
 {
@@ -24,6 +26,7 @@ namespace dsp
 
     //! Return a new InverseFilterbank instance and configure it
     InverseFilterbank* create ();
+
 
     //! Set the device on which the unpacker will operate
     // void set_device (Memory*);

@@ -7,8 +7,10 @@
 #include "dsp/TimeSeries.h"
 #include "dsp/Detection.h"
 #include "dsp/Unpacker.h"
-#include "dsp/OptimalFFT.h"
+#include "dsp/ResponseProduct.h"
 #include "dsp/Dedispersion.h"
+#include "dsp/FIRFilter.h"
+#include "dsp/DerippleResponse.h"
 #include "dsp/InverseFilterbank.h"
 #include "dsp/InverseFilterbankEngineCPU.h"
 
@@ -89,16 +91,84 @@ void TestInverseFilterbank::test_pipeline ()
 	std::cerr << "TestInverseFilterbank::test_pipeline" << std::endl;
 	dsp::TimeSeries* output = new dsp::TimeSeries;
 	dsp::InverseFilterbank filterbank;
-	dsp::InverseFilterbankEngineCPU* filterbank_engine = new dsp::InverseFilterbankEngineCPU;
-	Reference::To<dsp::Dedispersion> kernel = new dsp::Dedispersion;
-	kernel->set_dispersion_measure(dm);
-	// kernel->set_optimal_fft (new dsp::OptimalFFT);
-	dsp::Response* response = kernel.ptr();
+	filterbank.set_buffering_policy(NULL);
 	filterbank.set_output_nchan(1);
 	filterbank.set_input(unpacked);
 	filterbank.set_output(output);
+
+	dsp::InverseFilterbankEngineCPU* filterbank_engine = new dsp::InverseFilterbankEngineCPU;
+	Reference::To<dsp::Dedispersion> kernel = new dsp::Dedispersion;
+	kernel->set_dispersion_measure(dm);
+	Reference::To<dsp::DerippleResponse> deripple = new dsp::DerippleResponse;
+	deripple->set_fir_filter(info->get_deripple()[0]);
+
+	// kernel->match(filterbank.get_input(), filterbank.get_output_nchan());
+	//
+	// int output_discard_pos = kernel->get_impulse_pos();
+	// int output_discard_neg = kernel->get_impulse_neg();
+	// int input_discard_neg = 0;
+	// int input_discard_pos = 0;
+	//
+	// int input_fft_length = 0;
+	// int output_fft_length = kernel->get_ndat();
+
+
+// if (verbose) {
+// 	cerr << "dsp::InverseFilterbank::make_preparations:"
+// 			<< " output_discard_neg(before)=" << output_discard_neg
+// 			<< " output_discard_pos(before)=" << output_discard_pos
+// 			<< " output_fft_length(before)=" << output_fft_length
+// 			<< endl;
+// }
+
+	// filterbank.optimize_discard_region(
+	// 	&input_discard_neg, &input_discard_pos,
+	// 	&output_discard_neg, &output_discard_pos
+	// );
+	// filterbank.optimize_fft_length(
+	// 	&input_fft_length, &output_fft_length);
+
+// if (verbose) {
+// 	cerr << "dsp::InverseFilterbank::make_preparations:"
+// 			<< " input_discard_neg(after)=" << input_discard_neg
+// 			<< " input_discard_pos(after)=" << input_discard_pos
+// 			<< " input_fft_length(after)=" << input_fft_length
+// 			<< " output_discard_neg(after)=" << output_discard_neg
+// 			<< " output_discard_pos(after)=" << output_discard_pos
+// 			<< " output_fft_length(after)=" << output_fft_length
+// 			<< endl;
+// }
+	// unsigned input_nchan = info->get_nchan();
+	// filterbank.set_input_discard_neg(input_discard_neg);
+	// filterbank.set_input_discard_pos(input_discard_pos);
+	// filterbank.set_output_discard_neg(output_discard_neg);
+	// filterbank.set_output_discard_pos(output_discard_pos);
+	// filterbank.set_input_fft_length(input_fft_length);
+	// filterbank.set_output_fft_length(output_fft_length);
+	//
+	// kernel->set_impulse_pos(output_discard_pos);
+	// kernel->set_impulse_neg(output_discard_neg);
+	// kernel->set_frequency_resolution(output_fft_length);
+	// kernel->build();
+	//
+	// deripple->set_nchan(input_nchan);
+	// deripple->set_ndat(kernel->get_ndat() / input_nchan);
+	// deripple->build();
+	//
+	// dsp::Response* response = kernel.ptr();
+
+	// dsp::ResponseProduct* response_product = new dsp::ResponseProduct;
+	// response_product->add_response(kernel);
+	// response_product->add_response(deripple);
+	// dsp::Response* response = response_product;
+	// response->match(filterbank.get_input(), filterbank.get_output_nchan());
+	std::cerr << "TestInverseFilterbank::test_pipeline: kernel->ndim=" << kernel->get_ndim() << std::endl;
+	std::cerr << "TestInverseFilterbank::test_pipeline: kernel->nchan=" << kernel->get_nchan() << std::endl;
+	std::cerr << "TestInverseFilterbank::test_pipeline: kernel->ndat=" << kernel->get_ndat() << std::endl;
+
 	filterbank.set_engine(filterbank_engine);
-	filterbank.set_response(response);
+	filterbank.set_response(kernel);
+	filterbank.set_deripple(deripple);
 	filterbank.prepare();
 	filterbank.operate();
 }

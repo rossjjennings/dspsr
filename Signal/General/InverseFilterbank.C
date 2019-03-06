@@ -4,10 +4,9 @@
  *   Licensed under the Academic Free License version 2.1
  *
  ***************************************************************************/
+#include <vector>
 
-#include "dsp/InverseFilterbank.h"
-#include "dsp/InverseFilterbankEngine.h"
-
+#include "dsp/FIRFilter.h"
 #include "dsp/WeightedTimeSeries.h"
 #include "dsp/Response.h"
 #include "dsp/Dedispersion.h"
@@ -15,6 +14,10 @@
 #include "dsp/InputBuffering.h"
 #include "dsp/Scratch.h"
 #include "dsp/OptimalFFT.h"
+
+#include "dsp/InverseFilterbank.h"
+#include "dsp/InverseFilterbankEngine.h"
+
 
 using namespace std;
 
@@ -26,8 +29,10 @@ dsp::InverseFilterbank::InverseFilterbank (const char* name, Behaviour behaviour
   set_buffering_policy (new InputBuffering (this));
   input_discard_neg = 0;
   input_discard_pos = 0;
+  input_discard_total = 0;
   output_discard_neg = 0;
   output_discard_pos = 0;
+  output_discard_total = 0;
 
 }
 
@@ -131,68 +136,87 @@ void dsp::InverseFilterbank::make_preparations ()
   unsigned n_per_sample = real_to_complex ? 2: 1;
   // setup the dedispersion discard region for the forward and backward FFTs
   input_nchan = input->get_nchan();
-
   if (has_response()) {
     response->match(input, output_nchan);
     output_discard_pos = response->get_impulse_pos();
     output_discard_neg = response->get_impulse_neg();
     output_fft_length = response->get_ndat();
+    if (verbose) {
+      cerr << "dsp::InverseFilterbank::make_preparations:"
+          << " output_discard_neg(before)=" << output_discard_neg
+          << " output_discard_pos(before)=" << output_discard_pos
+          << " output_fft_length(before)=" << output_fft_length
+          << endl;
+    }
+
+    optimize_discard_region(
+      &input_discard_neg, &input_discard_pos,
+      &output_discard_neg, &output_discard_pos
+    );
+    optimize_fft_length(
+      &input_fft_length, &output_fft_length);
+
+    if (verbose) {
+      cerr << "dsp::InverseFilterbank::make_preparations:"
+          << " input_discard_neg(after)=" << input_discard_neg
+          << " input_discard_pos(after)=" << input_discard_pos
+          << " input_fft_length(after)=" << input_fft_length
+          << " output_discard_neg(after)=" << output_discard_neg
+          << " output_discard_pos(after)=" << output_discard_pos
+          << " output_fft_length(after)=" << output_fft_length
+          << endl;
+    }
+
+    freq_res = output_fft_length;
+
+    input_fft_length *= n_per_sample;
+    output_fft_length *= n_per_sample;
+
+    input_discard_total = n_per_sample*(input_discard_neg + input_discard_pos);
+    input_sample_step = input_fft_length - input_discard_total;
+
+    output_discard_total = n_per_sample*(output_discard_neg + output_discard_pos);
+    output_sample_step = output_fft_length - output_discard_total;
+
+    if (verbose) {
+      cerr << "dsp::InverseFilterbank::make_preparations: done optimizing fft lengths and discard regions" << endl;
+      cerr << "dsp::InverseFilterbank::make_preparations: input_fft_length="
+           << input_fft_length << " output_fft_length="
+           << output_fft_length << " input_discard_neg/pos="
+           << input_discard_neg << "/" << input_discard_pos
+           << " output_discard_neg/pos="
+           << input_discard_neg << "/" << input_discard_pos
+           << endl;
+    }
+    response->set_impulse_neg(output_discard_neg);
+    response->set_impulse_pos(output_discard_pos);
+    Dedispersion* dedispersion = dynamic_cast<Dedispersion *>(response.ptr());
+  	if (dedispersion)
+  	{
+  		dedispersion->set_frequency_resolution(output_fft_length);
+  		dedispersion->build();
+  	}
+  } else {
+    output_fft_length = freq_res ;
+    input_fft_length = get_oversampling_factor().normalize(output_fft_length);
+    output_fft_length *= n_per_sample;
+    input_fft_length *= n_per_sample;
+    output_sample_step = output_fft_length;
+    input_sample_step = input_fft_length;
   }
 
-  if (verbose) {
-    cerr << "dsp::InverseFilterbank::make_preparations:"
-        << " output_discard_neg(before)=" << output_discard_neg
-        << " output_discard_pos(before)=" << output_discard_pos
-        << " output_fft_length(before)=" << output_fft_length
-        << endl;
+
+
+  if (has_deripple()) {
+    // needs to be modified to incorporate multiple layers of upstream
+    // channelization -- DCS
+    if (verbose) {
+      std::cerr << "dsp::InverseFilterbank::make_preparations: setting up derippling response" << std::endl;
+    }
+    deripple->set_ndat(freq_res / input_nchan);
+    deripple->set_nchan(input_nchan);
+    deripple->build();
   }
-
-  optimize_discard_region(
-    &input_discard_neg, &input_discard_pos,
-    &output_discard_neg, &output_discard_pos
-  );
-  optimize_fft_length(&input_fft_length, &output_fft_length);
-
-  if (verbose) {
-    cerr << "dsp::InverseFilterbank::make_preparations:"
-        << " input_discard_neg(after)=" << input_discard_neg
-        << " input_discard_pos(after)=" << input_discard_pos
-        << " input_fft_length(after)=" << input_fft_length
-        << " output_discard_neg(after)=" << output_discard_neg
-        << " output_discard_pos(after)=" << output_discard_pos
-        << " output_fft_length(after)=" << output_fft_length
-        << endl;
-  }
-
-  freq_res = output_fft_length;
-
-  input_fft_length *= n_per_sample;
-  output_fft_length *= n_per_sample;
-
-  input_discard_total = n_per_sample*(input_discard_neg + input_discard_pos);
-  input_sample_step = input_fft_length - input_discard_total;
-
-  output_discard_total = n_per_sample*(output_discard_neg + output_discard_pos);
-  output_sample_step = output_fft_length - output_discard_total;
-
-  if (verbose) {
-    cerr << "dsp::InverseFilterbankEngineCPU::setup: done optimizing fft lengths and discard regions" << endl;
-    cerr << "dsp::InverseFilterbankEngineCPU::setup: input_fft_length="
-         << input_fft_length << " output_fft_length="
-         << output_fft_length << " input_discard_neg/pos="
-         << input_discard_neg << "/" << input_discard_pos
-         << " output_discard_neg/pos="
-         << input_discard_neg << "/" << input_discard_pos
-         << endl;
-  }
-  response->set_impulse_neg(output_discard_neg);
-  response->set_impulse_pos(output_discard_pos);
-  Dedispersion* dedispersion = dynamic_cast<Dedispersion *>(response.ptr());
-	if (dedispersion)
-	{
-		dedispersion->set_frequency_resolution(output_fft_length);
-		dedispersion->build();
-	}
 
   if (has_buffering_policy()) {
     if (verbose) {

@@ -151,6 +151,9 @@ namespace dsp {
 
     bool is_inverse_filterbank;
 
+    // whether or not to apply deripple correction
+    bool do_deripple;
+
     bool force_sensible_nbin;
 
     // length of sub-integrations in pulse periods

@@ -6,17 +6,19 @@
  *
  ***************************************************************************/
 
+#include "FTransform.h"
+
 #include "dsp/InverseFilterbankEngineCPU.h"
 #include "dsp/TimeSeries.h"
 #include "dsp/Scratch.h"
 #include "dsp/Apodization.h"
 #include "dsp/OptimalFFT.h"
 
+#include <fstream>
 #include <iostream>
 #include <assert.h>
 #include <cstring>
 
-#include "FTransform.h"
 
 using namespace std;
 
@@ -25,6 +27,7 @@ dsp::InverseFilterbankEngineCPU::InverseFilterbankEngineCPU ()
   input_fft_length = 0;
   fft_plans_setup = false;
   response = nullptr;
+  deripple = nullptr;
 }
 
 dsp::InverseFilterbankEngineCPU::~InverseFilterbankEngineCPU ()
@@ -39,13 +42,37 @@ double dsp::InverseFilterbankEngineCPU::setup_fft_plans (
   TimeSeries* output = filterbank->get_output();
 
   if (filterbank->has_response()) {
+    if (verbose) {
+      std::cerr << "dsp::InverseFilterbankEngineCPU::setup_fft_plans: setting response" << std::endl;
+    }
     response = filterbank->get_response();
   }
+
+  if (filterbank->has_deripple()) {
+    if (verbose) {
+      std::cerr << "dsp::InverseFilterbankEngineCPU::setup_fft_plans: setting deripple" << std::endl;
+    }
+    deripple = filterbank->get_deripple();
+    if (verbose) {
+      std::cerr << "dsp::InverseFilterbankEngineCPU::setup_fft_plans: deripple nchan=" << deripple->get_nchan() << std::endl;
+      std::cerr << "dsp::InverseFilterbankEngineCPU::setup_fft_plans: deripple ndat=" << deripple->get_ndat() << std::endl;
+      std::cerr << "dsp::InverseFilterbankEngineCPU::setup_fft_plans: deripple ndim=" << deripple->get_ndim() << std::endl;
+      std::cerr << "dsp::InverseFilterbankEngineCPU::setup_fft_plans: deripple npol=" << deripple->get_npol() << std::endl;
+    }
+
+
+  }
+
   real_to_complex = (input->get_state() == Signal::Nyquist);
 
 
   input_fft_length = filterbank->get_input_fft_length();
   output_fft_length = filterbank->get_output_fft_length();
+
+  // if (verbose) {
+  //   std::cerr << "dsp::InverseFilterbankEngineCPU::setup_fft_plans: input_fft_length="
+  //             << input_fft_length << ", output_fft_length=" << output_fft_length << std::endl;
+  // }
 
   OptimalFFT* optimal = 0;
   if (response && response->has_optimal_fft()) {
@@ -174,6 +201,9 @@ void dsp::InverseFilterbankEngineCPU::perform (const dsp::TimeSeries* in, dsp::T
 
 	cerr << "dsp::InverseFilterbankEngineCPU::perform: writing " << npart << " chunks" << endl;
 
+  // std::ofstream deripple_before_file("deripple.before.dat", std::ios::out | std::ios::binary);
+  // std::ofstream deripple_after_file("deripple.after.dat", std::ios::out | std::ios::binary);
+
 	for(unsigned output_ichan = 0; output_ichan < output_nchan; output_ichan++) {
 		for(uint64_t ipart = 0; ipart < npart; ipart++) {
 			for(unsigned ipol = 0; ipol < n_pol; ipol++) {
@@ -229,9 +259,20 @@ void dsp::InverseFilterbankEngineCPU::perform (const dsp::TimeSeries* in, dsp::T
 					);
 				}
 
-				// for (int i=0; i<2*input_fft_length*input_nchan; i++) {
-				// 	*(response_stitch_scratch + i) = 0.0;
-				// }
+        // deripple_before_file.write(
+        //   reinterpret_cast<const char*>(stitch_scratch),
+        //   output_fft_length*sizeof_complex
+        // );
+        //! Deripple correction is setup to be done before circular shift
+        if (deripple != nullptr) {
+          deripple->operate(stitch_scratch, 0, 0, input_nchan);
+        }
+
+        // deripple_after_file.write(
+        //   reinterpret_cast<const char*>(stitch_scratch),
+        //   output_fft_length*sizeof_complex
+        // );
+
 
 				// do circular shift
 				// first copy all of stitch_scratch to fft_shift_scratch
@@ -257,7 +298,6 @@ void dsp::InverseFilterbankEngineCPU::perform (const dsp::TimeSeries* in, dsp::T
 					response->operate(stitch_scratch, ipol, 0, 1);
 				}
 
-
 				if (out != nullptr) {
 
           if (verbose)
@@ -279,7 +319,8 @@ void dsp::InverseFilterbankEngineCPU::perform (const dsp::TimeSeries* in, dsp::T
   if (verbose) {
     cerr << "dsp::InverseFilterbankEngineCPU::perform: finish" << endl;
   }
-
+  deripple_before_file.close();
+  deripple_after_file.close();
 }
 
 void dsp::InverseFilterbankEngineCPU::finish ()

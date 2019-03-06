@@ -5,7 +5,7 @@ dsp::File::create testing Dummy
 dsp::DummyFile::is_valid first line != DUMMY
 dsp::File::create testing DADA
 dsp::File::create DADA::is_valid() returned true
-dsp::Input ctor this=0x1f4ac00
+dsp::Input ctor this=0xef8c00
 dsp::File::open filename=/home/SWIN/dshaff/mnt/ozstar/projects/PST_Matlab_pulsar_signal_processing_model_CDR/data/py_channelized.simulated_pulsar.noise_0.0.nseries_10.ndim_2.os.dump
 DADAFile::open exit
 dsp::File::fstat_file_ndat(): buf=189431680 header_bytes=8192 tailer_bytes=0 total_bytes=189423488
@@ -22,43 +22,43 @@ dsp::Unpacker::create return new sub-class
 TestInverseFilterbank::setup: creating Input instance
 TestInverseFilterbank::setup: creating Observation instance
 TestInverseFilterbank::load_data
-dsp::Input::set_load_size block_size=400000 resolution_offset=0
-dsp::Input::set_load_size load_size=400000
-dsp::IOManager::load (TimeSeries* = 0x1f4e380)
-dsp::IOManager::set_output (TimeSeries*) 0x1f4e380
+dsp::Input::set_load_size block_size=699048 resolution_offset=0
+dsp::Input::set_load_size load_size=699048
+dsp::IOManager::load (TimeSeries* = 0xefc380)
+dsp::IOManager::set_output (TimeSeries*) 0xefc380
 dsp::IOManager::set_output call Unpacker::set_output
-dsp::Transformation[FloatUnpacker]::set_output (0x1f4e380)
-dsp::IOManager::set_output (BitSeries*) 0x1f4e810
+dsp::Transformation[FloatUnpacker]::set_output (0xefc380)
+dsp::IOManager::set_output (BitSeries*) 0xefc810
 dsp::IOManager::set_output call Unpacker::set_input
-dsp::Transformation[FloatUnpacker]::set_input (0x1f4e810)
+dsp::Transformation[FloatUnpacker]::set_input (0xefc810)
 dsp::Input::load before lock
 dsp::Input::load after lock
-dsp::Input::set_output (BitSeries* = 0x1f4e810)
+dsp::Input::set_output (BitSeries* = 0xefc810)
 dsp::Operation[DADA]::operate
-dsp::Input::operation [EXTERNAL] block_size=400000 next_sample=0
-dsp::Input::operation [INTERNAL] load_size=400000 load_sample=0
+dsp::Input::operation [EXTERNAL] block_size=699048 next_sample=0
+dsp::Input::operation [INTERNAL] load_size=699048 load_sample=0
 dsp::Input::operation call load_data Bit_Stream::ndat=1479871
-dsp::Input::reserve block_size=400000 maximum_load_size=400000
+dsp::Input::reserve block_size=699048 maximum_load_size=699048
 dsp::Seekable::load_data
-   load_size=400000
+   load_size=699048
    load_sample=0
    current_sample=0
 dsp::Seekable::recycle_data no input_sample
 dsp::Seekable::load_data
    recycled=0
-   read_size=400000
+   read_size=699048
    read_sample=0
 dsp::Seekable::load_data total ndat=1479871 read_sample=0
 dsp::Seekable::load_data 1479871 samples remaining
-dsp::Seekable::load_data call load_bytes(51200000)
-dsp::File::load_bytes nbytes=51200000
-dsp::File::load_bytes bytes_read=51200000 old_pos=8192 new_pos=51208192 end_pos=189431680
+dsp::Seekable::load_data call load_bytes(89478144)
+dsp::File::load_bytes nbytes=89478144
+dsp::File::load_bytes bytes_read=89478144 old_pos=8192 new_pos=89486336 end_pos=189431680
 dsp::Input::operation load_data done load_sample=0 name='DADA'
-dsp::Input::operation calling seek(400000)
-dsp::Input::seek [INTERNAL] resolution=1 resolution_offset=0 load_sample=400000
-dsp::Input::set_load_size block_size=400000 resolution_offset=0
-dsp::Input::set_load_size load_size=400000
-dsp::Input::operation exit with load_sample=400000
+dsp::Input::operation calling seek(699048)
+dsp::Input::seek [INTERNAL] resolution=1 resolution_offset=0 load_sample=699048
+dsp::Input::set_load_size block_size=699048 resolution_offset=0
+dsp::Input::set_load_size load_size=699048
+dsp::Input::operation exit with load_sample=699048
 dsp::Input::load exit
 dsp::Operation[FloatUnpacker]::operate
 dsp::Transformation[FloatUnpacker]::operation call vchecks
@@ -68,94 +68,46 @@ dsp::Transformation[FloatUnpacker]::operation transformation
 dsp::Unpacker::transformation
 dsp::Unpacker::prepare
 dsp::Unpacker::prepare output start_time=58520.2
-dsp::Unpacker::reserve input ndat=400000
+dsp::Unpacker::reserve input ndat=699048
 dsp::Unpacker::tranformation TimeSeries book-keeping
-  input_sample=0  seek=0  ndat=400000
+  input_sample=0  seek=0  ndat=699048
 dsp::Unpacker::transformation exit
 dsp::Transformation[FloatUnpacker]::operation check output
-dsp::IOManager::load (TimeSeries* = 0x1f4e380)
-dsp::IOManager::set_output (TimeSeries*) 0x1f4e380
+dsp::IOManager::load (TimeSeries* = 0xefc380)
+dsp::IOManager::set_output (TimeSeries*) 0xefc380
 dsp::IOManager::set_output call Unpacker::set_output
-dsp::Transformation[FloatUnpacker]::set_output (0x1f4e380)
+dsp::Transformation[FloatUnpacker]::set_output (0xefc380)
 dsp::Input::load before lock
 dsp::Input::load after lock
-dsp::Input::set_output (BitSeries* = 0x1f4e810)
+dsp::Input::set_output (BitSeries* = 0xefc810)
 dsp::Operation[DADA]::operate
-dsp::Input::operation [EXTERNAL] block_size=400000 next_sample=400000
-dsp::Input::operation [INTERNAL] load_size=400000 load_sample=400000
+dsp::Input::operation [EXTERNAL] block_size=699048 next_sample=699048
+dsp::Input::operation [INTERNAL] load_size=699048 load_sample=699048
 dsp::Input::operation call load_data Bit_Stream::ndat=1479871
-dsp::Input::reserve block_size=400000 maximum_load_size=400000
+dsp::Input::reserve block_size=699048 maximum_load_size=699048
 dsp::Seekable::load_data
-   load_size=400000
-   load_sample=400000
-   current_sample=400000
+   load_size=699048
+   load_sample=699048
+   current_sample=699048
 dsp::Seekable::recycle_data
    start_sample=0
-   last_sample=400000
+   last_sample=699048
 dsp::Seekable::load_data
    recycled=0
-   read_size=400000
-   read_sample=400000
-dsp::Seekable::load_data total ndat=1479871 read_sample=400000
-dsp::Seekable::load_data 1079871 samples remaining
-dsp::Seekable::load_data call load_bytes(51200000)
-dsp::File::load_bytes nbytes=51200000
-dsp::File::load_bytes bytes_read=51200000 old_pos=51208192 new_pos=102408192 end_pos=189431680
-dsp::Input::operation load_data done load_sample=400000 name='DADA'
-dsp::Input::operation calling seek(400000)
-dsp::Input::seek [INTERNAL] resolution=1 resolution_offset=0 load_sample=800000
-dsp::Input::set_load_size block_size=400000 resolution_offset=0
-dsp::Input::set_load_size load_size=400000
-dsp::Input::operation exit with load_sample=800000
-dsp::Input::load exit
-dsp::Operation[FloatUnpacker]::operate
-dsp::Transformation[FloatUnpacker]::operation call vchecks
-dsp::Transformation[FloatUnpacker]::vchecks input checks
-dsp::Transformation[FloatUnpacker]::vchecks done
-dsp::Transformation[FloatUnpacker]::operation transformation
-dsp::Unpacker::transformation
-dsp::Unpacker::prepare
-dsp::Unpacker::prepare output start_time=58520.2
-dsp::Unpacker::reserve input ndat=400000
-dsp::Unpacker::tranformation TimeSeries book-keeping
-  input_sample=400000  seek=0  ndat=400000
-dsp::Unpacker::transformation exit
-dsp::Transformation[FloatUnpacker]::operation check output
-dsp::IOManager::load (TimeSeries* = 0x1f4e380)
-dsp::IOManager::set_output (TimeSeries*) 0x1f4e380
-dsp::IOManager::set_output call Unpacker::set_output
-dsp::Transformation[FloatUnpacker]::set_output (0x1f4e380)
-dsp::Input::load before lock
-dsp::Input::load after lock
-dsp::Input::set_output (BitSeries* = 0x1f4e810)
-dsp::Operation[DADA]::operate
-dsp::Input::operation [EXTERNAL] block_size=400000 next_sample=800000
-dsp::Input::operation [INTERNAL] load_size=400000 load_sample=800000
-dsp::Input::operation call load_data Bit_Stream::ndat=1479871
-dsp::Input::reserve block_size=400000 maximum_load_size=400000
-dsp::Seekable::load_data
-   load_size=400000
-   load_sample=800000
-   current_sample=800000
-dsp::Seekable::recycle_data
-   start_sample=400000
-   last_sample=800000
-dsp::Seekable::load_data
-   recycled=0
-   read_size=400000
-   read_sample=800000
-dsp::Seekable::load_data total ndat=1479871 read_sample=800000
-dsp::Seekable::load_data 679871 samples remaining
-dsp::Seekable::load_data call load_bytes(51200000)
-dsp::File::load_bytes nbytes=51200000
-dsp::File::load_bytes bytes_read=51200000 old_pos=102408192 new_pos=153608192 end_pos=189431680
-dsp::Input::operation load_data done load_sample=800000 name='DADA'
-dsp::Input::operation calling seek(400000)
-dsp::Input::seek [INTERNAL] resolution=1 resolution_offset=0 load_sample=1200000
-dsp::Input::set_load_size block_size=400000 resolution_offset=0
+   read_size=699048
+   read_sample=699048
+dsp::Seekable::load_data total ndat=1479871 read_sample=699048
+dsp::Seekable::load_data 780823 samples remaining
+dsp::Seekable::load_data call load_bytes(89478144)
+dsp::File::load_bytes nbytes=89478144
+dsp::File::load_bytes bytes_read=89478144 old_pos=89486336 new_pos=178964480 end_pos=189431680
+dsp::Input::operation load_data done load_sample=699048 name='DADA'
+dsp::Input::operation calling seek(699048)
+dsp::Input::seek [INTERNAL] resolution=1 resolution_offset=0 load_sample=1398096
+dsp::Input::set_load_size block_size=699048 resolution_offset=0
 dsp::Input::set_load_size near end of data
-dsp::Input::set_load_size load_size=279871
-dsp::Input::operation exit with load_sample=1200000
+dsp::Input::set_load_size load_size=81775
+dsp::Input::operation exit with load_sample=1398096
 dsp::Input::load exit
 dsp::Operation[FloatUnpacker]::operate
 dsp::Transformation[FloatUnpacker]::operation call vchecks
@@ -165,47 +117,47 @@ dsp::Transformation[FloatUnpacker]::operation transformation
 dsp::Unpacker::transformation
 dsp::Unpacker::prepare
 dsp::Unpacker::prepare output start_time=58520.2
-dsp::Unpacker::reserve input ndat=400000
+dsp::Unpacker::reserve input ndat=699048
 dsp::Unpacker::tranformation TimeSeries book-keeping
-  input_sample=800000  seek=0  ndat=400000
+  input_sample=699048  seek=0  ndat=699048
 dsp::Unpacker::transformation exit
 dsp::Transformation[FloatUnpacker]::operation check output
-dsp::IOManager::load (TimeSeries* = 0x1f4e380)
-dsp::IOManager::set_output (TimeSeries*) 0x1f4e380
+dsp::IOManager::load (TimeSeries* = 0xefc380)
+dsp::IOManager::set_output (TimeSeries*) 0xefc380
 dsp::IOManager::set_output call Unpacker::set_output
-dsp::Transformation[FloatUnpacker]::set_output (0x1f4e380)
+dsp::Transformation[FloatUnpacker]::set_output (0xefc380)
 dsp::Input::load before lock
 dsp::Input::load after lock
-dsp::Input::set_output (BitSeries* = 0x1f4e810)
+dsp::Input::set_output (BitSeries* = 0xefc810)
 dsp::Operation[DADA]::operate
-dsp::Input::operation [EXTERNAL] block_size=400000 next_sample=1200000
-dsp::Input::operation [INTERNAL] load_size=279871 load_sample=1200000
+dsp::Input::operation [EXTERNAL] block_size=699048 next_sample=1398096
+dsp::Input::operation [INTERNAL] load_size=81775 load_sample=1398096
 dsp::Input::operation call load_data Bit_Stream::ndat=1479871
-dsp::Input::reserve block_size=400000 maximum_load_size=400000
+dsp::Input::reserve block_size=699048 maximum_load_size=699048
 dsp::Seekable::load_data
-   load_size=279871
-   load_sample=1200000
-   current_sample=1200000
+   load_size=81775
+   load_sample=1398096
+   current_sample=1398096
 dsp::Seekable::recycle_data
-   start_sample=800000
-   last_sample=1200000
+   start_sample=699048
+   last_sample=1398096
 dsp::Seekable::load_data
    recycled=0
-   read_size=279871
-   read_sample=1200000
-dsp::Seekable::load_data total ndat=1479871 read_sample=1200000
-dsp::Seekable::load_data 279871 samples remaining
-dsp::Seekable::load_data end of data read_size=279871
-dsp::Seekable::load_data call load_bytes(35823488)
-dsp::File::load_bytes nbytes=35823488
-dsp::File::load_bytes bytes_read=35823488 old_pos=153608192 new_pos=189431680 end_pos=189431680
-dsp::Input::operation load_data done load_sample=1200000 name='DADA'
-dsp::Input::operation total_ndat=279871 available=279871 < block_size=400000
-dsp::Input::operation useful ndat=279871
-dsp::Input::operation eod request_ndat=279871
-dsp::Input::operation calling seek(279871)
+   read_size=81775
+   read_sample=1398096
+dsp::Seekable::load_data total ndat=1479871 read_sample=1398096
+dsp::Seekable::load_data 81775 samples remaining
+dsp::Seekable::load_data end of data read_size=81775
+dsp::Seekable::load_data call load_bytes(10467200)
+dsp::File::load_bytes nbytes=10467200
+dsp::File::load_bytes bytes_read=10467200 old_pos=178964480 new_pos=189431680 end_pos=189431680
+dsp::Input::operation load_data done load_sample=1398096 name='DADA'
+dsp::Input::operation total_ndat=81775 available=81775 < block_size=699048
+dsp::Input::operation useful ndat=81775
+dsp::Input::operation eod request_ndat=81775
+dsp::Input::operation calling seek(81775)
 dsp::Input::seek [INTERNAL] resolution=1 resolution_offset=0 load_sample=1479871
-dsp::Input::set_load_size block_size=400000 resolution_offset=0
+dsp::Input::set_load_size block_size=699048 resolution_offset=0
 dsp::Input::set_load_size near end of data
 dsp::Input::set_load_size load_size=0
 dsp::Input::operation exit with load_sample=1479871
@@ -218,9 +170,9 @@ dsp::Transformation[FloatUnpacker]::operation transformation
 dsp::Unpacker::transformation
 dsp::Unpacker::prepare
 dsp::Unpacker::prepare output start_time=58520.2
-dsp::Unpacker::reserve input ndat=279871
+dsp::Unpacker::reserve input ndat=81775
 dsp::Unpacker::tranformation TimeSeries book-keeping
-  input_sample=1200000  seek=0  ndat=279871
+  input_sample=1398096  seek=0  ndat=81775
 dsp::Unpacker::transformation exit
 dsp::Transformation[FloatUnpacker]::operation check output
 TestInverseFilterbank::test_ctor
@@ -233,27 +185,116 @@ TestInverseFilterbank::test_set_engine
 TestInverseFilterbank::test_pipeline
 dsp::Transformation[InverseFilterbank]::ctor
 dsp::ScalarFilter::ScalarFilter()
+dsp::Transformation[InverseFilterbank]::set_input (0xefc380)
+dsp::Transformation[InverseFilterbank]::set_output (0xefd2b0)
 dsp::Dedispersion::set_dispersion_measure 2.64476
-dsp::Transformation[InverseFilterbank]::set_input (0x1f4e380)
-dsp::Transformation[InverseFilterbank]::set_output (0x1f4f2b0)
-dsp::InverseFilterbank::prepare
-dsp::InverseFilterbank::make_preparations
+dsp::DerippleResponse::DerippleResponse()
 dsp::Dedispersion::match before lock
 dsp::Dedispersion::match after lock
 dsp::Dedispersion::prepare input.nchan=8 channels=1
-	 centre frequency=1405 bandwidth=40 dispersion measure=0
-dsp::Dedispersion::set_dispersion_measure 0
+	 centre frequency=1405 bandwidth=40 dispersion measure=2.64476
+dsp::Dedispersion::set_dispersion_measure 2.64476
 dsp::Dedispersion::smearing_time freq=1385 bw=20
-dsp::Dedispersion::delay_time DM=0 f1=1375 f2=1395
-dsp::Dedispersion::smearing_time in the lower half of the band: 0 ms
-dsp::Dedispersion::smearing_samples = 0
-dsp::Dedispersion::smearing_samples effective smear time: 0 ms (0 pts).
+dsp::Dedispersion::delay_time DM=2.64476 f1=1375 f2=1395
+dsp::Dedispersion::smearing_time in the lower half of the band: 0.165244 ms
+dsp::Dedispersion::smearing_samples = 6609
+dsp::Dedispersion::smearing_samples effective smear time: 0.181775 ms (7271 pts).
 dsp::Dedispersion::prepare 0 unsupported channels
 dsp::Dedispersion::smearing_time freq=1425 bw=20
-dsp::Dedispersion::delay_time DM=0 f1=1415 f2=1435
-dsp::Dedispersion::smearing_time in the upper half of the band: 0 ms
-dsp::Dedispersion::smearing_samples = 0
-dsp::Dedispersion::smearing_samples effective smear time: 0 ms (0 pts).
-Response::set_optimal_ndat minimum ndat=0
-dsp::OptimalFFT::get_nfft nfilt=0
-terminate called after throwing an instance of 'Error'
+dsp::Dedispersion::delay_time DM=2.64476 f1=1415 f2=1435
+dsp::Dedispersion::smearing_time in the upper half of the band: 0.151715 ms
+dsp::Dedispersion::smearing_samples = 6068
+dsp::Dedispersion::smearing_samples effective smear time: 0.1669 ms (6676 pts).
+dsp::Response::get_minimum_ndat impulse_tot=13947 min power of two=16384
+Response::set_optimal_ndat minimum ndat=16384
+optimal_fft_length: minimum FFT:16384 maximum FFT:0
+NFFT 16384  %kept:0.1487 O(FFT):158991.3277 Timescale:65.2406
+NFFT 32768  %kept:0.5744 O(FFT):340695.7022 Timescale:18.1019
+NFFT 65536  %kept:0.7872 O(FFT):726817.4980 Timescale:14.0886
+NFFT 131072  %kept:0.8936 O(FFT):1544487.1833 Timescale:13.1867
+NFFT 262144  %kept:0.9468 O(FFT):3270678.7410 Timescale:13.1778
+NFFT 524288  %kept:0.9734 O(FFT):6904766.2310 Timescale:13.5297
+dsp::Shape::resize  npol=2  nchan=1  ndat=262144  ndim=1
+dsp::Dedispersion::build
+  centre frequency = 1405
+  bandwidth = 40
+  dispersion measure = 2.64476
+  Doppler shift = 1
+  ndat = 262144
+  nchan = 1
+  centred on DC = 0
+  fractional delay compensation = 0
+dsp::Shape::resize  npol=1  nchan=1  ndat=262144  ndim=2
+dsp::Response::match input.nchan=8 channels=1
+dsp::Dedispersion::match exit
+dsp::InverseFilterbank::optimize_discard_region
+dsp::InverseFilterbank::optimize_fft_length
+dsp::Dedispersion::set_frequency_resolution (229376)
+dsp::Shape::resize  npol=1  nchan=1  ndat=229376  ndim=2
+dsp::Response::get_minimum_ndat impulse_tot=14000 min power of two=16384
+Response::check_ndat minimum ndat=16384
+dsp::Dedispersion::build
+  centre frequency = 1405
+  bandwidth = 40
+  dispersion measure = 2.64476
+  Doppler shift = 1
+  ndat = 229376
+  nchan = 1
+  centred on DC = 0
+  fractional delay compensation = 0
+dsp::Shape::resize  npol=1  nchan=1  ndat=229376  ndim=2
+dsp::DerippleResponse::resize(1,8,28672,2)
+dsp::Shape::resize  npol=1  nchan=8  ndat=28672  ndim=2
+dsp::DerippleResponse::calc_freq_response
+TestInverseFilterbank::test_pipeline: response->ndim=2
+TestInverseFilterbank::test_pipeline: response->nchan=1
+TestInverseFilterbank::test_pipeline: response->ndat=229376
+dsp::InverseFilterbank::prepare
+dsp::InverseFilterbank::make_preparations
+dsp::InverseFilterbank::make_preparations: done optimizing fft lengths and discard regions
+dsp::InverseFilterbank::make_preparations: input_fft_length=32768 output_fft_length=229376 input_discard_neg/pos=1040/960 output_discard_neg/pos=1040/960
+dsp::InverseFilterbank::prepare_output
+dsp::InverseFilterbank::prepare_output output ndim=2 output npol=2 output nchan=1 output ndat=81775
+dsp::InverseFilterbank::prepare_output scrunch ndat=81775
+dsp::InverseFilterbank::prepare_output output ndat=81775
+dsp::InverseFilterbank::prepare_output scale=6.87195e+10
+dsp::InverseFilterbank::prepare_output ratechange=8 input_nchan=8 output_nchan=1
+dsp::InverseFilterbank::prepare_output ratechange=7 input rate=5.71429e+06 output rate=4e+07
+dsp::InverseFilterbank::prepare_output start time += 6720 samps -> 58520.2
+dsp::Dedispersion::mark no longer changing DM
+dsp::InverseFilterbank::make_preparations: calling engine setup
+dsp::InverseFilterbankEngineCPU::setup input_fft_points=65536 output_fft_points=458752 response_stitch_points=524288 fft_shift_points=458752 stitch_points=458752
+dsp::InverseFilterbank::make_preparations: scalefac=6.87195e+10
+dsp::Operation[InverseFilterbank]::operate
+dsp::Transformation[InverseFilterbank]::operation call vchecks
+dsp::Transformation[InverseFilterbank]::vchecks input checks
+dsp::Transformation[InverseFilterbank]::vchecks done
+dsp::Transformation[InverseFilterbank]::operation transformation
+dsp::InverseFilterbank::transformation input ndat=81775 nchan=8
+dsp::InverseFilterbank::resize_output reserve_extra=0
+dsp::InverseFilterbank::reserve input ndat=81775 overlap=2000 step=30768 reserve=0 output_sample_step=215376 npart=2 output ndat=430752
+dsp::InverseFilterbank::prepare_output
+dsp::InverseFilterbank::prepare_output set ndat=430752
+dsp::InverseFilterbank::prepare_output output ndim=2 output npol=2 output nchan=1 output ndat=81775
+dsp::InverseFilterbank::prepare_output reset ndat=430752
+dsp::InverseFilterbank::prepare_output output ndat=430752
+dsp::InverseFilterbank::prepare_output scale=6.87195e+10
+dsp::InverseFilterbank::prepare_output ratechange=8 input_nchan=8 output_nchan=1
+dsp::InverseFilterbank::prepare_output ratechange=7 input rate=5.71429e+06 output rate=4e+07
+dsp::InverseFilterbank::prepare_output start time += 6720 samps -> 58520.2
+dsp::Dedispersion::mark no longer changing DM
+dsp::InverseFilterbank::transformation npart=2 nkeep=0 output_ndat=430752
+dsp::InverseFilterbank::transformation after prepare output ndat=430752 input_sample=0
+dsp::InverseFilterbank::filterbank
+dsp::InverseFilterbank::filterbank: computing in_step and out_step
+dsp::InverseFilterbankEngineCPU::perform: writing 2 chunks
+dsp::InverseFilterbankEngineCPU::perform: pol=0 loop=1/2 doing inverse FFT
+dsp::InverseFilterbankEngineCPU::perform: backward FFT complete.
+dsp::InverseFilterbankEngineCPU::perform: pol=1 loop=1/2 doing inverse FFT
+dsp::InverseFilterbankEngineCPU::perform: backward FFT complete.
+dsp::InverseFilterbankEngineCPU::perform: pol=0 loop=2/2 doing inverse FFT
+dsp::InverseFilterbankEngineCPU::perform: backward FFT complete.
+dsp::InverseFilterbankEngineCPU::perform: pol=1 loop=2/2 doing inverse FFT
+dsp::InverseFilterbankEngineCPU::perform: backward FFT complete.
+dsp::InverseFilterbankEngineCPU::perform: finish
+dsp::Transformation[InverseFilterbank]::operation check output

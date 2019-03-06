@@ -60,6 +60,8 @@ namespace dsp
 
     Response* response;
 
+    DerippleResponse* deripple;
+
   private:
 
     //! This is the number of floats per sample. This could be 1 or 2,
