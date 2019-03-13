@@ -131,6 +131,9 @@ void dsp::InverseFilterbank::make_preparations ()
 {
   if (verbose) {
     cerr << "dsp::InverseFilterbank::make_preparations" << endl;
+    cerr << "dsp::InverseFilterbank::make_preparations"
+          << " get_oversampling_factor() " << get_oversampling_factor()
+          << endl;
   }
   bool real_to_complex = (input->get_state() == Signal::Nyquist);
   unsigned n_per_sample = real_to_complex ? 2: 1;

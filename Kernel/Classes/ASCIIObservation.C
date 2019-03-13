@@ -474,6 +474,10 @@ void dsp::ASCIIObservation::load (const char* header)
   if (ascii_header_check (header, "OS_FACTOR", "%s", buffer) >= 0)
   {
     set_oversampling_factor (fromstring<Rational>(buffer));
+    if (verbose) {
+      std::cerr << "dsp::ASCIIObservation::load: oversampling_factor="
+          << get_oversampling_factor() << std::endl;
+    }
   }
 }
 

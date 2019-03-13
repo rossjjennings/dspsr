@@ -152,11 +152,22 @@ void dsp::InverseFilterbankEngineCPU::setup (
 
   if (verbose) {
     cerr << "dsp::InverseFilterbankEngineCPU::setup"
+          << " oversampling factor=" << filterbank->get_oversampling_factor()
+          << endl;
+    cerr << "dsp::InverseFilterbankEngineCPU::setup"
           << " input_fft_points=" << input_fft_points
           << " output_fft_points=" << output_fft_points
           << " response_stitch_points=" << response_stitch_points
           << " fft_shift_points=" << fft_shift_points
           << " stitch_points=" << stitch_points
+          << endl;
+    cerr << "dsp::InverseFilterbankEngineCPU::setup"
+          << " input_os_keep=" << input_os_keep
+          << " input_os_discard=" << input_os_discard
+          << " input_discard_total=" << input_discard_total
+          << " input_sample_step=" << input_sample_step
+          << " output_discard_total=" << output_discard_total
+          << " output_sample_step=" << output_sample_step
           << endl;
   }
 
@@ -208,18 +219,9 @@ void dsp::InverseFilterbankEngineCPU::perform (const dsp::TimeSeries* in, dsp::T
 		for(uint64_t ipart = 0; ipart < npart; ipart++) {
 			for(unsigned ipol = 0; ipol < n_pol; ipol++) {
 				for(unsigned input_ichan = 0; input_ichan < input_nchan; input_ichan++) {
-					// cerr << "dsp::InverseFilterbankEngineCPU::perform: forward FFT, pol: " << ipol << ", input channel: " << input_ichan << ", loop: " << ipart << "/" << npart << endl;
-					// cerr << "dsp::InverseFilterbankEngineCPU::perform: ipart=" << ipart << " input_ichan=" << input_ichan << " getting freq_dom_ptr" << endl;
 					freq_dom_ptr = input_fft_scratch;
-					// cerr << "dsp::InverseFilterbankEngineCPU::perform: ipart=" << ipart << " input_ichan=" << input_ichan << " freq_dom_ptr=" << freq_dom_ptr << endl;
-					// cerr << "dsp::InverseFilterbankEngineCPU::perform: ipart=" << ipart << " input_ichan=" << input_ichan << " getting time_dom_ptr" << endl;
 					time_dom_ptr = const_cast<float*>(in->get_datptr(input_ichan, ipol));
-					// cerr << "dsp::InverseFilterbankEngineCPU::perform: ipart=" << ipart << " input_ichan=" << input_ichan << " time_dom_ptr=" << time_dom_ptr << endl;
 					time_dom_ptr += n_dims*ipart*(input_fft_length - input_discard_total);
-					// cerr << "dsp::InverseFilterbankEngineCPU::perform: ipart=" << ipart << " input_ichan=" << input_ichan << " time_dom_ptr (after increment)=" << time_dom_ptr << endl;
-					// time_dom_ptr += n_dims*ipart*(input_fft_length - _input_discard.neg);
-					// time_dom_ptr += n_dims*ipart*(input_fft_length);
-					// perform forward FFT to convert time domain data to the frequency domain
 					if (real_to_complex) {
 						forward->frc1d(input_fft_length, freq_dom_ptr, time_dom_ptr);
 					} else {
@@ -227,37 +229,61 @@ void dsp::InverseFilterbankEngineCPU::perform (const dsp::TimeSeries* in, dsp::T
 						forward->fcc1d(input_fft_length, freq_dom_ptr, time_dom_ptr);
 					}
 					response_offset = n_dims*input_ichan*input_fft_length;
+          // discard oversampled regions
+          stitched_offset_neg = n_dims*input_os_keep*input_ichan;
+          stitched_offset_pos = stitched_offset_neg + n_dims*input_os_keep_2;
 
-					memcpy(
-						response_stitch_scratch + response_offset,
-						freq_dom_ptr,
-						input_fft_length*sizeof_complex
-					);
+          response_offset_neg = n_dims*(input_fft_length*(input_ichan + 1) - input_os_keep_2);
+          response_offset_pos = n_dims*input_fft_length*input_ichan;
+
+          // response_offset_neg = n_dims*(input_fft_length*input_ichan + input_os_discard);
+          // response_offset_pos = n_dims*(n_dims*input_fft_length*input_ichan + input_fft_length/2);
+
+          memcpy(
+            stitch_scratch + stitched_offset_neg,
+            freq_dom_ptr + n_dims*(input_fft_length - input_os_keep_2),
+            input_os_keep_2 * sizeof_complex
+          );
+
+          memcpy(
+            stitch_scratch + stitched_offset_pos,
+            freq_dom_ptr,
+            input_os_keep_2 * sizeof_complex
+          );
+
+
+        	// memcpy(
+					// 	response_stitch_scratch + response_offset,
+					// 	freq_dom_ptr,
+					// 	input_fft_length*sizeof_complex
+					// );
+
+
 				} // end of for input_nchan
 
         // assemble spectrum
-				for (uint64_t input_ichan = 0; input_ichan < input_nchan; input_ichan++) {
-					stitched_offset_neg = n_dims*input_os_keep*input_ichan;
-					stitched_offset_pos = stitched_offset_neg + n_dims*input_os_keep_2;
-
-					response_offset_neg = n_dims*(input_fft_length*(input_ichan + 1) - input_os_keep_2);
-					response_offset_pos = n_dims*input_fft_length*input_ichan;
-
-					// response_offset_neg = n_dims*(input_fft_length*input_ichan + input_os_discard);
-					// response_offset_pos = n_dims*(n_dims*input_fft_length*input_ichan + input_fft_length/2);
-
-					memcpy(
-						stitch_scratch + stitched_offset_neg,
-						response_stitch_scratch + response_offset_neg,
-						input_os_keep_2 * sizeof_complex
-					);
-
-					memcpy(
-						stitch_scratch + stitched_offset_pos,
-						response_stitch_scratch + response_offset_pos,
-						input_os_keep_2 * sizeof_complex
-					);
-				}
+				// for (uint64_t input_ichan = 0; input_ichan < input_nchan; input_ichan++) {
+				// 	stitched_offset_neg = n_dims*input_os_keep*input_ichan;
+				// 	stitched_offset_pos = stitched_offset_neg + n_dims*input_os_keep_2;
+        //
+				// 	response_offset_neg = n_dims*(input_fft_length*(input_ichan + 1) - input_os_keep_2);
+				// 	response_offset_pos = n_dims*input_fft_length*input_ichan;
+        //
+				// 	// response_offset_neg = n_dims*(input_fft_length*input_ichan + input_os_discard);
+				// 	// response_offset_pos = n_dims*(n_dims*input_fft_length*input_ichan + input_fft_length/2);
+        //
+				// 	memcpy(
+				// 		stitch_scratch + stitched_offset_neg,
+				// 		response_stitch_scratch + response_offset_neg,
+				// 		input_os_keep_2 * sizeof_complex
+				// 	);
+        //
+				// 	memcpy(
+				// 		stitch_scratch + stitched_offset_pos,
+				// 		response_stitch_scratch + response_offset_pos,
+				// 		input_os_keep_2 * sizeof_complex
+				// 	);
+				// }
 
         // deripple_before_file.write(
         //   reinterpret_cast<const char*>(stitch_scratch),
@@ -319,8 +345,8 @@ void dsp::InverseFilterbankEngineCPU::perform (const dsp::TimeSeries* in, dsp::T
   if (verbose) {
     cerr << "dsp::InverseFilterbankEngineCPU::perform: finish" << endl;
   }
-  deripple_before_file.close();
-  deripple_after_file.close();
+  // deripple_before_file.close();
+  // deripple_after_file.close();
 }
 
 void dsp::InverseFilterbankEngineCPU::finish ()
