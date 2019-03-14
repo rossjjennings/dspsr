@@ -211,6 +211,7 @@ void dsp::Response::match (const Response* response)
   resize (npol, response->get_nchan(),
 	  response->get_ndat(), ndim);
 
+  input_nchan = response->input_nchan;
   whole_swapped = response->whole_swapped;
   swap_divisions = response->swap_divisions;
   dc_centred = response->dc_centred;

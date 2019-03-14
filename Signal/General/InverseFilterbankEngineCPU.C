@@ -228,13 +228,20 @@ void dsp::InverseFilterbankEngineCPU::perform (const dsp::TimeSeries* in, dsp::T
 						// fcc1d(number_of_points, destinationPtr, sourcePtr);
 						forward->fcc1d(input_fft_length, freq_dom_ptr, time_dom_ptr);
 					}
-					response_offset = n_dims*input_ichan*input_fft_length;
+          // discard oversampled regions and do circular shift
+          if (input_ichan == 0) {
+            stitched_offset_neg = n_dims*(input_fft_length - input_os_keep_2);
+            stitched_offset_pos = 0;
+          } else {
+            stitched_offset_neg = n_dims*(input_os_keep*input_ichan - input_os_keep_2);
+            stitched_offset_pos = stitched_offset_neg + n_dims*input_os_keep_2;
+          }
           // discard oversampled regions
-          stitched_offset_neg = n_dims*input_os_keep*input_ichan;
-          stitched_offset_pos = stitched_offset_neg + n_dims*input_os_keep_2;
+          // stitched_offset_neg = n_dims*(input_os_keep*input_ichan);
+          // stitched_offset_pos = stitched_offset_neg + n_dims*input_os_keep_2;
 
-          response_offset_neg = n_dims*(input_fft_length*(input_ichan + 1) - input_os_keep_2);
-          response_offset_pos = n_dims*input_fft_length*input_ichan;
+          // response_offset_neg = n_dims*(input_fft_length*(input_ichan + 1) - input_os_keep_2);
+          // response_offset_pos = n_dims*input_fft_length*input_ichan;
 
           // response_offset_neg = n_dims*(input_fft_length*input_ichan + input_os_discard);
           // response_offset_pos = n_dims*(n_dims*input_fft_length*input_ichan + input_fft_length/2);
@@ -251,7 +258,7 @@ void dsp::InverseFilterbankEngineCPU::perform (const dsp::TimeSeries* in, dsp::T
             input_os_keep_2 * sizeof_complex
           );
 
-
+          // response_offset = n_dims*input_ichan*input_fft_length;
         	// memcpy(
 					// 	response_stitch_scratch + response_offset,
 					// 	freq_dom_ptr,
@@ -288,9 +295,9 @@ void dsp::InverseFilterbankEngineCPU::perform (const dsp::TimeSeries* in, dsp::T
         //   output_fft_length*sizeof_complex
         // );
         //! Deripple correction is setup to be done before circular shift
-        if (deripple != nullptr) {
-          deripple->operate(stitch_scratch, 0, 0, input_nchan);
-        }
+        // if (deripple != nullptr) {
+        //   deripple->operate(stitch_scratch, 0, 0, input_nchan);
+        // }
 
         // deripple_after_file.write(
         //   reinterpret_cast<const char*>(stitch_scratch),
@@ -300,23 +307,27 @@ void dsp::InverseFilterbankEngineCPU::perform (const dsp::TimeSeries* in, dsp::T
 
 				// do circular shift
 				// first copy all of stitch_scratch to fft_shift_scratch
-				memcpy(
-					fft_shift_scratch,
-					stitch_scratch,
-					sizeof_complex * (input_os_keep * input_nchan)
-				);
-				// copy offset chunk to start of stitch_scratch
-				memcpy(
-					stitch_scratch,
-					fft_shift_scratch + (circ_shift_size*n_dims*input_os_keep_2),
-					sizeof_complex*((input_nchan*2) - circ_shift_size)*input_os_keep_2
-				);
-				// copy bit we stored in fft_shift_scratch to back of stitch_scratch
-				memcpy(
-					stitch_scratch + ((input_nchan*2) - circ_shift_size)*n_dims*input_os_keep_2,
-					fft_shift_scratch,
-					sizeof_complex * (input_os_keep_2 * circ_shift_size)
-				);
+				// memcpy(
+				// 	fft_shift_scratch,
+				// 	stitch_scratch,
+				// 	sizeof_complex * (input_os_keep * input_nchan)
+				// );
+				// // copy offset chunk to start of stitch_scratch
+				// memcpy(
+				// 	stitch_scratch,
+				// 	fft_shift_scratch + (circ_shift_size*n_dims*input_os_keep_2),
+				// 	sizeof_complex*((input_nchan*2) - circ_shift_size)*input_os_keep_2
+				// );
+				// // copy bit we stored in fft_shift_scratch to back of stitch_scratch
+				// memcpy(
+				// 	stitch_scratch + ((input_nchan*2) - circ_shift_size)*n_dims*input_os_keep_2,
+				// 	fft_shift_scratch,
+				// 	sizeof_complex * (input_os_keep_2 * circ_shift_size)
+				// );
+
+        if (deripple != nullptr) {
+          deripple->operate(stitch_scratch, ipol, 0, 1);
+        }
 
 				if (response != nullptr) {
 					response->operate(stitch_scratch, ipol, 0, 1);

@@ -12,6 +12,7 @@
 #include <fstream>
 #include <iostream>
 #include <vector>
+#include <cstring>
 
 dsp::DerippleResponse::DerippleResponse ()
 {
@@ -23,6 +24,8 @@ dsp::DerippleResponse::DerippleResponse ()
   input_nchan = 1;
   npol = 1;
   ndat = 1;
+
+  half_chan_shift = 1;
 
   built = false;
 }
@@ -45,16 +48,20 @@ void dsp::DerippleResponse::build ()
   }
 
   std::vector<float> freq_response;
+  unsigned ndat_per_chan = ndat / input_nchan;
+  // calc_freq_response(freq_response, ndat*nchan/2);
+  calc_freq_response(freq_response, ndat/2);
+  // roll the array by the appropriate number of bins
+  roll(freq_response, -ndim*half_chan_shift*ndat_per_chan/2);
 
-  calc_freq_response(freq_response, ndat*nchan/2);
+  std::complex<float>* freq_response_complex = reinterpret_cast<std::complex<float>*>(freq_response.data());
 
-  std::complex<float>* freq_response_complex = reinterpret_cast< std::complex<float>* >(freq_response.data());
-  std::complex<float>* phasors = reinterpret_cast< std::complex<float>* > ( buffer );
+  std::complex<float>* phasors = reinterpret_cast<std::complex<float>*>(buffer);
 
-  uint64_t npt = ndat/2;
+  uint64_t npt = ndat_per_chan/2;
 
   int step = 0;
-  for (int ichan=0; ichan < nchan; ichan++) {
+  for (int ichan=0; ichan < input_nchan; ichan++) {
     for (uint64_t ipt=0; ipt < npt; ipt++) {
       // this is correct.. but why?
       phasors[ipt + step] = std::complex<float>(1.0/std::abs(freq_response_complex[ipt]), 0.0);
@@ -63,7 +70,7 @@ void dsp::DerippleResponse::build ()
       // phasors[ipt + step] = std::complex<float>(1.0/std::abs(freq_response_complex[npt - ipt + 1]), 0.0);
       // phasors[npt + ipt + step] = std::complex<float>(1.0/std::abs(freq_response_complex[ipt]), 0.0);
     }
-    step += ndat;
+    step += ndat_per_chan;
   }
   // std::ofstream freq_response_file("freq_response.buffer.dat", std::ios::out | std::ios::binary);
   //
@@ -185,4 +192,24 @@ void dsp::DerippleResponse::match (const Response* response)
 
   if (!built)
     build();
+}
+
+//! "roll" `arr` by `shift`
+void dsp::DerippleResponse::roll (std::vector<float>& arr, int shift) {
+  if (shift == 0) {
+    return;
+  } else {
+    unsigned original_size = arr.size();
+    arr.resize(original_size + abs(shift));
+    float* buffer = arr.data();
+    if (shift > 0) {
+      std::memcpy(buffer + shift, buffer, original_size*sizeof(float));
+      std::memcpy(buffer, buffer + original_size, shift*sizeof(float));
+    } else {
+      std::memcpy(buffer + original_size, buffer, abs(shift)*sizeof(float));
+      std::memcpy(buffer, buffer + abs(shift), (original_size+shift)*sizeof(float));
+      std::memcpy(buffer + original_size+shift, buffer + original_size, abs(shift)*sizeof(float));
+    }
+    arr.resize(original_size);
+  }
 }
