@@ -257,8 +257,6 @@ void dsp::InverseFilterbankEngineCPU::perform (const dsp::TimeSeries* in, dsp::T
 					// 	freq_dom_ptr,
 					// 	input_fft_length*sizeof_complex
 					// );
-
-
 				} // end of for input_nchan
 
         // assemble spectrum

@@ -127,6 +127,16 @@ void dsp::InverseFilterbank::filterbank()
 
 }
 
+inline unsigned output_to_input (
+  unsigned n,
+  unsigned _output_nchan,
+  const Rational& osf
+)
+{
+  return (n*osf.get_numerator()) / (osf.get_denominator()*_output_nchan);
+}
+
+
 void dsp::InverseFilterbank::make_preparations ()
 {
   if (verbose) {
@@ -137,6 +147,7 @@ void dsp::InverseFilterbank::make_preparations ()
   }
   bool real_to_complex = (input->get_state() == Signal::Nyquist);
   unsigned n_per_sample = real_to_complex ? 2: 1;
+  Rational osf = get_oversampling_factor();
   // setup the dedispersion discard region for the forward and backward FFTs
   input_nchan = input->get_nchan();
   if (has_response()) {
@@ -144,31 +155,36 @@ void dsp::InverseFilterbank::make_preparations ()
     output_discard_pos = response->get_impulse_pos();
     output_discard_neg = response->get_impulse_neg();
     output_fft_length = response->get_ndat();
-    if (verbose) {
-      cerr << "dsp::InverseFilterbank::make_preparations:"
-          << " output_discard_neg(before)=" << output_discard_neg
-          << " output_discard_pos(before)=" << output_discard_pos
-          << " output_fft_length(before)=" << output_fft_length
-          << endl;
-    }
 
-    optimize_discard_region(
-      &input_discard_neg, &input_discard_pos,
-      &output_discard_neg, &output_discard_pos
-    );
-    optimize_fft_length(
-      &input_fft_length, &output_fft_length);
+    input_discard_pos = output_to_input(output_discard_pos, input_nchan, osf);
+    input_discard_neg = output_to_input(output_discard_neg, input_nchan, osf);
+    input_fft_length = output_to_input(output_fft_length, input_nchan, osf);
 
-    if (verbose) {
-      cerr << "dsp::InverseFilterbank::make_preparations:"
-          << " input_discard_neg(after)=" << input_discard_neg
-          << " input_discard_pos(after)=" << input_discard_pos
-          << " input_fft_length(after)=" << input_fft_length
-          << " output_discard_neg(after)=" << output_discard_neg
-          << " output_discard_pos(after)=" << output_discard_pos
-          << " output_fft_length(after)=" << output_fft_length
-          << endl;
-    }
+    // if (verbose) {
+    //   cerr << "dsp::InverseFilterbank::make_preparations:"
+    //       << " output_discard_neg(before)=" << output_discard_neg
+    //       << " output_discard_pos(before)=" << output_discard_pos
+    //       << " output_fft_length(before)=" << output_fft_length
+    //       << endl;
+    // }
+    //
+    // optimize_discard_region(
+    //   &input_discard_neg, &input_discard_pos,
+    //   &output_discard_neg, &output_discard_pos
+    // );
+    // optimize_fft_length(
+    //   &input_fft_length, &output_fft_length);
+
+    // if (verbose) {
+    //   cerr << "dsp::InverseFilterbank::make_preparations:"
+    //       << " input_discard_neg(after)=" << input_discard_neg
+    //       << " input_discard_pos(after)=" << input_discard_pos
+    //       << " input_fft_length(after)=" << input_fft_length
+    //       << " output_discard_neg(after)=" << output_discard_neg
+    //       << " output_discard_pos(after)=" << output_discard_pos
+    //       << " output_fft_length(after)=" << output_fft_length
+    //       << endl;
+    // }
 
     freq_res = output_fft_length;
 
@@ -188,17 +204,17 @@ void dsp::InverseFilterbank::make_preparations ()
            << output_fft_length << " input_discard_neg/pos="
            << input_discard_neg << "/" << input_discard_pos
            << " output_discard_neg/pos="
-           << input_discard_neg << "/" << input_discard_pos
+           << output_discard_neg << "/" << output_discard_pos
            << endl;
     }
-    response->set_impulse_neg(output_discard_neg);
-    response->set_impulse_pos(output_discard_pos);
-    Dedispersion* dedispersion = dynamic_cast<Dedispersion *>(response.ptr());
-  	if (dedispersion)
-  	{
-  		dedispersion->set_frequency_resolution(output_fft_length);
-  		dedispersion->build();
-  	}
+    // response->set_impulse_neg(output_discard_neg);
+    // response->set_impulse_pos(output_discard_pos);
+    // Dedispersion* dedispersion = dynamic_cast<Dedispersion *>(response.ptr());
+  	// if (dedispersion)
+  	// {
+  	// 	dedispersion->set_frequency_resolution(output_fft_length);
+  	// 	dedispersion->build();
+  	// }
   } else {
     output_fft_length = freq_res ;
     input_fft_length = get_oversampling_factor().normalize(output_fft_length);

@@ -95,7 +95,7 @@ void dsp::ResponseProduct::build ()
   Response::operator = (*response[copy_index]);
 
   if (verbose)
-    cerr << "dsp::ResponseProduct::build ndat=" << ndat 
+    cerr << "dsp::ResponseProduct::build ndat=" << ndat
          << " nchan=" << nchan << endl;
 
   for (unsigned iresp=0; iresp < response.size(); iresp++)
@@ -105,4 +105,3 @@ void dsp::ResponseProduct::build ()
   if (verbose)
     cerr << "dsp::ResponseProduct::build DONE!" << endl;
 }
-

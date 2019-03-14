@@ -20,6 +20,7 @@ dsp::DerippleResponse::DerippleResponse ()
   }
   ndim = 2;
   nchan = 1;
+  input_nchan = 1;
   npol = 1;
   ndat = 1;
 
@@ -46,41 +47,32 @@ void dsp::DerippleResponse::build ()
   std::vector<float> freq_response;
 
   calc_freq_response(freq_response, ndat*nchan/2);
-  // calc_freq_response(freq_response, ndat*nchan);
-  // calc_freq_response(freq_response, ndat*2);
 
   std::complex<float>* freq_response_complex = reinterpret_cast< std::complex<float>* >(freq_response.data());
   std::complex<float>* phasors = reinterpret_cast< std::complex<float>* > ( buffer );
 
   uint64_t npt = ndat/2;
-  // uint64_t npt = ndat;
+
   int step = 0;
   for (int ichan=0; ichan < nchan; ichan++) {
     for (uint64_t ipt=0; ipt < npt; ipt++) {
-      // std::cerr << freq_response_complex[ipt] << std::endl;
-      // phasors[ipt + step] = std::complex<float>(1.0/std::abs(freq_response_complex[ipt]), 0.0);
-      // std::cerr << std::abs(freq_response_complex[ipt]) << std::endl;
-
       // this is correct.. but why?
       phasors[ipt + step] = std::complex<float>(1.0/std::abs(freq_response_complex[ipt]), 0.0);
       phasors[npt + ipt + step] = std::complex<float>(1.0/std::abs(freq_response_complex[npt - ipt + 1]), 0.0);
 
       // phasors[ipt + step] = std::complex<float>(1.0/std::abs(freq_response_complex[npt - ipt + 1]), 0.0);
       // phasors[npt + ipt + step] = std::complex<float>(1.0/std::abs(freq_response_complex[ipt]), 0.0);
-
-      // phasors[ipt + step] = std::complex<float>(std::abs(freq_response_complex[ipt]), 0.0);
-      // phasors[npt + ipt + step] = std::complex<float>(std::abs(freq_response_complex[ipt]), 0.0);
     }
     step += ndat;
   }
-  std::ofstream freq_response_file("freq_response.buffer.dat", std::ios::out | std::ios::binary);
-
-  freq_response_file.write(
-      reinterpret_cast<const char*>(buffer),
-      ndat*nchan*ndim*npol*sizeof(float)
-  );
-
-  freq_response_file.close();
+  // std::ofstream freq_response_file("freq_response.buffer.dat", std::ios::out | std::ios::binary);
+  //
+  // freq_response_file.write(
+  //     reinterpret_cast<const char*>(buffer),
+  //     ndat*nchan*ndim*npol*sizeof(float)
+  // );
+  //
+  // freq_response_file.close();
   built = true;
 
 }

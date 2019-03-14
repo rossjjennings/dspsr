@@ -48,6 +48,8 @@ dsp::Dedispersion::Dedispersion ()
 
   built = false;
   context = 0;
+
+  oversampling_factor = Rational(1,1);
 }
 
 //! Set the dimensions of the data and update the built attribute
@@ -250,7 +252,6 @@ void dsp::Dedispersion::prepare ()
   }
 }
 
-
 /*! Builds a frequency response function (kernel) suitable for phase-coherent
   dispersion removal, based on the centre frequency, bandwidth, and number
   of channels in the input Observation.
@@ -263,13 +264,18 @@ void dsp::Dedispersion::prepare ()
  */
 void dsp::Dedispersion::match (const Observation* input, unsigned channels)
 {
-  if (verbose)
+  if (verbose){
     cerr << "dsp::Dedispersion::match before lock" << endl;
+  }
+
+  input_nchan = input->get_nchan();
+  oversampling_factor = input->get_oversampling_factor();
 
   ThreadContext::Lock lock (context);
 
-  if (verbose)
+  if (verbose){
     cerr << "dsp::Dedispersion::match after lock" << endl;
+  }
 
   prepare (input, channels);
 
@@ -308,6 +314,27 @@ void dsp::Dedispersion::build ()
     if (optimal_fft)
       optimal_fft->set_simultaneous (nchan > 1);
     set_optimal_ndat ();
+    if (verbose) {
+      std::cerr << "dsp::Dedispersion::build:"
+        << " calculating oversampling ndat and discard regions"
+        << " ndat=" << ndat
+        << " impulse_pos=" << impulse_pos
+        << " impulse_neg=" << impulse_neg
+        << std::endl;
+    }
+    if (oversampling_factor.doubleValue() > 1.0) {
+      calc_oversampled_fft_length(
+        &ndat, input_nchan, oversampling_factor);
+      calc_oversampled_discard_region(
+        &impulse_neg, &impulse_pos, input_nchan, oversampling_factor);
+    }
+    if (verbose) {
+      std::cerr << "dsp::Dedispersion::build:"
+        << " ndat=" << ndat
+        << " impulse_pos=" << impulse_pos
+        << " impulse_neg=" << impulse_neg
+        << std::endl;
+    }
   }
 
   // calculate the complex frequency response function

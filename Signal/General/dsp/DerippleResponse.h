@@ -30,6 +30,8 @@ namespace dsp {
     void resize(unsigned _npol, unsigned _nchan,
                 unsigned _ndat, unsigned _ndim);
 
+    void match (const Observation* input, unsigned channels, const Rational& osf);
+
     void match (const Observation* input, unsigned channels);
 
     //! Create a DerippleResponse with the same number of channels as Response

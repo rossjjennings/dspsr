@@ -13,11 +13,12 @@
 
 #include "dsp/Response.h"
 #include "dsp/SampleDelayFunction.h"
+#include "Rational.h"
 
 class ThreadContext;
 
 namespace dsp {
-  
+
   //! Phase-coherent dispersion removal frequency response function
   /* This class implements the phase-coherent dedispersion kernel, as
      determined by the frequency response of the interstellar
@@ -183,15 +184,16 @@ namespace dsp {
     //! Supported frequency channels
     /*! Set to false when the dispersive smearing is too large */
     std::vector<bool> supported_channels;
-    
+
     //! Return the effective smearing time in seconds (worker function)
     double smearing_time (int half) const;
 
     //! Return the number of complex samples of smearing (worker function)
     unsigned smearing_samples (int half) const;
 
+    Rational oversampling_factor;
   };
-  
+
 }
 
 #endif

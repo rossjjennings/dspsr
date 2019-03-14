@@ -13,6 +13,7 @@
 #include "Jones.h"
 #include "cross_detect.h"
 
+#include <vector>
 #include <assert.h>
 #include <math.h>
 
@@ -35,6 +36,7 @@ dsp::Response::Response ()
   npol = 2;
   ndim = 1;
   nchan = 1;
+  input_nchan = 1;
   step = 1;
 }
 
@@ -58,6 +60,7 @@ const dsp::Response& dsp::Response::operator = (const Response& response)
 
   Shape::operator = ( response );
 
+  input_nchan = response.input_nchan;
   impulse_pos = response.impulse_pos;
   impulse_neg = response.impulse_neg;
   whole_swapped = response.whole_swapped;
@@ -113,8 +116,6 @@ void dsp::Response::prepare (const Observation* input, unsigned channels)
   impulse_neg = impulse_pos = 0;
 }
 
-
-
 /*! The ordering of frequency channels in the response function depends
   upon:
   <UL>
@@ -138,7 +139,7 @@ void dsp::Response::match (const Observation* input, unsigned channels)
   if (verbose)
     cerr << "dsp::Response::match input.nchan=" << input->get_nchan()
 	 << " channels=" << channels << endl;
-
+  input_nchan = input->get_nchan();
   if ( input->get_nchan() == 1 ) {
 
     // if the input Observation is single-channel, complex sampled
@@ -709,4 +710,86 @@ void dsp::Response::flagswap (unsigned divisions)
     whole_swapped = true;
   else
     swap_divisions = divisions;
+}
+
+void dsp::Response::calc_lcf (
+	unsigned a, unsigned b, const Rational& osf, vector<unsigned>& result)
+{
+  // if (verbose) {
+  //   std::cerr << "dsp::Response::calc_lcf:"
+  //     << " a=" << a
+  //     << " b=" << b
+  //     << " osf=" << osf
+  //     << std::endl;
+  //   std::cerr << "dsp::Response::calc_lcf: quot=" << a / (osf.get_denominator()*b) << std::endl;
+  //   std::cerr << "dsp::Response::calc_lcf: rem=" << a % (osf.get_denominator()*b) << std::endl;
+  // }
+  result[0] = a / (osf.get_denominator()*b);
+  result[1] = a % (osf.get_denominator()*b);
+}
+
+void dsp::Response::calc_oversampled_fft_length (
+	// int* _input_fft_length,
+  unsigned* _fft_length,
+  unsigned _nchan,
+  const Rational& osf
+)
+{
+  if (verbose) {
+    std::cerr << "dsp::Response::calc_oversampled_fft_length:"
+      << " _fft_length=" << *_fft_length
+      << " _nchan=" << _nchan
+      << " osf=" << osf
+      << std::endl;
+  }
+  vector<unsigned> max_fft_length_lcf(2);
+	calc_lcf(*_fft_length, _nchan, osf, max_fft_length_lcf);
+  while (max_fft_length_lcf[1] != 0 || fmod(log2(max_fft_length_lcf[0]), 1) != 0){
+    if (max_fft_length_lcf[1] != 0) {
+      (*_fft_length) -= max_fft_length_lcf[1];
+    } else {
+      (*_fft_length) -= 2;
+    }
+    calc_lcf(*_fft_length, _nchan, osf, max_fft_length_lcf);
+  }
+  // *_input_fft_length = max_input_fft_length_lcf.quot * osf.get_numerator();
+}
+
+void dsp::Response::calc_oversampled_discard_region(
+  // int* _input_discard_neg,
+  // int* _input_discard_pos,
+  unsigned* _discard_neg,
+  unsigned* _discard_pos,
+  unsigned _nchan,
+  const Rational& osf
+)
+{
+  if (verbose) {
+    std::cerr << "dsp::Response::calc_oversampled_discard_region"
+      << " _discard_neg=" << *_discard_neg
+      << " _discard_pos=" << *_discard_pos
+      << " _nchan=" << _nchan
+      << " osf=" << osf
+      << std::endl;
+  }
+	vector<unsigned> n = {*_discard_pos, *_discard_neg};
+  vector<vector<unsigned>> lcfs(2);
+  unsigned min_n;
+	vector<unsigned> lcf(2);
+  for (int i=0; i<n.size(); i++) {
+    min_n = n[i];
+    calc_lcf(min_n, _nchan, osf, lcf);
+    if (lcf[1] != 0) {
+      min_n += osf.get_denominator()*_nchan - lcf[1];
+			lcf[0] += 1;
+	    lcf[1] = 0;
+    }
+    lcfs[i] = lcf;
+    n[i] = min_n;
+  }
+
+  *_discard_pos = n[0];
+  *_discard_neg = n[1];
+  // *_input_discard_pos = lcfs[0].quot * osf.get_numerator();
+  // *_input_discard_neg = lcfs[1].quot * osf.get_numerator();
 }
