@@ -339,13 +339,13 @@ void dsp::LoadToFold::construct () try
         response_product->add_response (deripple_response);
         response_product->add_response (kernel);
 
-        response_product->set_copy_index (0);
+        response_product->set_copy_index (1);
         response_product->set_match_index (1);
 
         response = response_product;
       }
     }
-    
+
     inverse_filterbank->set_response (response);
     // for now, inverse filterbank does convolution during inversion.
     if (!convolve_when == Convolution::Config::Before){

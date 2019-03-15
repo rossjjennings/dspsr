@@ -192,10 +192,9 @@ void dsp::DerippleResponse::match (const Observation* obs, unsigned channels)
 
   input_nchan = obs->get_nchan();
 
-  // if (!built)
-  // {
-  //   build();
-  // }
+  if (!built && ndat > 1) {
+    build();
+  }
 }
 
 //! Create a DerippleResponse with the same number of channels as Response
