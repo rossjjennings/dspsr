@@ -23,11 +23,11 @@ dsp::ResponseProduct::~ResponseProduct ()
 void dsp::ResponseProduct::match (const Observation* obs, unsigned nchan)
 {
   if (verbose)
-    cerr << "dsp::ResponseProduct::match (const Observation*)" << endl;
+    cerr << "dsp::ResponseProduct::match (const Observation*, unsigned nchan)" << endl;
 
-  for (unsigned iresp=0; iresp < response.size(); iresp++)
+  for (unsigned iresp=0; iresp < response.size(); iresp++){
     response[iresp]->match (obs, nchan);
-
+  }
   build ();
 }
 
@@ -37,9 +37,9 @@ void dsp::ResponseProduct::match (const Response* _response)
   if (verbose)
     cerr << "dsp::ResponseProduct::match (const Response*)" << endl;
 
-  for (unsigned iresp=0; iresp < response.size(); iresp++)
+  for (unsigned iresp=0; iresp < response.size(); iresp++){
     response[iresp]->match (_response);
-
+  }
   build ();
 }
 

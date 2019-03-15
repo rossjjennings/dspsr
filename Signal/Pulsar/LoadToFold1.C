@@ -322,7 +322,6 @@ void dsp::LoadToFold::construct () try
     }
     inverse_filterbank->set_input (unpacked);
     inverse_filterbank->set_output (filterbanked);
-    inverse_filterbank->set_response (response);
 
     // set up derippling response
 
@@ -330,9 +329,24 @@ void dsp::LoadToFold::construct () try
       std::cerr << "dspsr: setting up deripple" << std::endl;
       Reference::To<dsp::DerippleResponse> deripple_response = new dsp::DerippleResponse;
       deripple_response->set_fir_filter(manager->get_info()->get_deripple()[0]);
-      inverse_filterbank->set_deripple (deripple_response);
-    }
+      // inverse_filterbank->set_deripple (deripple_response);
 
+      if (kernel) {
+        std::cerr << "dspsr: adding deripple to ResponseProduct" << std::endl;
+        if (!response_product)
+          response_product = new ResponseProduct;
+
+        response_product->add_response (deripple_response);
+        response_product->add_response (kernel);
+
+        response_product->set_copy_index (0);
+        response_product->set_match_index (1);
+
+        response = response_product;
+      }
+    }
+    
+    inverse_filterbank->set_response (response);
     // for now, inverse filterbank does convolution during inversion.
     if (!convolve_when == Convolution::Config::Before){
       operations.push_back (inverse_filterbank.get());

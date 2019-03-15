@@ -232,8 +232,9 @@ void dsp::InverseFilterbank::make_preparations ()
     if (verbose) {
       std::cerr << "dsp::InverseFilterbank::make_preparations: setting up derippling response" << std::endl;
     }
-    deripple->set_ndat(freq_res / input_nchan);
-    deripple->set_nchan(input_nchan);
+    deripple->set_input_nchan(input_nchan);
+    deripple->set_ndat(freq_res);
+    deripple->set_nchan(output_nchan);
     deripple->build();
   }
 

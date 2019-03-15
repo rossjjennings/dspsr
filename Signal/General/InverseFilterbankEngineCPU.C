@@ -325,9 +325,9 @@ void dsp::InverseFilterbankEngineCPU::perform (const dsp::TimeSeries* in, dsp::T
 				// 	sizeof_complex * (input_os_keep_2 * circ_shift_size)
 				// );
 
-        if (deripple != nullptr) {
-          deripple->operate(stitch_scratch, ipol, 0, 1);
-        }
+        // if (deripple != nullptr) {
+        //   deripple->operate(stitch_scratch, ipol, 0, 1);
+        // }
 
 				if (response != nullptr) {
 					response->operate(stitch_scratch, ipol, 0, 1);

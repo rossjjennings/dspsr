@@ -12,12 +12,11 @@
 #include <fstream>
 #include <iostream>
 #include <vector>
-#include <cstring>
 
 dsp::DerippleResponse::DerippleResponse ()
 {
   if (verbose) {
-    std::cerr << "dsp::DerippleResponse::DerippleResponse()" << std::endl;
+    std::cerr << "dsp::DerippleResponse::DerippleResponse::ctor" << std::endl;
   }
   ndim = 2;
   nchan = 1;
@@ -45,6 +44,12 @@ void dsp::DerippleResponse::build ()
     std::cerr << "dsp::DerippleResponse::build: bufsize=" << bufsize << std::endl;
     std::cerr << "dsp::DerippleResponse::build: whole_swapped=" << whole_swapped << std::endl;
     std::cerr << "dsp::DerippleResponse::build: swap_divisions=" << swap_divisions << std::endl;
+    std::cerr << "dsp::DerippleResponse::build: npol=" << npol
+      << " input_nchan=" << input_nchan
+      << " nchan=" << nchan
+      << " ndat=" << ndat
+      << " ndim=" << ndim
+      << std::endl;
   }
 
   std::vector<float> freq_response;
@@ -52,7 +57,10 @@ void dsp::DerippleResponse::build ()
   // calc_freq_response(freq_response, ndat*nchan/2);
   calc_freq_response(freq_response, ndat/2);
   // roll the array by the appropriate number of bins
-  roll(freq_response, -ndim*half_chan_shift*ndat_per_chan/2);
+  int shift_bins = -1*static_cast<int>(ndim*half_chan_shift*ndat_per_chan/2);
+  if (verbose) {
+    std::cerr << "dsp::DerippleResponse::build: shift_bins=" << shift_bins << std::endl;
+  }
 
   std::complex<float>* freq_response_complex = reinterpret_cast<std::complex<float>*>(freq_response.data());
 
@@ -72,14 +80,28 @@ void dsp::DerippleResponse::build ()
     }
     step += ndat_per_chan;
   }
-  // std::ofstream freq_response_file("freq_response.buffer.dat", std::ios::out | std::ios::binary);
+
+  // std::ofstream freq_response_file_before("freq_response.buffer.before.dat", std::ios::out | std::ios::binary);
   //
-  // freq_response_file.write(
+  // freq_response_file_before.write(
   //     reinterpret_cast<const char*>(buffer),
   //     ndat*nchan*ndim*npol*sizeof(float)
   // );
   //
-  // freq_response_file.close();
+  // freq_response_file_before.close();
+
+  roll<std::complex<float>>(phasors, ndat, static_cast<int>(ndat) + shift_bins/static_cast<int>(ndim));
+  // roll<std::complex<float>>(phasors, ndat, shift_bins/static_cast<int>(ndim));
+
+  // std::ofstream freq_response_file_after("freq_response.buffer.after.dat", std::ios::out | std::ios::binary);
+  //
+  // freq_response_file_after.write(
+  //     reinterpret_cast<const char*>(buffer),
+  //     ndat*nchan*ndim*npol*sizeof(float)
+  // );
+  //
+  // freq_response_file_after.close();
+
   built = true;
 
 }
@@ -156,20 +178,24 @@ void dsp::DerippleResponse::calc_freq_response (
 //! Create an Scalar Filter with nchan channels
 void dsp::DerippleResponse::match (const Observation* obs, unsigned channels)
 {
-  if (verbose)
+  if (verbose){
     std::cerr << "dsp::DerippleResponse::match channels=" << channels << std::endl;
+  }
+  // if (!channels)
+  //   channels = obs->get_nchan();
 
-  if (!channels)
-    channels = obs->get_nchan();
-
-  if (verbose)
+  if (verbose){
     std::cerr << "dsp::DerippleResponse::match set_nchan(" << channels << ")" << std::endl;
+  }
+
   set_nchan (channels);
 
-  if (!built)
-  {
-    build();
-  }
+  input_nchan = obs->get_nchan();
+
+  // if (!built)
+  // {
+  //   build();
+  // }
 }
 
 //! Create a DerippleResponse with the same number of channels as Response
@@ -188,28 +214,11 @@ void dsp::DerippleResponse::match (const Response* response)
     return;
   }
 
+  input_nchan = response->get_input_nchan();
+
   resize (npol, response->get_nchan(), response->get_ndat(), ndim);
 
-  if (!built)
+  if (!built){
     build();
-}
-
-//! "roll" `arr` by `shift`
-void dsp::DerippleResponse::roll (std::vector<float>& arr, int shift) {
-  if (shift == 0) {
-    return;
-  } else {
-    unsigned original_size = arr.size();
-    arr.resize(original_size + abs(shift));
-    float* buffer = arr.data();
-    if (shift > 0) {
-      std::memcpy(buffer + shift, buffer, original_size*sizeof(float));
-      std::memcpy(buffer, buffer + original_size, shift*sizeof(float));
-    } else {
-      std::memcpy(buffer + original_size, buffer, abs(shift)*sizeof(float));
-      std::memcpy(buffer, buffer + abs(shift), (original_size+shift)*sizeof(float));
-      std::memcpy(buffer + original_size+shift, buffer + original_size, abs(shift)*sizeof(float));
-    }
-    arr.resize(original_size);
   }
 }

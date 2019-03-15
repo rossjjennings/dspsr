@@ -11,6 +11,7 @@
 #define __DerippleResponse_h
 
 #include <vector>
+#include <cstring>
 
 #include "dsp/Response.h"
 #include "dsp/FIRFilter.h"
@@ -57,7 +58,11 @@ namespace dsp {
   protected:
 
     //! Roll array `arr` by `shift` number of points
-    void roll (std::vector<float>& arr, int shift);
+    template<typename T>
+    void roll (std::vector<T>& arr, int shift);
+
+    template<typename T>
+    void roll (T* arr, unsigned len, int shift);
 
     //! FIR filter that contains time domain filter coefficients
     FIRFilter fir_filter;
@@ -72,6 +77,40 @@ namespace dsp {
     //! or "roll" the response
     unsigned half_chan_shift;
   };
+}
+
+template<typename T>
+void dsp::DerippleResponse::roll (T* buffer, unsigned len, int shift) {
+  if (verbose) {
+    std::cerr << "dsp::DerippleResponse::roll"
+      << " buffer=" << buffer
+      << " len=" << len
+      << " shift=" << shift
+      << std::endl;
+  }
+	unsigned abs_shift = static_cast<unsigned>(abs(shift));
+  T* scratch = new T[abs_shift];
+
+	if (shift == 0) {
+		return;
+	}
+	if (shift > 0) {
+		std::memcpy(scratch, buffer + len - abs_shift, abs_shift*sizeof(T));
+		std::memcpy(buffer + abs_shift, buffer, (len - abs_shift)*sizeof(T));
+		std::memcpy(buffer, scratch, abs_shift*sizeof(T));
+	} else {
+		std::memcpy(scratch, buffer, abs_shift*sizeof(T));
+		std::memcpy(buffer, buffer + abs_shift, (len - abs_shift)*sizeof(T));
+		std::memcpy(buffer + len - abs_shift, scratch, abs_shift*sizeof(T));
+	}
+	delete [] scratch;
+}
+
+template<typename T>
+void dsp::DerippleResponse::roll (std::vector<T>& arr, int shift) {
+	unsigned len = arr.size();
+	T* buffer = arr.data();
+	roll<T> (buffer, len, shift);
 }
 
 #endif
