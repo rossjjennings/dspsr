@@ -92,8 +92,8 @@ namespace dsp
 
     float* input_fft_scratch;
     float* output_fft_scratch;
-    float* response_stitch_scratch;
-    float* fft_shift_scratch;
+    // float* response_stitch_scratch;
+    // float* fft_shift_scratch;
     float* stitch_scratch;
 
     bool fft_plans_setup;

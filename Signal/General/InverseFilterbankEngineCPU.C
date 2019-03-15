@@ -143,42 +143,55 @@ void dsp::InverseFilterbankEngineCPU::setup (
   input_os_discard = input_fft_length - input_os_keep;
 
   // setup scratch space
-  int in_npol = input->get_npol();
-  int input_fft_points = in_npol*input_fft_length;
-  int output_fft_points = 2*output_fft_length; // always return complex result
-  int response_stitch_points = in_npol*input_fft_length*input_nchan;
-  int fft_shift_points = 2*output_fft_length;
-  int stitch_points = 2*output_fft_length;
-
-  if (verbose) {
-    cerr << "dsp::InverseFilterbankEngineCPU::setup"
-          << " oversampling factor=" << filterbank->get_oversampling_factor()
-          << endl;
-    cerr << "dsp::InverseFilterbankEngineCPU::setup"
-          << " input_fft_points=" << input_fft_points
-          << " output_fft_points=" << output_fft_points
-          << " response_stitch_points=" << response_stitch_points
-          << " fft_shift_points=" << fft_shift_points
-          << " stitch_points=" << stitch_points
-          << endl;
-    cerr << "dsp::InverseFilterbankEngineCPU::setup"
-          << " input_os_keep=" << input_os_keep
-          << " input_os_discard=" << input_os_discard
-          << " input_discard_total=" << input_discard_total
-          << " input_sample_step=" << input_sample_step
-          << " output_discard_total=" << output_discard_total
-          << " output_sample_step=" << output_sample_step
-          << endl;
-  }
+  unsigned in_ndim = input->get_ndim();
+  unsigned input_fft_points = in_ndim*input_fft_length;
+  unsigned output_fft_points = 2*output_fft_length; // always return complex result
+  unsigned stitch_points = 2*output_fft_length;
 
   dsp::Scratch* scratch = new Scratch;
-	input_fft_scratch = scratch->space<float>
-		(input_fft_points + output_fft_points + response_stitch_points + fft_shift_points + stitch_points);
+  input_fft_scratch = scratch->space<float>
+    (input_fft_points + output_fft_points  + stitch_points);
 
   output_fft_scratch = input_fft_scratch + input_fft_points;
-  response_stitch_scratch = output_fft_scratch + output_fft_points;
-  fft_shift_scratch = response_stitch_scratch + response_stitch_points;
-  stitch_scratch = fft_shift_scratch + fft_shift_points;
+  stitch_scratch = output_fft_scratch + output_fft_points;
+
+  // // setup scratch space
+  // int in_ndim = input->get_ndim();
+  // int input_fft_points = in_ndim*input_fft_length;
+  // int output_fft_points = 2*output_fft_length; // always return complex result
+  // int response_stitch_points = in_ndim*input_fft_length*input_nchan;
+  // int fft_shift_points = 2*output_fft_length;
+  // int stitch_points = 2*output_fft_length;
+  //
+  // if (verbose) {
+  //   cerr << "dsp::InverseFilterbankEngineCPU::setup"
+  //         << " oversampling factor=" << filterbank->get_oversampling_factor()
+  //         << endl;
+  //   cerr << "dsp::InverseFilterbankEngineCPU::setup"
+  //         << " input_fft_points=" << input_fft_points
+  //         << " output_fft_points=" << output_fft_points
+  //         << " response_stitch_points=" << response_stitch_points
+  //         << " fft_shift_points=" << fft_shift_points
+  //         << " stitch_points=" << stitch_points
+  //         << endl;
+  //   cerr << "dsp::InverseFilterbankEngineCPU::setup"
+  //         << " input_os_keep=" << input_os_keep
+  //         << " input_os_discard=" << input_os_discard
+  //         << " input_discard_total=" << input_discard_total
+  //         << " input_sample_step=" << input_sample_step
+  //         << " output_discard_total=" << output_discard_total
+  //         << " output_sample_step=" << output_sample_step
+  //         << endl;
+  // }
+  //
+  // dsp::Scratch* scratch = new Scratch;
+	// input_fft_scratch = scratch->space<float>
+	// 	(input_fft_points + output_fft_points + response_stitch_points + fft_shift_points + stitch_points);
+  //
+  // output_fft_scratch = input_fft_scratch + input_fft_points;
+  // response_stitch_scratch = output_fft_scratch + output_fft_points;
+  // fft_shift_scratch = response_stitch_scratch + response_stitch_points;
+  // stitch_scratch = fft_shift_scratch + fft_shift_points;
 }
 
 
