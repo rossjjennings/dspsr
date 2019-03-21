@@ -32,7 +32,7 @@ dsp::InverseFilterbank::Config::Config ()
 
   nchan = 0; // unspecified. If this stays 0, then no inverse filterbank is applied.
   freq_res = 0;  // unspecified
-  when = During;
+  when = After;
 }
 
 //! Return a new InverseFilterbank instance and configure it
@@ -41,6 +41,10 @@ dsp::InverseFilterbank* dsp::InverseFilterbank::Config::create ()
   Reference::To<InverseFilterbank> filterbank = new InverseFilterbank;
 
   filterbank->set_output_nchan( get_nchan() );
+
+  if (freq_res) {
+    filterbank->set_input_fft_length(freq_res);
+  }
 
 #if HAVE_CUDA
   CUDA::DeviceMemory* device_memory =

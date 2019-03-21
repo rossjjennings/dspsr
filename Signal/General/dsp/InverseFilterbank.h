@@ -16,11 +16,29 @@
 
 namespace dsp {
 
-  //! Performs a synthesis operation, combining multiple input frequency channels
-  //! into a smaller number of output channels.
+  //! Performs the PFB inversion synthesis operation, combining multiple input
+  //! frequency channels into a smaller number of output channels.
+  //!
   //! Input can be critically sampled or over sampled.
   //! In the over sampled case, input spectra will be appropriately stitched
   //! together, discarding band edge overlap regions.
+  //!
+  //! The manner in which input channels are synthesized depends on the number
+  //! of input channels that are present, and if the zeroth PFB channel is present.
+  //! Here, the "reassembled" spectrum refers to the spectrum that gets assembled
+  //! from forward FFTs operating on each input channel in the transformation
+  //! step.
+  //! There are three distinct scenarios:
+  //!   - All PFB channels are present, and the zeroth, or DC PFB channel is present.
+  //!   Here, the first half channel of the reassembled spectrum gets put at the end
+  //!   of the spectrum; we "roll" the assembled spectrum by half a channel.
+  //!   - The DC PFB channel is present, but we only have a subset of the channels
+  //!   from upstream channelization. In this case, we discard the zeroth channel,
+  //!   and append a half channel's worth of zeros to the end of the assembled
+  //!   spectrum
+  //!   - We have neither the DC PFB channel nor all the PFB channels. In this
+  //!   case we leave the assembled spectrum as is.
+
 
   class InverseFilterbank: public Convolution {
 
@@ -71,6 +89,12 @@ namespace dsp {
     void set_oversampling_factor (const Rational& _osf) { oversampling_factor = _osf; }
 
     const Rational& get_oversampling_factor () {return input->get_oversampling_factor();}
+
+    const bool get_pfb_dc_chan () const { return pfb_dc_chan; }
+    void set_pfb_dc_chan (bool _pfb_dc_chan) { pfb_dc_chan = _pfb_dc_chan; }
+
+    const bool get_pfb_all_chan () const { return pfb_all_chan; }
+    void set_pfb_all_chan (bool _pfb_all_chan) { pfb_all_chan = _pfb_all_chan; }
 
     int get_input_discard_neg() const {return input_discard_neg;}
     void set_input_discard_neg(int _input_discard_neg) { input_discard_neg = _input_discard_neg;}
@@ -135,6 +159,14 @@ namespace dsp {
     //! This will be 1/1 for critically sampled,
     //! and some number greater than 1 for over sampled case
     Rational oversampling_factor;
+
+
+    //! This flag indicates whether we have the DC, or zeroth PFB channel.
+    bool pfb_dc_chan;
+
+    //! This flag indicates whether we have all the channels from the last
+    //! stage of upstream channelization.
+    bool pfb_all_chan;
 
     //! Interface to alternate processing engine (e.g. GPU)
     Reference::To<Engine> engine;

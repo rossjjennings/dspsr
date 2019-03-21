@@ -60,7 +60,7 @@ namespace dsp
 
     Response* response;
 
-    DerippleResponse* deripple;
+    // DerippleResponse* deripple;
 
   private:
 
@@ -97,6 +97,10 @@ namespace dsp
     float* stitch_scratch;
 
     bool fft_plans_setup;
+
+    //! These two parameters are inherited from the InverseFilterbank parent.
+    bool pfb_dc_chan;
+    bool pfb_all_chan;
 
   };
 

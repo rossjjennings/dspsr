@@ -34,6 +34,9 @@ dsp::InverseFilterbank::InverseFilterbank (const char* name, Behaviour behaviour
   output_discard_pos = 0;
   output_discard_total = 0;
 
+  pfb_all_chan = false;
+  pfb_dc_chan = false;
+
 }
 
 void dsp::InverseFilterbank::prepare ()
@@ -140,10 +143,11 @@ inline unsigned output_to_input (
 void dsp::InverseFilterbank::make_preparations ()
 {
   if (verbose) {
-    cerr << "dsp::InverseFilterbank::make_preparations" << endl;
-    cerr << "dsp::InverseFilterbank::make_preparations"
-          << " get_oversampling_factor() " << get_oversampling_factor()
-          << endl;
+    std::cerr << "dsp::InverseFilterbank::make_preparations:" 
+      << " oversampling_factor=" << get_oversampling_factor()
+      << " pfb_dc_chan=" << get_pfb_dc_chan()
+      << " pfb_all_chan=" << get_pfb_all_chan()
+      << std::endl;
   }
   bool real_to_complex = (input->get_state() == Signal::Nyquist);
   unsigned n_per_sample = real_to_complex ? 2: 1;
@@ -216,27 +220,26 @@ void dsp::InverseFilterbank::make_preparations ()
   	// 	dedispersion->build();
   	// }
   } else {
-    output_fft_length = freq_res ;
-    input_fft_length = get_oversampling_factor().normalize(output_fft_length);
+    // this means that the input_fft_length has been specified in the
+    // configuration
+    output_fft_length = input_nchan*get_oversampling_factor().normalize(input_fft_length);
     output_fft_length *= n_per_sample;
     input_fft_length *= n_per_sample;
     output_sample_step = output_fft_length;
     input_sample_step = input_fft_length;
   }
 
-
-
-  if (has_deripple()) {
-    // needs to be modified to incorporate multiple layers of upstream
-    // channelization -- DCS
-    if (verbose) {
-      std::cerr << "dsp::InverseFilterbank::make_preparations: setting up derippling response" << std::endl;
-    }
-    deripple->set_input_nchan(input_nchan);
-    deripple->set_ndat(freq_res);
-    deripple->set_nchan(output_nchan);
-    deripple->build();
-  }
+  // if (has_deripple()) {
+  //   // needs to be modified to incorporate multiple layers of upstream
+  //   // channelization -- DCS
+  //   if (verbose) {
+  //     std::cerr << "dsp::InverseFilterbank::make_preparations: setting up derippling response" << std::endl;
+  //   }
+  //   deripple->set_input_nchan(input_nchan);
+  //   deripple->set_ndat(freq_res);
+  //   deripple->set_nchan(output_nchan);
+  //   deripple->build();
+  // }
 
   if (has_buffering_policy()) {
     if (verbose) {

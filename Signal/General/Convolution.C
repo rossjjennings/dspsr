@@ -91,25 +91,25 @@ dsp::Response* dsp::Convolution::get_response()
 }
 
 //! Set the frequency response function
-void dsp::Convolution::set_deripple (DerippleResponse* _deripple)
-{
-  deripple = _deripple;
-}
-
-bool dsp::Convolution::has_deripple () const
-{
-  return deripple;
-}
-
-const dsp::DerippleResponse* dsp::Convolution::get_deripple() const
-{
-  return deripple;
-}
-
-dsp::DerippleResponse* dsp::Convolution::get_deripple()
-{
-  return deripple;
-}
+// void dsp::Convolution::set_deripple (DerippleResponse* _deripple)
+// {
+//   deripple = _deripple;
+// }
+//
+// bool dsp::Convolution::has_deripple () const
+// {
+//   return deripple;
+// }
+//
+// const dsp::DerippleResponse* dsp::Convolution::get_deripple() const
+// {
+//   return deripple;
+// }
+// 
+// dsp::DerippleResponse* dsp::Convolution::get_deripple()
+// {
+//   return deripple;
+// }
 
 
 

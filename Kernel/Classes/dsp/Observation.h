@@ -235,6 +235,11 @@ namespace dsp
     // or the number of upsteam layers of channelization
     const unsigned get_deripple_stages () const { return deripple.size(); }
 
+    //! set/get the DC PFB channel flag (for inverse filterbank)
+    virtual void set_pfb_dc_chan (bool _pfb_dc_chan) { pfb_dc_chan = _pfb_dc_chan; }
+
+    const bool get_pfb_dc_chan () const { return pfb_dc_chan; }
+
     //! Change the state and correct other attributes accordingly
     virtual void change_state (Signal::State new_state);
 
@@ -369,6 +374,9 @@ namespace dsp
 
     //! information about deripple correction
     std::vector<FIRFilter> deripple;
+
+    //! Do we have the DC, or zeroth PFB channel?
+    bool pfb_dc_chan;
 
   private:
 

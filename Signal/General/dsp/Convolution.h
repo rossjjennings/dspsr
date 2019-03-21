@@ -87,7 +87,7 @@ namespace dsp {
     virtual void set_response (Response* response);
 
     //! Set deripple response function
-    virtual void set_deripple (DerippleResponse* deripple);
+    // virtual void set_deripple (DerippleResponse* deripple);
 
     //! Set the apodization function
     virtual void set_apodization (Apodization* function);
@@ -103,11 +103,11 @@ namespace dsp {
     virtual Response* get_response();
 
     //! Return true if the response attribute has been set
-    bool has_deripple () const;
+    // bool has_deripple () const;
 
     //! Return a pointer to the frequency deripple function
-    virtual const DerippleResponse* get_deripple() const;
-    virtual DerippleResponse* get_deripple();
+    // virtual const DerippleResponse* get_deripple() const;
+    // virtual DerippleResponse* get_deripple();
 
 
     //! Return true if the passband attribute has been set

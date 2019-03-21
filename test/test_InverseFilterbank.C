@@ -168,7 +168,7 @@ void TestInverseFilterbank::test_pipeline ()
 
 	filterbank.set_engine(filterbank_engine);
 	filterbank.set_response(kernel);
-	filterbank.set_deripple(deripple);
+	// filterbank.set_deripple(deripple);
 	filterbank.prepare();
 	filterbank.operate();
 }

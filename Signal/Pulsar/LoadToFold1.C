@@ -25,6 +25,7 @@
 #include "dsp/RFIFilter.h"
 #include "dsp/PolnCalibration.h"
 
+#include "dsp/FIRFilter.h"
 #include "dsp/InverseFilterbank.h"
 #include "dsp/InverseFilterbankEngineCPU.h"
 #include "dsp/Filterbank.h"
@@ -75,6 +76,7 @@
 #include "Pulsar/Archive.h"
 #include "Pulsar/TextParameters.h"
 #include "Pulsar/SimplePredictor.h"
+
 
 #include "Error.h"
 #include "debug.h"
@@ -322,31 +324,44 @@ void dsp::LoadToFold::construct () try
     }
     inverse_filterbank->set_input (unpacked);
     inverse_filterbank->set_output (filterbanked);
+    inverse_filterbank->set_pfb_dc_chan(manager->get_info()->get_pfb_dc_chan());
 
     // set up derippling response
 
-    if (manager->get_info()->get_deripple_stages() > 0 && config->do_deripple) {
-      std::cerr << "dspsr: setting up deripple" << std::endl;
-      Reference::To<dsp::DerippleResponse> deripple_response = new dsp::DerippleResponse;
-      deripple_response->set_fir_filter(manager->get_info()->get_deripple()[0]);
-      // inverse_filterbank->set_deripple (deripple_response);
+    if (manager->get_info()->get_deripple_stages() > 0) {
+      dsp::FIRFilter first_filter = manager->get_info()->get_deripple()[0];
+      inverse_filterbank->set_pfb_all_chan(
+          first_filter.get_pfb_nchan() == manager->get_info()->get_nchan());
 
-      if (kernel) {
-        std::cerr << "dspsr: adding deripple to ResponseProduct" << std::endl;
-        if (!response_product)
-          response_product = new ResponseProduct;
+      if (config->do_deripple) {
+        std::cerr << "dspsr: setting up deripple" << std::endl;
+        Reference::To<dsp::DerippleResponse> deripple_response = new dsp::DerippleResponse;
+        deripple_response->set_fir_filter(first_filter);
 
-        response_product->add_response (deripple_response);
-        response_product->add_response (kernel);
+        if (kernel) {
+          std::cerr << "dspsr: adding deripple to ResponseProduct" << std::endl;
+          if (!response_product)
+            response_product = new ResponseProduct;
 
-        response_product->set_copy_index (1);
-        response_product->set_match_index (1);
+          response_product->add_response (deripple_response);
+          response_product->add_response (kernel);
 
-        response = response_product;
+          response_product->set_copy_index (1);
+          response_product->set_match_index (1);
+
+          response = response_product;
+        } else {
+          std::cerr << "dspsr: using DerippleResponse as response" << std::endl;
+          response = deripple_response;
+          response->resize(1, 1, config->inverse_filterbank.get_freq_res(), 2);
+        }
       }
     }
 
-    inverse_filterbank->set_response (response);
+    if (convolve_when == Convolution::Config::During) {
+      inverse_filterbank->set_response (response);
+    }
+
     // for now, inverse filterbank does convolution during inversion.
     if (!convolve_when == Convolution::Config::Before){
       operations.push_back (inverse_filterbank.get());

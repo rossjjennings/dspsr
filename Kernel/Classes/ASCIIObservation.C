@@ -479,6 +479,27 @@ void dsp::ASCIIObservation::load (const char* header)
           << get_oversampling_factor() << std::endl;
     }
   }
+
+  // //////////////////////////////////////////////////////////////////////
+  //
+  // PFB_DC_CHAN
+  //
+  int _pfb_dc_chan;
+  if (ascii_header_check (header, "PFB_DC_CHAN", "%d", &_pfb_dc_chan) >= 0)
+  {
+    if (_pfb_dc_chan != 1 && _pfb_dc_chan != 0) {
+      std::cerr << "dsp::ASCIIObservation::load: pfb_dc_chan="
+        << _pfb_dc_chan << " invalid. "
+        << "defaulting to 0" << std::endl;
+      _pfb_dc_chan = 0;
+    }
+    set_pfb_dc_chan (_pfb_dc_chan);
+    if (verbose) {
+      std::cerr << "dsp::ASCIIObservation::load: pfb_dc_chan="
+        << get_pfb_dc_chan() << std::endl;
+    }
+  }
+
 }
 
 /* ***********************************************************************
@@ -655,5 +676,14 @@ void dsp::ASCIIObservation::unload (char* header)
     string osf = tostring (osfactor);
     if (ascii_header_set (header, "OS_FACTOR", "%s", osf.c_str() ) < 0 )
       throw Error (InvalidState, "ASCIIObservation", "failed unload OS_FACTOR");
+  }
+
+  // //////////////////////////////////////////////////////////////////////
+  //
+  // PFB_DC_CHAN
+  //
+  bool _pfb_dc_chan = get_pfb_dc_chan();
+  if (ascii_header_set (header, "PFB_DC_CHAN", "%d", _pfb_dc_chan) < 0) {
+    throw Error (InvalidState, "ASCIIObservation", "failed unload PFB_DC_CHAN");
   }
 }
