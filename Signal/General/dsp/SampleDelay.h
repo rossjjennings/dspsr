@@ -34,7 +34,7 @@ namespace dsp {
     void prepare ();
 
     //! Prepares the output data buffer
-    void prepare_output ();
+    void prepare_output (uint64_t);
 
     //! Get the minimum number of samples required for operation
     uint64_t get_minimum_samples () { return total_delay; }
