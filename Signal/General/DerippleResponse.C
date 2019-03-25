@@ -24,7 +24,7 @@ dsp::DerippleResponse::DerippleResponse ()
   npol = 1;
   ndat = 1;
 
-  half_chan_shift = 1;
+  pfb_dc_chan = false;
 
   built = false;
 }
@@ -44,12 +44,17 @@ void dsp::DerippleResponse::build ()
     std::cerr << "dsp::DerippleResponse::build: bufsize=" << bufsize << std::endl;
     std::cerr << "dsp::DerippleResponse::build: whole_swapped=" << whole_swapped << std::endl;
     std::cerr << "dsp::DerippleResponse::build: swap_divisions=" << swap_divisions << std::endl;
+    std::cerr << "dsp::DerippleResponse::build: pfb_dc_chan=" << pfb_dc_chan << std::endl;
     std::cerr << "dsp::DerippleResponse::build: npol=" << npol
       << " input_nchan=" << input_nchan
       << " nchan=" << nchan
       << " ndat=" << ndat
       << " ndim=" << ndim
       << std::endl;
+  }
+  unsigned half_chan_shift = 0 ;
+  if (pfb_dc_chan) {
+    half_chan_shift = 1;
   }
 
   std::vector<float> freq_response;
@@ -89,8 +94,9 @@ void dsp::DerippleResponse::build ()
   // );
   //
   // freq_response_file_before.close();
-
-  roll<std::complex<float>>(phasors, ndat, static_cast<int>(ndat) + shift_bins/static_cast<int>(ndim));
+  if (shift_bins != 0) {
+    roll<std::complex<float>>(phasors, ndat, static_cast<int>(ndat) + shift_bins/static_cast<int>(ndim));
+  }
   // roll<std::complex<float>>(phasors, ndat, shift_bins/static_cast<int>(ndim));
 
   // std::ofstream freq_response_file_after("freq_response.buffer.after.dat", std::ios::out | std::ios::binary);
@@ -191,6 +197,7 @@ void dsp::DerippleResponse::match (const Observation* obs, unsigned channels)
   set_nchan (channels);
 
   input_nchan = obs->get_nchan();
+  pfb_dc_chan = obs->get_pfb_dc_chan();
 
   if (!built && ndat > 1) {
     build();

@@ -60,8 +60,6 @@ AM_INIT_AUTOMAKE([foreign subdir-objects])
 
 DSPSR_FORMATS
 
-# Create static libraries by default
-AC_DISABLE_SHARED
 
 # Enable large-file support
 AC_SYS_LARGEFILE
@@ -81,6 +79,14 @@ AC_PROG_F77
 AC_PROG_INSTALL
 AC_PROG_LIBTOOL
 
+# Create static libraries by default
+if test x"$enable_shared" == xyes; then
+  # echo "enable shared"
+  AC_ENABLE_SHARED
+else
+  # echo "disable shared"
+  AC_DISABLE_SHARED
+fi
 #
 # Disable the debugging information option, -g
 #

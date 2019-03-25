@@ -8,4 +8,3 @@ libdspbase_la_LIBADD = \
 	Formats/libFormats.la
 
 include $(top_srcdir)/config/Makefile.local
-

@@ -44,15 +44,16 @@ namespace dsp {
     //! Set the length of the frequency response for each input channel
     void set_ndat (unsigned _ndat);
 
-    void set_half_chan_shift (unsigned _half_chan_shift) { half_chan_shift = _half_chan_shift; }
-
+    //! build the frequency response corresponding to the FIR filter
     void build ();
 
     //! Calculate the frequency response, filling up freq_response vector.
     void calc_freq_response (std::vector<float>& freq_response, unsigned n_freq);
 
+    //! set the FIR filter coefficients
     void set_fir_filter (const FIRFilter& _fir_filter) { fir_filter = _fir_filter; }
 
+    //! get the FIR filter coefficients
     const FIRFilter& get_fir_filter () const { return fir_filter; }
 
   protected:
@@ -73,9 +74,10 @@ namespace dsp {
     //! flag indicating whether frequency response has been built
     bool built;
 
-    //! number of half input channel widths by which to "circularly shift",
-    //! or "roll" the response
-    unsigned half_chan_shift;
+    //! flag indicating whether the DC, or zeroth PFB channel is present
+    //! in the input data. If it is present, then the response must be
+    //! rolled by a half channel.
+    bool pfb_dc_chan;
   };
 }
 

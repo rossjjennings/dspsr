@@ -226,10 +226,10 @@ namespace dsp
     const Rational& get_oversampling_factor () const
     { return oversampling_factor; }
 
-    virtual void set_deripple (const std::vector<FIRFilter>& _deripple)
+    virtual void set_deripple (const std::vector<dsp::FIRFilter>& _deripple)
     { deripple = _deripple; }
 
-    const std::vector<FIRFilter> get_deripple () const { return deripple; }
+    const std::vector<dsp::FIRFilter> get_deripple () const { return deripple; }
 
     // get the number of derippling stages,
     // or the number of upsteam layers of channelization
