@@ -84,6 +84,7 @@ static inline int getVDIFFrameNumber(const vdif_header *header) { return (int)he
 static inline int getVDIFStationID(const vdif_header *header) { return (int)header->stationid; }
 static inline int getVDIFBitsPerSample(const vdif_header *header) { return ((int)header->nbits+1); }
 int getVDIFNumChannels(const vdif_header *header);
+static inline int getVDIFFrameLegacyMode(const vdif_header *header) { return (int)header->legacymode; }
 static inline int getVDIFFrameInvalid(const vdif_header *header) { return (int)header->invalid; }
 static inline int getVDIFFullSecond(const vdif_header *header) { return (int)header->seconds; }
 static inline int getVDIFEpoch(const vdif_header *header) { return (int)header->epoch; }
