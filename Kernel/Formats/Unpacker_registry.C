@@ -70,6 +70,10 @@ static dsp::Unpacker::Register::Enter<dsp::SKA1Unpacker> ska1;
 static dsp::Unpacker::Register::Enter<dsp::UWBUnpacker> uwb;
 #include "dsp/UWBFloatUnpacker.h"
 static dsp::Unpacker::Register::Enter<dsp::UWBFloatUnpacker> uwbfloat;
+#include "dsp/UWBFourBitUnpacker.h"
+static dsp::Unpacker::Register::Enter<dsp::UWBFourBitUnpacker> uwbfourbit;
+#include "dsp/UWBEightBitUnpacker.h"
+static dsp::Unpacker::Register::Enter<dsp::UWBEightBitUnpacker> uwbeightbit;
 #endif
 
 #if HAVE_cpsr
