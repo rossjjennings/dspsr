@@ -1,6 +1,10 @@
-/*
-
- */
+//-*-C++-*-
+/***************************************************************************
+ *
+ *   Copyright (C) 2019 by Andrew Jameson
+ *   Licensed under the Academic Free License version 2.1
+ *
+ ***************************************************************************/
 
 #ifndef __dsp_UWBEightBitUnpacker_h
 #define __dsp_UWBEightBitUnpacker_h
@@ -33,8 +37,6 @@ namespace dsp {
 
     //! Cloner (calls new)
     virtual UWBEightBitUnpacker * clone () const;
-
-    void print_char_binary(char value);
 
   protected:
     

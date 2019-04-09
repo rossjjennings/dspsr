@@ -1,7 +1,7 @@
 //-*-C++-*-
 /***************************************************************************
  *
- *   Copyright (C) 2014
+ *   Copyright (C) 2019 by Andrew Jameson
  *   Licensed under the Academic Free License version 2.1
  *
  ***************************************************************************/
@@ -92,20 +92,6 @@ bool dsp::UWBFourBitUnpacker::matches (const Observation* observation)
     && observation->get_ndim() == 2
     && (observation->get_npol() == 2 || observation->get_npol() == 1)
     && observation->get_nbit() == 4;
-}
-
-void dsp::UWBFourBitUnpacker::print_char_binary(char value)
-{
-  char c;
-  char displayMask = 1 << 7;
-  for (c=1; c <= 8; c++) {
-    if (value & displayMask)  
-      cout << '1';
-    else
-      cout << '0';
-    value <<= 1;
-  }
-  cout << endl;
 }
 
 void dsp::UWBFourBitUnpacker::get_scales_and_offsets ()
