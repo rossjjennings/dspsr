@@ -61,6 +61,7 @@ namespace dsp {
 
     unsigned sfactor;
     uint64_t output_ndat;
+    bool prepared;
 
     Reference::To<Engine> engine;
   };
