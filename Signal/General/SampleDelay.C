@@ -21,6 +21,7 @@ dsp::SampleDelay::SampleDelay ()
   zero_delay = 0;
   total_delay = 0;
   built = false;
+  engine = NULL;
 
   set_buffering_policy (new InputBuffering (this));
 }
@@ -126,35 +127,17 @@ void dsp::SampleDelay::prepare ()
     cerr << "dsp::SampleDelay::prepare reserve=" << total_delay << endl;
 
   get_buffering_policy()->set_minimum_samples (total_delay);
-
-  prepare_output ();
 }
 
 //! prepare the output timeseries
-void dsp::SampleDelay::prepare_output ()
+void dsp::SampleDelay::prepare_output (uint64_t output_ndat)
 {
-  const uint64_t input_ndat  = input->get_ndat();
-  uint64_t output_ndat = 0;
-  if (input_ndat < total_delay)
-  {
-    if (verbose)
-      cerr << "dsp::SampleDelay::prepare_output insufficient data\n"
-        "  input ndat=" << input_ndat << " total delay=" << total_delay  << endl;
-  }
-  else
-    output_ndat = input_ndat - total_delay;
-
-  if (verbose)
-    cerr << "dsp::SampleDelay::prepare_output input_ndat=" << input_ndat
-         << " output_ndat=" << output_ndat << " total_delay=" << total_delay
-         << endl;
-
   // prepare the output timeseries
   if (verbose)
     cerr << "dsp::SampleDelay::prepare_output output->copy_configuration(input)" << endl;
   get_output()->copy_configuration (get_input());
 
-  if (input.get() != output.get())
+  if (output != input)
   {
     output->resize (output_ndat);
     get_output()->set_input_sample (get_input()->get_input_sample());
@@ -197,6 +180,9 @@ void dsp::SampleDelay::transformation ()
   if (verbose)
     cerr << "dsp::SampleDelay::transformation set_next_start(" << output_ndat << ")" << endl;
   get_buffering_policy()->set_next_start (output_ndat);
+
+  //prepare the output TimeSeries
+  prepare_output (output_ndat);
 
   if (!output_ndat)
     return;

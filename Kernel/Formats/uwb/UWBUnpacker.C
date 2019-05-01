@@ -157,6 +157,9 @@ void dsp::UWBUnpacker::unpack ()
 
   if (engine)
   {
+    // ensure the histogram is resized
+    unsigned long * hist = get_histogram(0);
+
     if (verbose)
       cerr << "dsp::UWBUnpacker::unpack using Engine" << endl;
     engine->unpack(input, output);

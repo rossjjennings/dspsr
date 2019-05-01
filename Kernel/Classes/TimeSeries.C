@@ -173,7 +173,7 @@ void dsp::TimeSeries::resize (uint64_t nsamples)
   if (nsamples || auto_delete)
   {
     // only resize the data series when additional space is required
-    if (ndat_change > 0 || auto_delete)
+    if (ndat_change > 0 || auto_delete || reshape_required())
       DataSeries::resize (nsamples+fake_ndat);
   }
 
@@ -358,7 +358,7 @@ void dsp::TimeSeries::copy_configuration (const Observation* copy)
   if( copy==this )
     return;
 
-  Observation::operator=( *copy );
+  DataSeries::copy_configuration ( copy );
 
   if (verbose)
     cerr << "dsp::TimeSeries::copy_configuration ndat=" << get_ndat()

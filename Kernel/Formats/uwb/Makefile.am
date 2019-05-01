@@ -1,9 +1,9 @@
 
 noinst_LTLIBRARIES = libuwb.la
 
-nobase_include_HEADERS =  dsp/UWBUnpacker.h dsp/UWBFloatUnpacker.h
+nobase_include_HEADERS =  dsp/UWBUnpacker.h dsp/UWBFloatUnpacker.h dsp/UWBFourBitUnpacker.h dsp/UWBEightBitUnpacker.h
 
-libuwb_la_SOURCES = UWBUnpacker.C UWBFloatUnpacker.C
+libuwb_la_SOURCES = UWBUnpacker.C UWBFloatUnpacker.C UWBFourBitUnpacker.C UWBEightBitUnpacker.C
 
 if HAVE_CUDA
 

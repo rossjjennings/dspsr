@@ -156,7 +156,7 @@ void dsp::VDIFFile::open_file (const char* filename)
   bool got_valid_frame = false;
   char rawhdr_bytes[VDIF_HEADER_BYTES];
   vdif_header *rawhdr = (vdif_header *)rawhdr_bytes;
-  int nbyte;
+  int nbyte, legacymode;
   while (!got_valid_frame) 
   {
     size_t rv = read(fd, rawhdr_bytes, VDIF_HEADER_BYTES);
@@ -167,9 +167,13 @@ void dsp::VDIFFile::open_file (const char* filename)
     // Get frame size
     nbyte = getVDIFFrameBytes(rawhdr);
     if (verbose) cerr << "VDIFFile::open_file FrameBytes = " << nbyte << endl;
+    // Get the legacy mode
+    legacymode = getVDIFFrameLegacyMode(rawhdr);
+    if (verbose) cerr << "VDIFFile::open_file LegacyMode = " << legacymode << endl;
+
     header_bytes = 0;
     block_bytes = nbyte;
-    block_header_bytes = VDIF_HEADER_BYTES; // XXX what about "legacy" mode
+    block_header_bytes = (legacymode) ? VDIF_LEGACY_HEADER_BYTES : VDIF_HEADER_BYTES;
 
     // If this first frame is invalid, go to the next one
     if (getVDIFFrameInvalid(rawhdr)==0)
@@ -221,7 +225,7 @@ void dsp::VDIFFile::open_file (const char* filename)
 
   // Figure frames per sec from bw, pkt size, etc
   //double frames_per_sec = 64000.0;
-  int frame_data_size = nbyte - VDIF_HEADER_BYTES;
+  int frame_data_size = nbyte - block_header_bytes;
   double frames_per_sec = get_info()->get_nbit() * get_info()->get_nchan() * get_info()->get_npol()
     * get_info()->get_rate() / 8.0 / (double) frame_data_size;
   if (verbose) cerr << "VDIFFile::open_file frame_data_size = " 
