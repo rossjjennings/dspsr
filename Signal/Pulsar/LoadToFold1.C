@@ -335,6 +335,7 @@ void dsp::LoadToFold::construct () try
 
       if (config->do_deripple) {
         std::cerr << "dspsr: setting up deripple" << std::endl;
+        // std::cerr << "dspsr: pfb_dc_chan=" << manager->get_info()->get_pfb_dc_chan() << std::endl;
         Reference::To<dsp::DerippleResponse> deripple_response = new dsp::DerippleResponse;
         deripple_response->set_fir_filter(first_filter);
 
@@ -342,7 +343,7 @@ void dsp::LoadToFold::construct () try
           std::cerr << "dspsr: adding deripple to ResponseProduct" << std::endl;
           if (!response_product)
             response_product = new ResponseProduct;
-
+          deripple_response->set_pfb_dc_chan (manager->get_info()->get_pfb_dc_chan());
           response_product->add_response (deripple_response);
           response_product->add_response (kernel);
 

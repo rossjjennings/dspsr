@@ -236,7 +236,7 @@ namespace dsp
     const unsigned get_deripple_stages () const { return deripple.size(); }
 
     //! set/get the DC PFB channel flag (for inverse filterbank)
-    virtual void set_pfb_dc_chan (bool _pfb_dc_chan) { pfb_dc_chan = _pfb_dc_chan; }
+    virtual void set_pfb_dc_chan (const bool _pfb_dc_chan) { pfb_dc_chan = _pfb_dc_chan; }
 
     const bool get_pfb_dc_chan () const { return pfb_dc_chan; }
 

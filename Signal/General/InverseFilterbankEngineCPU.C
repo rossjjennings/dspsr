@@ -13,6 +13,7 @@
 #include "dsp/Scratch.h"
 #include "dsp/Apodization.h"
 #include "dsp/OptimalFFT.h"
+#include "dsp/Observation.h"
 
 #include <fstream>
 #include <iostream>
@@ -28,6 +29,7 @@ dsp::InverseFilterbankEngineCPU::InverseFilterbankEngineCPU ()
 
   pfb_dc_chan = 0;
   pfb_all_chan = 0;
+  verbose = Observation::verbose;
 }
 
 dsp::InverseFilterbankEngineCPU::~InverseFilterbankEngineCPU ()
@@ -262,6 +264,13 @@ void dsp::InverseFilterbankEngineCPU::perform (const dsp::TimeSeries* in, dsp::T
     std::cerr << "dsp::InverseFilterbankEngineCPU::perform: writing " << npart << " chunks" << std::endl;
   }
 
+  if (verbose) {
+    std::cerr << "creating stitched file dump" << std::endl;
+  }
+  // std::ofstream stitched_file("/home/SWIN/dshaff/stitched.dat", std::ios::out | std::ios::binary);
+  // std::ofstream ifft_file("/home/SWIN/dshaff/ifft.dat", std::ios::out | std::ios::binary);
+  // std::ofstream out_file("/home/SWIN/dshaff/out.dat", std::ios::out | std::ios::binary);
+  // std::ofstream deripple_before_file("deripple.before.dat", std::ios::out | std::ios::binary);
   // std::ofstream deripple_before_file("deripple.before.dat", std::ios::out | std::ios::binary);
   // std::ofstream deripple_after_file("deripple.after.dat", std::ios::out | std::ios::binary);
 
@@ -282,7 +291,7 @@ void dsp::InverseFilterbankEngineCPU::perform (const dsp::TimeSeries* in, dsp::T
 
           if (pfb_dc_chan) {
             if (input_ichan == 0) {
-              stitched_offset_neg = n_dims*(input_fft_length - input_os_keep_2);
+              stitched_offset_neg = n_dims*(output_fft_length - input_os_keep_2);
               stitched_offset_pos = 0;
             } else {
               stitched_offset_neg = n_dims*(input_os_keep*input_ichan - input_os_keep_2);
@@ -292,6 +301,14 @@ void dsp::InverseFilterbankEngineCPU::perform (const dsp::TimeSeries* in, dsp::T
             stitched_offset_neg = n_dims*input_os_keep*input_ichan;
             stitched_offset_pos = stitched_offset_neg + n_dims*input_os_keep_2;
           }
+
+          // if (verbose) {
+          //   std::cerr << "dsp::InverseFilterbankEngineCPU::perform: "
+          //     << " input_ichan=" << input_ichan
+          //     << " stitched_offset_neg=" << stitched_offset_neg
+          //     << " stitched_offset_pos=" << stitched_offset_pos
+          //     << std::endl;
+          // }
 
           // discard oversampled regions
           // stitched_offset_neg = n_dims*(input_os_keep*input_ichan);
@@ -326,6 +343,9 @@ void dsp::InverseFilterbankEngineCPU::perform (const dsp::TimeSeries* in, dsp::T
         // If we have the zeroth PFB channel and we don't have all the PFB channels,
         // then we zero the last half channel.
         if (! pfb_all_chan && pfb_dc_chan) {
+          if (verbose) {
+            std::cerr << "dsp::InverseFilterbankEngineCPU::perform: zeroing last half channel" << std::endl;
+          }
           int offset = n_dims*(output_fft_length - input_os_keep_2);
           for (int i=0; i<n_dims*input_os_keep_2; i++) {
             stitch_scratch[offset + i] = 0.0;
@@ -366,6 +386,10 @@ void dsp::InverseFilterbankEngineCPU::perform (const dsp::TimeSeries* in, dsp::T
         // }
 
         // deripple_after_file.write(
+        //   reinterpret_cast<const char*>(stitch_scratch),
+        //   output_fft_length*sizeof_complex
+        // );
+        // stitched_file.write(
         //   reinterpret_cast<const char*>(stitch_scratch),
         //   output_fft_length*sizeof_complex
         // );
@@ -413,6 +437,11 @@ void dsp::InverseFilterbankEngineCPU::perform (const dsp::TimeSeries* in, dsp::T
           }
 					backward->bcc1d(output_fft_length, output_fft_scratch, stitch_scratch);
 
+          // ifft_file.write(
+          //   reinterpret_cast<const char*>(output_fft_scratch),
+          //   output_fft_length*sizeof_complex
+          // );
+
           if (verbose)
   					std::cerr << "dsp::InverseFilterbankEngineCPU::perform: backward FFT complete." << std::endl;
 
@@ -420,6 +449,10 @@ void dsp::InverseFilterbankEngineCPU::perform (const dsp::TimeSeries* in, dsp::T
 					void* sourcePtr = (void*)(output_fft_scratch + output_discard_pos*floats_per_complex);
 					void* destinationPtr = (void *)(out->get_datptr(0, ipol) + ipart*output_sample_step*floats_per_complex);
 					std::memcpy(destinationPtr, sourcePtr, output_sample_step*sizeof_complex);
+          // out_file.write(
+          //   reinterpret_cast<const char*>(destinationPtr),
+          //   output_sample_step*sizeof_complex
+          // );
 				} // end of if(out!=nullptr)
 			} // end of n_pol
 		} // end of ipart
@@ -427,6 +460,9 @@ void dsp::InverseFilterbankEngineCPU::perform (const dsp::TimeSeries* in, dsp::T
   if (verbose) {
     std::cerr << "dsp::InverseFilterbankEngineCPU::perform: finish" << std::endl;
   }
+  // stitched_file.close();
+  // ifft_file.close();
+  // out_file.close();
   // deripple_before_file.close();
   // deripple_after_file.close();
 }

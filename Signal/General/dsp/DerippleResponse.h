@@ -56,6 +56,12 @@ namespace dsp {
     //! get the FIR filter coefficients
     const FIRFilter& get_fir_filter () const { return fir_filter; }
 
+    //! get the pfb_dc_chan flag
+    const bool get_pfb_dc_chan () const { return pfb_dc_chan; }
+
+    //! set the pfb_dc_chan flag
+    void set_pfb_dc_chan (bool _pfb_dc_chan) { pfb_dc_chan = _pfb_dc_chan; }
+
   protected:
 
     //! Roll array `arr` by `shift` number of points

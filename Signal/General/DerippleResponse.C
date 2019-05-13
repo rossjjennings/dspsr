@@ -185,19 +185,18 @@ void dsp::DerippleResponse::calc_freq_response (
 void dsp::DerippleResponse::match (const Observation* obs, unsigned channels)
 {
   if (verbose){
-    std::cerr << "dsp::DerippleResponse::match channels=" << channels << std::endl;
+    std::cerr << "dsp::DerippleResponse::match(const Observation*, unsigned) channels=" << channels << std::endl;
   }
   // if (!channels)
   //   channels = obs->get_nchan();
 
-  if (verbose){
-    std::cerr << "dsp::DerippleResponse::match set_nchan(" << channels << ")" << std::endl;
-  }
-
   set_nchan (channels);
-
+  if (verbose){
+    std::cerr << "dsp::DerippleResponse::match obs->get_nchan() " << obs->get_nchan() << std::endl;
+    std::cerr << "dsp::DerippleResponse::match obs->get_pfb_dc_chan() " << obs->get_pfb_dc_chan() << std::endl;
+  }
   input_nchan = obs->get_nchan();
-  pfb_dc_chan = obs->get_pfb_dc_chan();
+  // pfb_dc_chan = obs->get_pfb_dc_chan();
 
   if (!built && ndat > 1) {
     build();
@@ -208,7 +207,7 @@ void dsp::DerippleResponse::match (const Observation* obs, unsigned channels)
 void dsp::DerippleResponse::match (const Response* response)
 {
   if (verbose)
-    std::cerr << "dsp::DerippleResponse::match Response nchan=" << response->get_nchan()
+    std::cerr << "dsp::DerippleResponse::match (const Response*) nchan=" << response->get_nchan()
          << " ndat=" << response->get_ndat() << std::endl;
 
   if ( get_nchan() == response->get_nchan() &&

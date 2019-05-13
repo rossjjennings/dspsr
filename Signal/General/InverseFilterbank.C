@@ -143,7 +143,7 @@ inline unsigned output_to_input (
 void dsp::InverseFilterbank::make_preparations ()
 {
   if (verbose) {
-    std::cerr << "dsp::InverseFilterbank::make_preparations:" 
+    std::cerr << "dsp::InverseFilterbank::make_preparations:"
       << " oversampling_factor=" << get_oversampling_factor()
       << " pfb_dc_chan=" << get_pfb_dc_chan()
       << " pfb_all_chan=" << get_pfb_all_chan()
@@ -382,6 +382,7 @@ void dsp::InverseFilterbank::prepare_output (uint64_t ndat, bool set_ndat)
    * if freq_res is even, then each sub-band will be centred on a frequency
    * that lies on a spectral bin *edge* - not the centre of the spectral bin
    */
+
   output->set_dc_centred (freq_res%2);
 
 // #if 0
@@ -394,8 +395,19 @@ void dsp::InverseFilterbank::prepare_output (uint64_t ndat, bool set_ndat)
   // dual sideband data produces a band swapped result
   if (input->get_dual_sideband())
   {
+    if (verbose) {
+      std::cerr << "dsp::InverseFilterbank::prepare_output: setting output swap to true" << std::endl;
+    }
     output->set_swap (true);
   }
+
+  if (verbose) {
+    std::cerr << "dsp::InverseFilterbank::prepare_output:"
+      << " output->get_dual_sideband()=" << output->get_dual_sideband()
+      << " output->get_dc_centred()=" << output->get_dc_centred()
+      << std::endl;
+  }
+
 
   // increment the start time by the number of samples dropped from the fft
 
@@ -462,71 +474,71 @@ void dsp::InverseFilterbank::resize_output (bool reserve_extra)
   prepare_output (output_ndat, true);
 }
 
-div_t dsp::InverseFilterbank::calc_lcf (
-	int a, int b, Rational os)
-{
-	return div (a, os.get_denominator()*b);
-}
-
-void dsp::InverseFilterbank::optimize_fft_length (
-	int* _input_fft_length, int* _output_fft_length
-)
-{
-  if (verbose) {
-    cerr << "dsp::InverseFilterbank::optimize_fft_length" << endl;
-  }
-	const Rational os = get_oversampling_factor();
-	int n_input_channels = (int) input->get_nchan();
-
-	div_t max_input_fft_length_lcf = calc_lcf(*_output_fft_length, n_input_channels, os);
-  while (max_input_fft_length_lcf.rem != 0 || fmod(log2(max_input_fft_length_lcf.quot), 1) != 0){
-    if (max_input_fft_length_lcf.rem != 0) {
-      (*_output_fft_length) -= max_input_fft_length_lcf.rem;
-    } else {
-      (*_output_fft_length) -= 2;
-    }
-    max_input_fft_length_lcf = calc_lcf(*_output_fft_length, n_input_channels, os);
-  }
-  *_input_fft_length = max_input_fft_length_lcf.quot * os.get_numerator();
-}
-
-void dsp::InverseFilterbank::optimize_discard_region(
-  int* _input_discard_neg,
-  int* _input_discard_pos,
-  int* _output_discard_neg,
-  int* _output_discard_pos
-)
-{
-  if (verbose) {
-    cerr << "dsp::InverseFilterbank::optimize_discard_region" << endl;
-  }
-	const Rational os = get_oversampling_factor();
-	int n_input_channels = (int) input->get_nchan();
-  // if (verbose) {
-  //   cerr << "dsp::InverseFilterbank::optimize_discard_region"
-  //         << " oversampling_factor=" << os
-  //         << " n_input_channels=" << n_input_channels
-  //         << endl;
-  // }
-
-	vector<int> n = {*_output_discard_pos, *_output_discard_neg};
-  vector<div_t> lcfs(2);
-  int min_n;
-	div_t lcf;
-  for (int i=0; i<n.size(); i++) {
-    min_n = n[i];
-    lcf = calc_lcf(min_n, n_input_channels, os);
-    if (lcf.rem != 0) {
-      min_n += os.get_denominator()*n_input_channels - lcf.rem;
-			lcf.quot += 1;
-	    lcf.rem = 0;
-    }
-    lcfs[i] = lcf;
-    n[i] = min_n;
-  }
-
-  *_output_discard_pos = n[0];
-  *_output_discard_neg = n[1];
-  *_input_discard_pos = lcfs[0].quot * os.get_numerator();
-  *_input_discard_neg = lcfs[1].quot * os.get_numerator();
-}
+// div_t dsp::InverseFilterbank::calc_lcf (
+// 	int a, int b, Rational os)
+// {
+// 	return div (a, os.get_denominator()*b);
+// }
+//
+// void dsp::InverseFilterbank::optimize_fft_length (
+// 	int* _input_fft_length, int* _output_fft_length
+// )
+// {
+//   if (verbose) {
+//     cerr << "dsp::InverseFilterbank::optimize_fft_length" << endl;
+//   }
+// 	const Rational os = get_oversampling_factor();
+// 	int n_input_channels = (int) input->get_nchan();
+//
+// 	div_t max_input_fft_length_lcf = calc_lcf(*_output_fft_length, n_input_channels, os);
+//   while (max_input_fft_length_lcf.rem != 0 || fmod(log2(max_input_fft_length_lcf.quot), 1) != 0){
+//     if (max_input_fft_length_lcf.rem != 0) {
+//       (*_output_fft_length) -= max_input_fft_length_lcf.rem;
+//     } else {
+//       (*_output_fft_length) -= 2;
+//     }
+//     max_input_fft_length_lcf = calc_lcf(*_output_fft_length, n_input_channels, os);
+//   }
+//   *_input_fft_length = max_input_fft_length_lcf.quot * os.get_numerator();
+// }
+//
+// void dsp::InverseFilterbank::optimize_discard_region(
+//   int* _input_discard_neg,
+//   int* _input_discard_pos,
+//   int* _output_discard_neg,
+//   int* _output_discard_pos
+// )
+// {
+//   if (verbose) {
+//     cerr << "dsp::InverseFilterbank::optimize_discard_region" << endl;
+//   }
+// 	const Rational os = get_oversampling_factor();
+// 	int n_input_channels = (int) input->get_nchan();
+//   // if (verbose) {
+//   //   cerr << "dsp::InverseFilterbank::optimize_discard_region"
+//   //         << " oversampling_factor=" << os
+//   //         << " n_input_channels=" << n_input_channels
+//   //         << endl;
+//   // }
+//
+// 	vector<int> n = {*_output_discard_pos, *_output_discard_neg};
+//   vector<div_t> lcfs(2);
+//   int min_n;
+// 	div_t lcf;
+//   for (int i=0; i<n.size(); i++) {
+//     min_n = n[i];
+//     lcf = calc_lcf(min_n, n_input_channels, os);
+//     if (lcf.rem != 0) {
+//       min_n += os.get_denominator()*n_input_channels - lcf.rem;
+// 			lcf.quot += 1;
+// 	    lcf.rem = 0;
+//     }
+//     lcfs[i] = lcf;
+//     n[i] = min_n;
+//   }
+//
+//   *_output_discard_pos = n[0];
+//   *_output_discard_neg = n[1];
+//   *_input_discard_pos = lcfs[0].quot * os.get_numerator();
+//   *_input_discard_neg = lcfs[1].quot * os.get_numerator();
+// }
