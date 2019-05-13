@@ -17,7 +17,7 @@ nobase_include_HEADERS = dsp/ACFilterbank.h dsp/Detection.h	       \
 	dsp/OptimalFFT.h dsp/OptimalFilterbank.h dsp/on_host.h	       \
 	dsp/FScrunch.h dsp/FilterbankBench.h dsp/FilterbankConfig.h    \
 	dsp/FilterbankEngine.h dsp/filterbank_engine.h dsp/FZoom.h  \
-	dsp/GeometricDelay.h					       \
+	dsp/GeometricDelay.h dsp/DelayStartTime.h \
 	dsp/TFPFilterbank.h dsp/RFIZapper.h dsp/SKFilterbank.h	       \
 	dsp/Resize.h dsp/SKDetector.h dsp/SKMasker.h		       \
 	dsp/Pipeline.h dsp/SingleThread.h dsp/MultiThread.h            \
@@ -30,7 +30,7 @@ libdspdsp_la_SOURCES = optimize_fft.c cross_detect.c cross_detect.h  \
 	TimeOrder.C Apodization.C AutoCorrelation.C Filterbank.C     \
 	IncoherentFilterbank.C Bandpass.C LevelMonitor.C RFIFilter.C \
 	Chomper.C Response.C ResponseProduct.C Convolution.C	     \
-	Dedispersion.C SampleDelay.C DedispersionHistory.C	     \
+	Dedispersion.C SampleDelay.C DelayStartTime.C DedispersionHistory.C	\
 	Shape.C DedispersionSampleDelay.C Detection.C Rescale.C	     \
 	PScrunch.C BandpassMonitor.C FourthMoment.C Stats.C	     \
 	PolnCalibration.C Dump.C OptimalFFT.C FScrunch.C	     \
@@ -46,6 +46,7 @@ bin_PROGRAMS = dmsmear digitxt digimon digihist filterbank_speed
 if HAVE_CUFFT
 
 nobase_include_HEADERS += CUFFTError.h dsp/LaunchConfig.h \
+	dsp/DelayStartTimeCUDA.h \
   dsp/FilterbankCUDA.h dsp/filterbank_cuda.h \
   dsp/TransferCUDA.h dsp/TransferBitSeriesCUDA.h \
   dsp/SKMaskerCUDA.h dsp/DetectionCUDA.h dsp/FZoomCUDA.h \
@@ -57,6 +58,7 @@ nobase_include_HEADERS += CUFFTError.h dsp/LaunchConfig.h \
   dsp/SampleDelayCUDA.h
 
 libdspdsp_la_SOURCES += CUFFTError.C LaunchConfig.C FilterbankCUDA.cu \
+	DelayStartTimeCUDA.cu \
   TransferCUDA.C TransferBitSeriesCUDA.C DetectionCUDA.cu             \
   SKMaskerCUDA.cu FZoomCUDA.cu FScrunchCUDA.cu TScrunchCUDA.cu        \
   PScrunchCUDA.cu PolnSelectCUDA.cu SpectralKurtosisCUDA.cu \

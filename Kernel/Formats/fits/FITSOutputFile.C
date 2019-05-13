@@ -317,6 +317,7 @@ void dsp::FITSOutputFile::write_header ()
   if (output_filename.empty() || max_bytes)
   {
     MJD epoch = get_input()->get_start_time();
+    cerr << "dsp::FITSOutputFile::write_header input start time="  << epoch.in_seconds() << endl;
     vector<char> buffer (FILENAME_MAX);
     char* filename = &buffer[0];
     if (use_atnf)
