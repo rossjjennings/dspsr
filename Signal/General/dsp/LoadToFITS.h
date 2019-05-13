@@ -105,6 +105,9 @@ namespace dsp {
     //! coherently dedisperse along with filterbank
     bool coherent_dedisp;
 
+    //! artificial delay to the start time in seconds
+    double start_time_delay;
+
     //! integrate in time before digitization
     unsigned tscrunch_factor;
 
