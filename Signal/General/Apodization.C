@@ -12,7 +12,7 @@
 dsp::Apodization::Apodization()
 {
   type = none;
-}  
+}
 
 void dsp::Apodization::Hanning (int npts, bool analytic)
 {
@@ -95,6 +95,70 @@ void dsp::Apodization::Parzen (int npts, bool analytic)
 }
 
 
+/**
+ * \method Tukey
+ * \param npts the size of the window.
+ * \param stop_band the number of points *on each side* that are not part
+ * of the passband.
+ * \param transition_band the number of points *on each side* that form the
+ * Hann transition area.
+**/
+void dsp::Apodization::Tukey (int npts, int stop_band, int transition_band, bool analytic)
+{
+  unsigned _ndim = (analytic)?2:1
+  resize (1, 1, npts, _ndim);
+  float denom = 2*transition_band - 1.0;
+  float value = 0.0;
+  unsigned itrans = 0;
+
+  for (unsigned idat=0; idat<ndat; idat++) {
+    if (idat < stop_band || idat > (npts - stop_band)) {
+      value = 0.0;
+    } else if (idat > transition_band && idat < (npts - transition_band)) {
+      value = 1.0;
+    } else {
+      value = 0.5 * (1 - cos(2.0*M_PI*float(itrans)/denom)); // the Hann component
+      itrans++ ;
+    }
+
+    for (unsigned idim=0; idim<_ndim; idim++) {
+      *datptr = value;
+      datptr++;
+    }
+  }
+  type = tukey;
+}
+
+/**
+ * \method TopHat
+ * \param npts the size of the window.
+ * \param stop_band the number of points *on each side* that are not part
+ * of the passband.
+**/
+void dsp::Apodization::TopHat (int npts, int stop_band, bool analytic)
+{
+  unsigned _ndim = (analytic)?2:1;
+  resize (1, 1, npts, _ndim);
+
+  float* datptr = buffer;
+  float value = 0.0;
+
+  for (int idat=0; idat<ndat; idat++) {
+    if (idat > stop_band && idat < (npts - stop_band)) {
+      value = 1.0;
+    } else {
+      value = 0.0;
+    }
+    for (unsigned idim=0; idim<_ndim; idim++) {
+      *datptr = value;
+      datptr++;
+    }
+  }
+
+  type = top_hat;
+}
+
+
 void dsp::Apodization::operate (float* indata, float* outdata) const
 {
   int npts = ndat * ndim;
@@ -102,11 +166,11 @@ void dsp::Apodization::operate (float* indata, float* outdata) const
 
   if (outdata == NULL)
     outdata = indata;
-  
+
   for (int ipt=0; ipt<npts; ipt++) {
     *outdata = *indata * *winptr;
     outdata ++; indata++; winptr++;
-  } 
+  }
 }
 
 void dsp::Apodization::normalize()
