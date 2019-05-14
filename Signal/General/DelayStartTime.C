@@ -107,8 +107,12 @@ void dsp::DelayStartTime::prepare_output ()
   // set the number of output samples
   output->set_ndat (output_ndat);
 
-  // adjust the start time by the number of samples to be delayed
-  output->change_start_time (delay_samples);
+  // adjust the start time by the number of samples, until the
+  // delay has been applied
+  if (!delay_applied)
+  {
+    output->change_start_time (delay_samples);
+  }
 
   // set the output sample number
   uint64_t output_sample = 0;
@@ -121,9 +125,6 @@ void dsp::DelayStartTime::prepare_output ()
            << output_sample << endl;
   }
   output->set_input_sample (output_sample);
-
-  if (output_ndat == 0)
-    return;
 }
 
 void dsp::DelayStartTime::transformation ()
