@@ -20,6 +20,7 @@
 
 #include "dsp/SampleDelay.h"
 #include "dsp/DedispersionSampleDelay.h"
+#include "dsp/DelayStartTime.h"
 
 #include "dsp/FScrunch.h"
 #include "dsp/TScrunch.h"
@@ -42,6 +43,7 @@
 #include "dsp/MemoryCUDA.h"
 #include "dsp/TimeSeriesCUDA.h"
 #include "dsp/SampleDelayCUDA.h"
+#include "dsp/DelayStartTimeCUDA.h"
 #include "dsp/FITSDigitizerCUDA.h"
 #include "dsp/TransferBitSeriesCUDA.h"
 #endif
@@ -86,6 +88,7 @@ dsp::LoadToFITS::Config::Config()
   dispersion_measure = 0;
   dedisperse = false;
   coherent_dedisp = false;
+  start_time_delay = 0;
 
   rescale_seconds = -1;
   rescale_constant = false;
@@ -402,24 +405,6 @@ void dsp::LoadToFITS::construct () try
   }
 #endif
 
-  if (tres_factor > 1)
-  {
-    TScrunch* tscrunch = new TScrunch;
-    tscrunch->set_factor ( tres_factor );
-    tscrunch->set_input ( timeseries );
-    tscrunch->set_output ( timeseries = new_TimeSeries() );
-
-#if HAVE_CUDA
-    if ( run_on_gpu )
-    {
-      tscrunch->set_engine ( new CUDA::TScrunchEngine(stream) );
-      timeseries->set_memory (device_memory);
-      timeseries->set_engine (new CUDA::TimeSeriesEngine (device_memory));
-    }
-#endif
-    operations.push_back( tscrunch );
-  }
-
   if ( config->dedisperse )
   {
     if (verbose)
@@ -441,6 +426,48 @@ void dsp::LoadToFITS::construct () try
 #endif
 
     operations.push_back( delay );
+  }
+
+  if (config->start_time_delay > 0)
+  {
+    MJD start = obs->get_start_time();
+    MJD new_start = start + config->start_time_delay;
+    MJD delay = new_start - start;
+    cerr << "obs start time=" << start.in_seconds() << " seconds" << endl;
+    if (verbose)
+      cerr << "digifits: delaying start time by " << delay.in_seconds() << endl;
+
+    DelayStartTime * start_delay = new DelayStartTime;
+    start_delay->set_input (timeseries);
+    start_delay->set_output (timeseries);
+    start_delay->set_start_time (new_start);
+#if HAVE_CUDA
+    if (run_on_gpu)
+    {
+      start_delay->set_engine (new CUDA::DelayStartTimeEngine (stream));
+      timeseries->set_memory (device_memory);
+      timeseries->set_engine (new CUDA::TimeSeriesEngine (device_memory));
+    }
+#endif
+    operations.push_back( start_delay );
+  }
+
+  if (tres_factor > 1)
+  {
+    TScrunch* tscrunch = new TScrunch;
+    tscrunch->set_factor ( tres_factor );
+    tscrunch->set_input ( timeseries );
+    tscrunch->set_output ( timeseries = new_TimeSeries() );
+
+#if HAVE_CUDA
+    if ( run_on_gpu )
+    {
+      tscrunch->set_engine ( new CUDA::TScrunchEngine(stream) );
+      timeseries->set_memory (device_memory);
+      timeseries->set_engine (new CUDA::TimeSeriesEngine (device_memory));
+    }
+#endif
+    operations.push_back( tscrunch );
   }
 
   if ( config->fscrunch_factor )

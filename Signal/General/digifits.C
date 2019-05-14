@@ -134,6 +134,9 @@ void parse_options (int argc, char** argv) try
   arg = menu.add (config->dedisperse, 'K');
   arg->set_help ("remove inter-channel dispersion delays");
 
+  arg = menu.add (config->start_time_delay, 's', "seconds");
+  arg->set_help ("delay start time");
+
   arg = menu.add (config->fscrunch_factor, 'f', "nchan");
   arg->set_help ("decimate in frequency by this factor");
 
