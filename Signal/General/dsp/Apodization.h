@@ -46,7 +46,7 @@ namespace dsp {
     void Tukey (int npts, int stop_band, int transition_band, bool analytic);
 
     //! Create top hat window function.
-    void TopHat (int npts, int stop_band, bool analytic)
+    void TopHat (int npts, int stop_band, bool analytic);
 
     //! Create a window with the specified shape
     void set_shape (int npts, Type type, bool analytic);

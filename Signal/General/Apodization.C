@@ -105,16 +105,19 @@ void dsp::Apodization::Parzen (int npts, bool analytic)
 **/
 void dsp::Apodization::Tukey (int npts, int stop_band, int transition_band, bool analytic)
 {
-  unsigned _ndim = (analytic)?2:1
+  unsigned _ndim = (analytic)?2:1;
   resize (1, 1, npts, _ndim);
+
   float denom = 2*transition_band - 1.0;
   float value = 0.0;
+  float* datptr = buffer;
+
   unsigned itrans = 0;
 
   for (unsigned idat=0; idat<ndat; idat++) {
     if (idat < stop_band || idat > (npts - stop_band)) {
       value = 0.0;
-    } else if (idat > transition_band && idat < (npts - transition_band)) {
+    } else if (idat >= transition_band && idat < (npts - transition_band)) {
       value = 1.0;
     } else {
       value = 0.5 * (1 - cos(2.0*M_PI*float(itrans)/denom)); // the Hann component
@@ -144,7 +147,7 @@ void dsp::Apodization::TopHat (int npts, int stop_band, bool analytic)
   float value = 0.0;
 
   for (int idat=0; idat<ndat; idat++) {
-    if (idat > stop_band && idat < (npts - stop_band)) {
+    if (idat >= stop_band && idat < (npts - stop_band)) {
       value = 1.0;
     } else {
       value = 0.0;
