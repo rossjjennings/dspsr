@@ -5,10 +5,10 @@
  *   Licensed under the Academic Free License version 2.1
  *
  ***************************************************************************/
- // dspsr/Signal/General/dsp/DerippleResponse.h
+ // dspsr/Signal/General/dsp/InverseFilterbankResponse.h
 
-#ifndef __DerippleResponse_h
-#define __DerippleResponse_h
+#ifndef __InverseFilterbankResponse_h
+#define __InverseFilterbankResponse_h
 
 #include <vector>
 #include <cstring>
@@ -17,15 +17,15 @@
 #include "dsp/FIRFilter.h"
 
 namespace dsp {
-  class DerippleResponse : public Response {
+  class InverseFilterbankResponse : public Response {
 
   public:
 
     //! Default constructor
-    DerippleResponse ();
+    InverseFilterbankResponse ();
 
     //! Destructor
-    ~DerippleResponse ();
+    ~InverseFilterbankResponse ();
 
     //! Set the dimensions of the data, updating built attribute
     void resize(unsigned _npol, unsigned _nchan,
@@ -35,7 +35,7 @@ namespace dsp {
 
     void match (const Observation* input, unsigned channels);
 
-    //! Create a DerippleResponse with the same number of channels as Response
+    //! Create a InverseFilterbankResponse with the same number of channels as Response
     void match (const Response* response);
 
     //! Set the number of input channels
@@ -62,6 +62,19 @@ namespace dsp {
     //! set the pfb_dc_chan flag
     void set_pfb_dc_chan (bool _pfb_dc_chan) { pfb_dc_chan = _pfb_dc_chan; }
 
+    //! get the apply_deripple flag
+    const bool get_apply_deripple () const { return apply_deripple; }
+
+    //! set the apply_deripple flag
+    void set_apply_deripple (bool _apply_deripple) { apply_deripple = _apply_deripple; }
+
+    //! Set oversampling ratio
+    void set_oversampling_factor (const Rational& _osf) { oversampling_factor = _osf; }
+
+    //! Get oversampling ratio
+    const Rational& get_oversampling_factor () {return oversampling_factor; }
+
+
   protected:
 
     //! Roll array `arr` by `shift` number of points
@@ -84,13 +97,20 @@ namespace dsp {
     //! in the input data. If it is present, then the response must be
     //! rolled by a half channel.
     bool pfb_dc_chan;
+
+    //! flag indicating whether to actually build and apply the Filter response.
+    bool apply_deripple;
+
+    //! PFB oversampling factor
+    Rational oversampling_factor;
+
   };
 }
 
 template<typename T>
-void dsp::DerippleResponse::roll (T* buffer, unsigned len, int shift) {
+void dsp::InverseFilterbankResponse::roll (T* buffer, unsigned len, int shift) {
   if (verbose) {
-    std::cerr << "dsp::DerippleResponse::roll"
+    std::cerr << "dsp::InverseFilterbankResponse::roll"
       << " buffer=" << buffer
       << " len=" << len
       << " shift=" << shift
@@ -115,7 +135,7 @@ void dsp::DerippleResponse::roll (T* buffer, unsigned len, int shift) {
 }
 
 template<typename T>
-void dsp::DerippleResponse::roll (std::vector<T>& arr, int shift) {
+void dsp::InverseFilterbankResponse::roll (std::vector<T>& arr, int shift) {
 	unsigned len = arr.size();
 	T* buffer = arr.data();
 	roll<T> (buffer, len, shift);

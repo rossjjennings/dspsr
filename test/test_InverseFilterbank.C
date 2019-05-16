@@ -10,9 +10,9 @@
 #include "dsp/ResponseProduct.h"
 #include "dsp/Dedispersion.h"
 #include "dsp/FIRFilter.h"
-#include "dsp/DerippleResponse.h"
 #include "dsp/InverseFilterbank.h"
 #include "dsp/InverseFilterbankEngineCPU.h"
+#include "dsp/InverseFilterbankResponse.h"
 
 const std::string file_path = "/home/SWIN/dshaff/mnt/ozstar/projects/PST_Matlab_pulsar_signal_processing_model_CDR/data/py_channelized.simulated_pulsar.noise_0.0.nseries_10.ndim_2.os.dump";
 const unsigned block_size = 699048; // this is taken from dspsr logs
@@ -99,7 +99,7 @@ void TestInverseFilterbank::test_pipeline ()
 	dsp::InverseFilterbankEngineCPU* filterbank_engine = new dsp::InverseFilterbankEngineCPU;
 	Reference::To<dsp::Dedispersion> kernel = new dsp::Dedispersion;
 	kernel->set_dispersion_measure(dm);
-	Reference::To<dsp::DerippleResponse> deripple = new dsp::DerippleResponse;
+	Reference::To<dsp::InverseFilterbankResponse> deripple = new dsp::InverseFilterbankResponse;
 	deripple->set_fir_filter(info->get_deripple()[0]);
 
 	// kernel->match(filterbank.get_input(), filterbank.get_output_nchan());

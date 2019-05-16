@@ -154,6 +154,9 @@ void dsp::InverseFilterbank::make_preparations ()
   Rational osf = get_oversampling_factor();
   // setup the dedispersion discard region for the forward and backward FFTs
   input_nchan = input->get_nchan();
+  if (verbose) {
+    std::cerr << "dsp::InverseFilterbank::make_preparations: has_response() " << has_response() << std::endl;
+  }
   if (has_response()) {
     response->match(input, output_nchan);
     output_discard_pos = response->get_impulse_pos();
@@ -201,16 +204,7 @@ void dsp::InverseFilterbank::make_preparations ()
     output_discard_total = n_per_sample*(output_discard_neg + output_discard_pos);
     output_sample_step = output_fft_length - output_discard_total;
 
-    if (verbose) {
-      cerr << "dsp::InverseFilterbank::make_preparations: done optimizing fft lengths and discard regions" << endl;
-      cerr << "dsp::InverseFilterbank::make_preparations: input_fft_length="
-           << input_fft_length << " output_fft_length="
-           << output_fft_length << " input_discard_neg/pos="
-           << input_discard_neg << "/" << input_discard_pos
-           << " output_discard_neg/pos="
-           << output_discard_neg << "/" << output_discard_pos
-           << endl;
-    }
+
     // response->set_impulse_neg(output_discard_neg);
     // response->set_impulse_pos(output_discard_pos);
     // Dedispersion* dedispersion = dynamic_cast<Dedispersion *>(response.ptr());
@@ -229,6 +223,16 @@ void dsp::InverseFilterbank::make_preparations ()
     input_sample_step = input_fft_length;
   }
 
+  if (verbose) {
+    cerr << "dsp::InverseFilterbank::make_preparations: done optimizing fft lengths and discard regions" << endl;
+    cerr << "dsp::InverseFilterbank::make_preparations: input_fft_length="
+         << input_fft_length << " output_fft_length="
+         << output_fft_length << " input_discard_neg/pos="
+         << input_discard_neg << "/" << input_discard_pos
+         << " output_discard_neg/pos="
+         << output_discard_neg << "/" << output_discard_pos
+         << endl;
+  }
   // if (has_deripple()) {
   //   // needs to be modified to incorporate multiple layers of upstream
   //   // channelization -- DCS

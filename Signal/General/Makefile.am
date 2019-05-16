@@ -28,7 +28,7 @@ nobase_include_HEADERS = dsp/ACFilterbank.h dsp/Detection.h	       \
 	dsp/InverseFilterbank.h dsp/InverseFilterbankEngine.h \
 	dsp/InverseFilterbankConfig.h \
 	dsp/InverseFilterbankEngineCPU.h \
-	dsp/DerippleResponse.h
+	dsp/InverseFilterbankResponse.h
 
 libdspdsp_la_SOURCES = optimize_fft.c cross_detect.c cross_detect.h  \
 	cross_detect.ic stokes_detect.c stokes_detect.h		     \
@@ -50,11 +50,11 @@ libdspdsp_la_SOURCES = optimize_fft.c cross_detect.c cross_detect.h  \
 	InverseFilterbank.C \
 	InverseFilterbankConfig.C \
 	InverseFilterbankEngineCPU.C \
-	DerippleResponse.C
+	InverseFilterbankResponse.C
 
 
 bin_PROGRAMS = dmsmear digitxt digimon digihist filterbank_speed
-# bin_PROGRAMS += test_DerippleResponse test_FIRFilter
+# bin_PROGRAMS += test_InverseFilterbankResponse test_FIRFilter
 
 if HAVE_CUFFT
 
@@ -106,7 +106,7 @@ digitxt_SOURCES = digitxt.C
 digimon_SOURCES = digimon.C
 digihist_SOURCES = digihist.C
 filterbank_speed_SOURCES = filterbank_speed.C
-# test_DerippleResponse_SOURCES = test_DerippleResponse.C
+# test_InverseFilterbankResponse_SOURCES = test_InverseFilterbankResponse.C
 # test_FIRFilter_SOURCES = test_FIRFilter.C
 
 check_PROGRAMS = test_PolnCalibration test_OptimalFFT
