@@ -329,7 +329,8 @@ void dsp::LoadToFold::construct () try
     // InverseFilterbank will always have a response.
     Reference::To<dsp::InverseFilterbankResponse> inverse_filterbank_response = new dsp::InverseFilterbankResponse;
     inverse_filterbank_response->set_apply_deripple(false);
-
+    inverse_filterbank_response->set_input_overlap(config->inverse_filterbank.get_input_overlap());
+    
     if (manager->get_info()->get_deripple_stages() > 0) {
       dsp::FIRFilter first_filter = manager->get_info()->get_deripple()[0];
       inverse_filterbank->set_pfb_all_chan(

@@ -228,7 +228,6 @@ namespace dsp {
     Reference::To<Engine> engine;
 
 
-
   private:
 
     // div_t calc_lcf (int a, int b, Rational osf);

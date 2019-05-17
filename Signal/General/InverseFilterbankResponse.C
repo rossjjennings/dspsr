@@ -23,6 +23,7 @@ dsp::InverseFilterbankResponse::InverseFilterbankResponse ()
   input_nchan = 1;
   npol = 1;
   ndat = 1;
+  input_overlap = 0;
 
   pfb_dc_chan = false;
 
@@ -44,8 +45,8 @@ void dsp::InverseFilterbankResponse::build ()
   if (built) {
     return;
   }
-  impulse_pos = 128;
-  impulse_neg = 128;
+  impulse_pos = input_overlap;
+  impulse_neg = input_overlap;
 
   ndat = input_nchan*oversampling_factor.normalize(ndat);
   impulse_pos = input_nchan*oversampling_factor.normalize(impulse_pos);
@@ -56,6 +57,7 @@ void dsp::InverseFilterbankResponse::build ()
 
 
   if (verbose) {
+    std::cerr << "dsp::InverseFilterbankResponse::build: input_overlap=" << input_overlap << std::endl;
     std::cerr << "dsp::InverseFilterbankResponse::build: apply_deripple=" << apply_deripple << std::endl;
     std::cerr << "dsp::InverseFilterbankResponse::build: impulse_pos=" << impulse_pos << std::endl;
     std::cerr << "dsp::InverseFilterbankResponse::build: impulse_neg=" << impulse_neg << std::endl;
@@ -111,11 +113,11 @@ void dsp::InverseFilterbankResponse::build ()
   int step = 0;
   for (int ichan=0; ichan < input_nchan; ichan++) {
     for (uint64_t ipt=0; ipt < npt; ipt++) {
-      // phasors[ipt + step] = std::complex<float>(1.0/std::abs(freq_response_complex[ipt]), 0.0);
-      // phasors[npt + ipt + step] = std::complex<float>(1.0/std::abs(freq_response_complex[npt - ipt]), 0.0);
+      phasors[ipt + step] = std::complex<float>(1.0/std::abs(freq_response_complex[ipt]), 0.0);
+      phasors[npt + ipt + step] = std::complex<float>(1.0/std::abs(freq_response_complex[npt - ipt]), 0.0);
 
-      phasors[ipt + step] = std::complex<float>(1.0/std::abs(freq_response_complex[npt - ipt]), 0.0);
-      phasors[npt + ipt + step] = std::complex<float>(1.0/std::abs(freq_response_complex[ipt]), 0.0);
+      // phasors[ipt + step] = std::complex<float>(1.0/std::abs(freq_response_complex[npt - ipt]), 0.0);
+      // phasors[npt + ipt + step] = std::complex<float>(1.0/std::abs(freq_response_complex[ipt]), 0.0);
     }
     step += ndat_per_chan;
   }

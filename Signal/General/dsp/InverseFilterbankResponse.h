@@ -73,7 +73,12 @@ namespace dsp {
 
     //! Get oversampling ratio
     const Rational& get_oversampling_factor () {return oversampling_factor; }
+    
+    //! Set the size of the input overlap discard region
+    void set_input_overlap (unsigned n) { input_overlap = n; }
 
+    //! Set the size of the input overlap discard region
+    unsigned get_input_overlap () const { return input_overlap; }
 
   protected:
 
@@ -103,6 +108,9 @@ namespace dsp {
 
     //! PFB oversampling factor
     Rational oversampling_factor;
+
+    //! overlap discard on the input, channelized data
+    unsigned input_overlap;
 
   };
 }

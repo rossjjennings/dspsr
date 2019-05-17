@@ -32,6 +32,7 @@ dsp::InverseFilterbank::Config::Config ()
 
   nchan = 0; // unspecified. If this stays 0, then no inverse filterbank is applied.
   freq_res = 0;  // unspecified
+  input_overlap = 0;
   when = After;
 }
 
@@ -45,6 +46,10 @@ dsp::InverseFilterbank* dsp::InverseFilterbank::Config::create ()
   if (freq_res) {
     filterbank->set_input_fft_length(freq_res);
   }
+
+  // if (input_overlap) {
+  //   filterbank->set_input_overlap(input_overlap);
+  // }
 
 #if HAVE_CUDA
   CUDA::DeviceMemory* device_memory =
