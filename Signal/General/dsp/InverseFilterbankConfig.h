@@ -11,10 +11,13 @@
 #ifndef __InverseFilterbankConfig_h
 #define __InverseFilterbankConfig_h
 
+#include <string>
+
 #include "dsp/ConvolutionConfig.h"
 #include "dsp/InverseFilterbank.h"
-#include "dsp/Response.h"
-#include "dsp/TimeSeries.h"
+// #include "dsp/Response.h"
+// #include "dsp/TimeSeries.h"
+#include "dsp/Apodization.h"
 
 namespace dsp
 {
@@ -26,7 +29,6 @@ namespace dsp
 
     //! Return a new InverseFilterbank instance and configure it
     InverseFilterbank* create ();
-
 
     //! Set the device on which the unpacker will operate
     // void set_device (Memory*);
@@ -92,7 +94,7 @@ namespace dsp
 
 
     void set_input_overlap (unsigned n) { input_overlap = n; }
-    
+
     unsigned get_input_overlap () const { return input_overlap; }
 
   protected:

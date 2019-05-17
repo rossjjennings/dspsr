@@ -11,6 +11,8 @@
 #ifndef __baseband_dsp_LoadToFoldConfig_h
 #define __baseband_dsp_LoadToFoldConfig_h
 
+#include <string>
+
 #include "dsp/LoadToFold1.h"
 #include "dsp/FilterbankConfig.h"
 #include "dsp/InverseFilterbankConfig.h"
@@ -153,6 +155,8 @@ namespace dsp {
 
     // whether or not to apply deripple correction
     bool do_deripple;
+
+    std::string inverse_filterbank_fft_window;
 
     bool force_sensible_nbin;
 

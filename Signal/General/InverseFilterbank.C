@@ -147,6 +147,7 @@ void dsp::InverseFilterbank::make_preparations ()
       << " oversampling_factor=" << get_oversampling_factor()
       << " pfb_dc_chan=" << get_pfb_dc_chan()
       << " pfb_all_chan=" << get_pfb_all_chan()
+      << " fft_window_str=" << get_fft_window_str()
       << std::endl;
   }
   bool real_to_complex = (input->get_state() == Signal::Nyquist);
@@ -222,6 +223,20 @@ void dsp::InverseFilterbank::make_preparations ()
     output_sample_step = output_fft_length;
     input_sample_step = input_fft_length;
   }
+
+  if (verbose) {
+    cerr << "dsp::InverseFilterbank::make_preparations: creating FFT window" << endl;
+  }
+
+  dsp::Apodization* fft_window = get_apodization();
+  dsp::Apodization::Type fft_window_type = dsp::Apodization::type_map[fft_window_str];
+  fft_window->set_shape(
+      input_fft_length,
+      fft_window_type,
+      true,
+      0,
+      input_discard_pos
+  );
 
   if (verbose) {
     cerr << "dsp::InverseFilterbank::make_preparations: done optimizing fft lengths and discard regions" << endl;

@@ -26,6 +26,8 @@ class TestApodization {
   	void test_ctor ();
   	void test_Tukey ();
     void test_TopHat ();
+    void test_None ();
+    void test_type_map ();
 
 };
 
@@ -63,6 +65,26 @@ void TestApodization::test_TopHat ()
     expected_data.size());
 }
 
+void TestApodization::test_None ()
+{
+  std::cerr << "TestApodization::test_None " << std::endl;
+  dsp::Apodization window;
+  window.None(1024, false);
+  std::vector<float> expected_data (1024, 1.0);
+  util::compare_test_data<float>(
+    window.get_datptr(0, 0),
+    expected_data.data(),
+    expected_data.size());
+
+}
+
+void TestApodization::test_type_map () {
+  std::cerr << "TestApodization::test_type_map " << std::endl;
+  dsp::Apodization::Type t = dsp::Apodization::type_map["tukey"];
+  assert(t == dsp::Apodization::tukey);
+}
+
+
 
 int main () {
 	// dsp::Input::verbose = true;
@@ -73,7 +95,9 @@ int main () {
 
 	tester.test_ctor();
 	tester.test_TopHat();
-	tester.test_Tukey();
+  tester.test_Tukey();
+  tester.test_None();
+  tester.test_type_map();
 
 	return 0;
 }

@@ -326,11 +326,14 @@ void dsp::LoadToFold::construct () try
     inverse_filterbank->set_input (unpacked);
     inverse_filterbank->set_output (filterbanked);
     inverse_filterbank->set_pfb_dc_chan(manager->get_info()->get_pfb_dc_chan());
+    inverse_filterbank->set_fft_window_str(config->inverse_filterbank_fft_window);
+    Reference::To<dsp::Apodization> fft_window = new dsp::Apodization;
+    inverse_filterbank->set_apodization(fft_window);
     // InverseFilterbank will always have a response.
     Reference::To<dsp::InverseFilterbankResponse> inverse_filterbank_response = new dsp::InverseFilterbankResponse;
     inverse_filterbank_response->set_apply_deripple(false);
     inverse_filterbank_response->set_input_overlap(config->inverse_filterbank.get_input_overlap());
-    
+
     if (manager->get_info()->get_deripple_stages() > 0) {
       dsp::FIRFilter first_filter = manager->get_info()->get_deripple()[0];
       inverse_filterbank->set_pfb_all_chan(

@@ -351,6 +351,15 @@ void parse_options (int argc, char** argv) try
   arg = menu.add (config->do_deripple, "dr");
   arg->set_help( "Apply deripple correction to inverse filterbank");
 
+  arg = menu.add (config->inverse_filterbank_fft_window, "fft-window");
+  arg->set_help( "Specify FFT window function to use with inverse filterbank." );
+  arg->set_long_help(
+    "Available FFT windows are\n"
+    " - tukey: Tukey window (default)\n"
+    " - top_hat: Top Hat window function\n"
+    " - no_window: No FFT window function\n"
+  );
+
   arg = menu.add (config->plfb_nbin, 'G', "nbin");
   arg->set_help ("create phase-locked filterbank");
 

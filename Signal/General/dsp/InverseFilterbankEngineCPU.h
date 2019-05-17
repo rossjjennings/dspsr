@@ -78,6 +78,9 @@ namespace dsp
     //! A response object that gets multiplied by assembled spectrum
     Response* response;
 
+    //! FFT window applied before forward FFT
+    Apodization* fft_window;
+
   private:
 
     //! This is the number of floats per sample. This could be 1 or 2,
@@ -121,6 +124,9 @@ namespace dsp
 
     //! Scratch space for performing forward FFTs
     float* input_fft_scratch;
+
+    //! Scratch space for input time series chunk
+    float* input_time_scratch;
 
     //! Scratch space for performing backward FFTs
     float* output_fft_scratch;

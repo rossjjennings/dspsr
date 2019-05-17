@@ -26,6 +26,7 @@ dsp::InverseFilterbankEngineCPU::InverseFilterbankEngineCPU ()
   input_fft_length = 0;
   fft_plans_setup = false;
   response = nullptr;
+  fft_window = nullptr;
 
   pfb_dc_chan = 0;
   pfb_all_chan = 0;
@@ -48,6 +49,21 @@ double dsp::InverseFilterbankEngineCPU::setup_fft_plans (
       std::cerr << "dsp::InverseFilterbankEngineCPU::setup_fft_plans: setting response" << std::endl;
     }
     response = filterbank->get_response();
+  }
+
+  if (filterbank->has_apodization()) {
+    if (verbose) {
+      std::cerr << "dsp::InverseFilterbankEngineCPU::setup_fft_plans: setting fft_window" << std::endl;
+    }
+    fft_window = filterbank->get_apodization();
+    if (verbose) {
+      std::cerr << "dsp::InverseFilterbankEngineCPU::setup_fft_plans: fft_window.get_type() "
+        << fft_window->get_type() << std::endl;
+      std::cerr << "dsp::InverseFilterbankEngineCPU::setup_fft_plans: fft_window.get_ndim() "
+        << fft_window->get_ndim() << std::endl;
+      std::cerr << "dsp::InverseFilterbankEngineCPU::setup_fft_plans: fft_window.get_ndat() "
+        << fft_window->get_ndat() << std::endl;
+    }
   }
 
   // if (filterbank->has_deripple()) {
@@ -175,9 +191,9 @@ void dsp::InverseFilterbankEngineCPU::setup (
 
   dsp::Scratch* scratch = new Scratch;
   input_fft_scratch = scratch->space<float>
-    (input_fft_points + output_fft_points  + stitch_points);
-
-  output_fft_scratch = input_fft_scratch + input_fft_points;
+    (2*input_fft_points + output_fft_points  + stitch_points);
+  input_time_scratch = input_fft_scratch + input_fft_points;
+  output_fft_scratch = input_time_scratch + input_fft_points;
   stitch_scratch = output_fft_scratch + output_fft_points;
 
   // // setup scratch space
@@ -246,8 +262,6 @@ void dsp::InverseFilterbankEngineCPU::perform (const dsp::TimeSeries* in, dsp::T
   float* freq_dom_ptr;
   float* time_dom_ptr;
 
-
-
   if (verbose) {
     if (pfb_dc_chan) {
       if (pfb_all_chan) {
@@ -263,16 +277,22 @@ void dsp::InverseFilterbankEngineCPU::perform (const dsp::TimeSeries* in, dsp::T
     }
     std::cerr << "dsp::InverseFilterbankEngineCPU::perform: writing " << npart << " chunks" << std::endl;
   }
-
-  if (verbose) {
-    std::cerr << "creating stitched file dump" << std::endl;
-  }
   // std::ofstream stitched_file("/home/SWIN/dshaff/stitched.dat", std::ios::out | std::ios::binary);
   // std::ofstream ifft_file("/home/SWIN/dshaff/ifft.dat", std::ios::out | std::ios::binary);
   // std::ofstream out_file("/home/SWIN/dshaff/out.dat", std::ios::out | std::ios::binary);
   // std::ofstream deripple_before_file("deripple.before.dat", std::ios::out | std::ios::binary);
   // std::ofstream deripple_before_file("deripple.before.dat", std::ios::out | std::ios::binary);
   // std::ofstream deripple_after_file("deripple.after.dat", std::ios::out | std::ios::binary);
+
+  if (verbose) {
+    std::cerr << "dsp::InverseFilterbankEngineCPU::perform: fft_window.get_type() "
+      << fft_window->get_type() << std::endl;
+    std::cerr << "dsp::InverseFilterbankEngineCPU::perform: fft_window.get_ndim() "
+      << fft_window->get_ndim() << std::endl;
+    std::cerr << "dsp::InverseFilterbankEngineCPU::perform: fft_window.get_ndat() "
+      << fft_window->get_ndat() << std::endl;
+  }
+
 
 	for(unsigned output_ichan = 0; output_ichan < output_nchan; output_ichan++) {
 		for(uint64_t ipart = 0; ipart < npart; ipart++) {
@@ -281,11 +301,21 @@ void dsp::InverseFilterbankEngineCPU::perform (const dsp::TimeSeries* in, dsp::T
 					freq_dom_ptr = input_fft_scratch;
 					time_dom_ptr = const_cast<float*>(in->get_datptr(input_ichan, ipol));
 					time_dom_ptr += n_dims*ipart*(input_fft_length - input_discard_total);
+          memcpy(
+            input_time_scratch,
+            time_dom_ptr,
+            sizeof_complex*input_fft_length
+          );
+
+          if (fft_window) {
+            fft_window->operate(input_time_scratch);
+          }
+
 					if (real_to_complex) {
-						forward->frc1d(input_fft_length, freq_dom_ptr, time_dom_ptr);
+						forward->frc1d(input_fft_length, freq_dom_ptr, input_time_scratch);
 					} else {
 						// fcc1d(number_of_points, destinationPtr, sourcePtr);
-						forward->fcc1d(input_fft_length, freq_dom_ptr, time_dom_ptr);
+						forward->fcc1d(input_fft_length, freq_dom_ptr, input_time_scratch);
 					}
           // discard oversampled regions and do circular shift
 

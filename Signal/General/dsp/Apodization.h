@@ -9,6 +9,9 @@
 #ifndef __Apodization_h
 #define __Apodization_h
 
+#include <map>
+#include <string>
+
 #include "dsp/Shape.h"
 
 namespace dsp {
@@ -48,13 +51,22 @@ namespace dsp {
     //! Create top hat window function.
     void TopHat (int npts, int stop_band, bool analytic);
 
+    //! Create empty window function
+    void None (int npts, bool analytic);
+
     //! Create a window with the specified shape
-    void set_shape (int npts, Type type, bool analytic);
+    void set_shape (int npts, Type type, bool analytic, int stop_band = 0, int transition_band = 0);
 
     //! make the integrated total of the window equal to one
     void normalize();
 
     Type getType () { return type; };
+
+    Type get_type () { return getType(); };
+
+    // void setType (Type _type) { type = _type; };
+    //
+    // void set_type (Type _type) { setType(_type); };
 
     //! Multiply indata by the window function
     void operate (float* indata, float* outdata = 0) const;
@@ -62,8 +74,25 @@ namespace dsp {
     //! Returns SUM i=1..N {window[i] * data[i]}
     double integrated_product (float* data, unsigned incr=1) const;
 
+    static std::map<std::string, Type> type_map;
+
   protected:
     Type type;
+
+  private:
+
+    static std::map<std::string, Type> init_type_map ()
+    {
+      static std::map<std::string, Type> _type_map;
+      _type_map["no_window"] = none;
+      _type_map["none"] = none;
+      _type_map["tukey"] = tukey;
+      _type_map["hanning"] = hanning;
+      _type_map["parzen"] = parzen;
+      _type_map["welch"] = welch;
+      _type_map["top_hat"] = top_hat;
+      return _type_map;
+    }
 
   };
 }
