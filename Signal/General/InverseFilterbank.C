@@ -234,8 +234,8 @@ void dsp::InverseFilterbank::make_preparations ()
       input_fft_length,
       fft_window_type,
       true,
-      0,
-      input_discard_pos
+      input_discard_pos,
+      0
   );
 
   if (verbose) {

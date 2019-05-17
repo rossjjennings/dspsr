@@ -67,7 +67,7 @@ void dsp::Apodization::set_shape (int npts, Type type, bool analytic, int stop_b
       Parzen (npts, analytic);
       break;
     case tukey:
-      Tukey (npts, stop_band, transition_band, analytic);
+      Tukey (npts, transition_band, stop_band, analytic);
       break;
     case top_hat:
       TopHat (npts, stop_band, analytic);
