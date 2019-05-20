@@ -39,7 +39,8 @@ namespace dsp {
   }
 
   //! All Transformations must define their behaviour
-  typedef enum { inplace, outofplace, anyplace } Behaviour;
+  // typedef enum { inplace, outofplace, anyplace } Behaviour;
+  enum Behaviour { inplace, outofplace, anyplace };
 
   //! Defines the interface by which Transformations are performed on data
   /*! This template base class defines the manner in which data
@@ -60,7 +61,7 @@ namespace dsp {
     virtual ~Transformation ();
 
     //! Set the size of the output to that of the input by default
-    void reserve () 
+    void reserve ()
     {
       if (Operation::verbose) cerr << name("reserve") << std::endl;
       reserve_trait ( this->input, this->output,
@@ -98,7 +99,7 @@ namespace dsp {
     { minimum_samps_can_process = -1; }
 
     //! String preceding output in verbose mode
-    std::string name (const std::string& function) 
+    std::string name (const std::string& function)
     { return "dsp::Transformation["+Operation::get_name()+"]::" + function; }
 
     //! Set verbosity ostream
@@ -146,7 +147,7 @@ namespace dsp {
 
 //! All sub-classes must specify name and capacity for inplace operation
 template<class In, class Out>
-dsp::Transformation<In,Out>::Transformation (const char* _name, 
+dsp::Transformation<In,Out>::Transformation (const char* _name,
 					     Behaviour _type)
   : Operation (_name)
 {
@@ -194,10 +195,10 @@ void dsp::Transformation<In, Out>::vchecks()
 
   if (Operation::verbose)
     cerr << name("vchecks") << " input checks" << std::endl;
-  
+
   if (!this->input)
     throw Error (InvalidState, name("vchecks"), "no input");
-  
+
   if (type!=inplace && !this->output)
     throw Error (InvalidState, name("vchecks"), "no output");
 
@@ -270,12 +271,12 @@ void dsp::Transformation<In, Out>::set_output (Out* _output)
   if (Operation::verbose)
     cerr << "dsp::Transformation["+this->get_name()+"]::set_output ("<<_output<<")"<<std::endl;
 
-  if (type == inplace && this->input 
+  if (type == inplace && this->input
       && (const void*)this->input != (const void*)_output )
     throw Error (InvalidState, "dsp::Transformation["+this->get_name()+"]::set_output",
 		 "inplace transformation input must equal output");
-  
-  if ( type == outofplace && this->input && this->output 
+
+  if ( type == outofplace && this->input && this->output
        && (const void*)this->input.get() == (const void*)_output )
     throw Error (InvalidState, "dsp::Transformation["+this->get_name()+"]::set_output",
 		 "output must != input");

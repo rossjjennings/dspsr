@@ -195,19 +195,17 @@ namespace dsp {
     //! Interface to alternate processing engine (e.g. GPU)
     Reference::To<Engine> engine;
   };
-
-  class Convolution::Engine : public Reference::Able
-  {
-    public:
-
-      virtual void set_scratch (void *) = 0;
-
-      virtual void prepare (dsp::Convolution * convolution) = 0;
-
-      virtual void perform (const TimeSeries* in, TimeSeries* out, unsigned npart) = 0;
-  };
-
-
 }
+
+class dsp::Convolution::Engine : public Reference::Able
+{
+  public:
+
+    virtual void set_scratch (void *) = 0;
+
+    virtual void prepare (dsp::Convolution * convolution) = 0;
+
+    virtual void perform (const dsp::TimeSeries* in, dsp::TimeSeries* out, unsigned npart) = 0;
+};
 
 #endif

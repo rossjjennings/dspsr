@@ -121,6 +121,7 @@ unsigned count (const std::vector<T>& data, T element)
 void dsp::LoadToFold::construct () try
 {
   SingleThread::construct ();
+  std::cerr << "dsp::LoadToFold::construct" << std::endl;
 
 #if HAVE_CUDA
   bool run_on_gpu = thread_id < config->get_cuda_ndevice();
@@ -209,6 +210,7 @@ void dsp::LoadToFold::construct () try
 
   if (config->coherent_dedispersion)
   {
+    std::cerr << "dspsr: creating Dedispersion kernel" << std::endl;
     if (!kernel)
       kernel = new Dedispersion;
 
@@ -364,7 +366,7 @@ void dsp::LoadToFold::construct () try
 
 
     // for now, inverse filterbank does convolution during inversion.
-    if (!convolve_when == Convolution::Config::Before){
+    if (convolve_when != Convolution::Config::Before){
       operations.push_back (inverse_filterbank.get());
     }
   } else {
