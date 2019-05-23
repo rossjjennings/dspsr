@@ -753,6 +753,12 @@ void dsp::Response::calc_oversampled_fft_length (
     }
     calc_lcf(*_fft_length, _nchan, osf, max_fft_length_lcf);
   }
+  if (verbose) {
+    std::cerr << "dsp::Response::calc_oversampled_fft_length: result"
+      << " _fft_length=" << *_fft_length
+      << std::endl;
+  }
+
   // *_input_fft_length = max_input_fft_length_lcf.quot * osf.get_numerator();
 }
 
@@ -791,6 +797,12 @@ void dsp::Response::calc_oversampled_discard_region(
 
   *_discard_pos = n[0];
   *_discard_neg = n[1];
+  if (verbose) {
+    std::cerr << "dsp::Response::calc_oversampled_discard_region: result"
+      << " _discard_neg=" << *_discard_neg
+      << " _discard_pos=" << *_discard_pos
+      << std::endl;
+  }
   // *_input_discard_pos = lcfs[0].quot * osf.get_numerator();
   // *_input_discard_neg = lcfs[1].quot * osf.get_numerator();
 }

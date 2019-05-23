@@ -72,36 +72,42 @@ using namespace std;
 
 void dsp::ResponseProduct::build ()
 {
-  if (verbose)
+  if (verbose) {
     cerr << "dsp::ResponseProduct::build" << endl;
-
-  if (response.size() == 0)
+  }
+  if (response.size() == 0) {
     throw Error (InvalidState, "dsp::ResponseProduct::build",
 		 "no responses in product");
-
+  }
   //if (!component_changed)
   //  return;
 
-  if (verbose)
+  if (verbose) {
     cerr  << "dsp::ResponseProduct::build match_index=" << match_index << endl;
-
-  for (unsigned iresp=0; iresp < response.size(); iresp++)
-    if (iresp != match_index)
+  }
+  for (unsigned iresp=0; iresp < response.size(); iresp++) {
+    if (iresp != match_index) {
       response[iresp]->match (response[match_index]);
+    }
+  }
 
-  if (verbose)
+  if (verbose) {
     cerr << "dsp::ResponseProduct::build copy_index=" << copy_index << endl;
+  }
 
   Response::operator = (*response[copy_index]);
 
-  if (verbose)
+  if (verbose) {
     cerr << "dsp::ResponseProduct::build ndat=" << ndat
          << " nchan=" << nchan << endl;
+  }
 
-  for (unsigned iresp=0; iresp < response.size(); iresp++)
-    if (iresp != copy_index)
+  for (unsigned iresp=0; iresp < response.size(); iresp++) {
+    if (iresp != copy_index) {
       Response::operator *= (*response[iresp]);
-
-  if (verbose)
-    cerr << "dsp::ResponseProduct::build DONE!" << endl;
+    }
+  }
+  if (verbose) {
+    cerr << "dsp::ResponseProduct::build done" << endl;
+  }
 }

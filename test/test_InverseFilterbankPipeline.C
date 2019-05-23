@@ -15,6 +15,7 @@
 #include "dsp/Unpacker.h"
 #include "dsp/LoadToFold1.h"
 #include "dsp/LoadToFoldConfig.h"
+#include "dsp/ConvolutionConfig.h"
 #include "dsp/InverseFilterbankConfig.h"
 
 #include "util.hpp"
@@ -28,6 +29,7 @@ class TestInverseFilterbankPipeline : public util::TestDataLoader {
   public:
     void setup_class ();
     void setup ();
+    void teardown ();
 
     void test_no_dedispersion ();
     void test_during_dedispersion ();
@@ -36,17 +38,38 @@ class TestInverseFilterbankPipeline : public util::TestDataLoader {
 
   private:
 
-    void change_inverse_filterbank_config (std::string config_str);
-
+    void change_inverse_filterbank_config (const std::string& config_str);
+    void build_loadtofold (dsp::LoadToFold& loader);
+    void run_loadtofold (dsp::LoadToFold& loader);
     Reference::To<dsp::LoadToFold::Config> config;
     dsp::Input* input;
 };
 
-void TestInverseFilterbankPipeline::change_inverse_filterbank_config (std::string config_str)
+void TestInverseFilterbankPipeline::teardown () {
+  config->inverse_filterbank.set_freq_res(0);
+  config->inverse_filterbank.set_input_overlap(0);
+  config->inverse_filterbank.set_nchan(0);
+}
+
+void TestInverseFilterbankPipeline::change_inverse_filterbank_config (const std::string& config_str)
 {
   // set up inverse filterbank configuration
   std::istringstream iss = std::istringstream(config_str);
   iss >> config->inverse_filterbank;
+}
+
+void TestInverseFilterbankPipeline::run_loadtofold (dsp::LoadToFold& loader)
+{
+  loader.prepare();
+  loader.run();
+  loader.finish();
+}
+
+void TestInverseFilterbankPipeline::build_loadtofold (dsp::LoadToFold& loader)
+{
+  loader.set_configuration(config);
+  loader.set_input(input);
+  loader.construct();
 }
 
 
@@ -78,23 +101,62 @@ void TestInverseFilterbankPipeline::test_no_dedispersion ()
 {
   std::cerr << "TestInverseFilterbankPipeline::test_no_dedispersion " << std::endl;
   dsp::LoadToFold loader;
-  change_inverse_filterbank_config("1:16384:128");
+  change_inverse_filterbank_config("1:1024:128");
+  assert(config->inverse_filterbank.get_convolve_when() == dsp::Convolution::Config::After);
+  assert(config->inverse_filterbank.get_freq_res() == 1024);
   config->coherent_dedispersion = false;
-  loader.set_configuration(config);
-  loader.set_input(input);
-  loader.construct();
+  config->archive_filename = "TestInverseFilterbankPipeline.test_no_dedispersion";
+  build_loadtofold(loader);
+  std::string operation_names[] = {
+      "IOManager:DADA", "InverseFilterbank", "Detection", "Fold"
+  };
+  std::vector< Reference::To<dsp::Operation>> operations = loader.get_operations();
+  for (unsigned iop=0; iop < operations.size(); iop++){
+    assert(operations[iop]->get_name() == operation_names[iop]);
+  }
+  run_loadtofold(loader);
+
 }
 
 void TestInverseFilterbankPipeline::test_during_dedispersion ()
 {
   std::cerr << "TestInverseFilterbankPipeline::test_during_dedispersion " << std::endl;
   dsp::LoadToFold loader;
-  change_inverse_filterbank_config("1:D");
+  change_inverse_filterbank_config("1:D:128");
+  assert(config->inverse_filterbank.get_convolve_when() == dsp::Convolution::Config::During);
+  assert(config->inverse_filterbank.get_freq_res() == 0);
   config->coherent_dedispersion = true;
-  loader.set_configuration(config);
-  loader.set_input(input);
-  loader.construct();
-  loader.prepare();
+  config->archive_filename = "TestInverseFilterbankPipeline.test_during_dedispersion";
+  build_loadtofold(loader);
+  std::string operation_names[] = {
+      "IOManager:DADA", "InverseFilterbank", "Detection", "Fold"
+  };
+  std::vector< Reference::To<dsp::Operation>> operations = loader.get_operations();
+  for (unsigned iop=0; iop < operations.size(); iop++){
+    assert(operations[iop]->get_name() == operation_names[iop]);
+  }
+  run_loadtofold(loader);
+
+}
+
+void TestInverseFilterbankPipeline::test_after_dedispersion ()
+{
+  std::cerr << "TestInverseFilterbankPipeline::test_after_dedispersion " << std::endl;
+  dsp::LoadToFold loader;
+  change_inverse_filterbank_config("1:1024:128");
+  assert(config->inverse_filterbank.get_convolve_when() == dsp::Convolution::Config::After);
+  assert(config->inverse_filterbank.get_freq_res() == 1024);
+  config->coherent_dedispersion = true;
+  config->archive_filename = "TestInverseFilterbankPipeline.test_after_dedispersion";
+  build_loadtofold(loader);
+  std::string operation_names[] = {
+      "IOManager:DADA", "InverseFilterbank", "Convolution", "Detection", "Fold"
+  };
+  std::vector< Reference::To<dsp::Operation>> operations = loader.get_operations();
+  for (unsigned iop=0; iop < operations.size(); iop++){
+    assert(operations[iop]->get_name() == operation_names[iop]);
+  }
+  run_loadtofold(loader);
 }
 
 int main () {
@@ -102,8 +164,13 @@ int main () {
 	TestInverseFilterbankPipeline tester;
   tester.set_test_data_file_path(file_path);
   tester.set_verbose(true);
-  runner.register_test_method(&TestInverseFilterbankPipeline::test_no_dedispersion);
-  runner.register_test_method(&TestInverseFilterbankPipeline::test_during_dedispersion);
+  // runner.register_test_method(
+  //   &TestInverseFilterbankPipeline::test_no_dedispersion);
+  runner.register_test_method(
+    &TestInverseFilterbankPipeline::test_during_dedispersion);
+  // runner.register_test_method(
+  //   &TestInverseFilterbankPipeline::test_after_dedispersion);
+
   runner.run(tester);
 
 	return 0;

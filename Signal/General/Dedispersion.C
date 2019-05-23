@@ -316,7 +316,7 @@ void dsp::Dedispersion::build ()
     set_optimal_ndat ();
     if (verbose) {
       std::cerr << "dsp::Dedispersion::build:"
-        << " calculating oversampling ndat and discard regions"
+        << " calculating oversampled ndat and discard regions"
         << " ndat=" << ndat
         << " impulse_pos=" << impulse_pos
         << " impulse_neg=" << impulse_neg

@@ -38,9 +38,6 @@ namespace dsp
     //! Extraction operator
     friend std::istream& operator >> (std::istream& is, InverseFilterbank::Config& config)
     {
-      if (verbose) {
-        std::cerr << "istream InverseFilterbankConfig" << std::endl;
-      }
       unsigned value;
       is >> value;
 

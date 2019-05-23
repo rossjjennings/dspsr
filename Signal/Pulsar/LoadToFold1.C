@@ -121,7 +121,7 @@ unsigned count (const std::vector<T>& data, T element)
 void dsp::LoadToFold::construct () try
 {
   SingleThread::construct ();
-  std::cerr << "dsp::LoadToFold::construct" << std::endl;
+  // std::cerr << "dsp::LoadToFold::construct" << std::endl;
 
 #if HAVE_CUDA
   bool run_on_gpu = thread_id < config->get_cuda_ndevice();
@@ -360,9 +360,10 @@ void dsp::LoadToFold::construct () try
         response = response_product;
         inverse_filterbank->set_response (response);
       }
+    } else {
+      inverse_filterbank_response->resize(1, 1, config->inverse_filterbank.get_freq_res(), 2);
+      inverse_filterbank->set_response (inverse_filterbank_response);
     }
-    inverse_filterbank_response->resize(1, 1, config->inverse_filterbank.get_freq_res(), 2);
-    inverse_filterbank->set_response (inverse_filterbank_response);
 
 
     // for now, inverse filterbank does convolution during inversion.
