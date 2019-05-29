@@ -133,16 +133,10 @@ namespace dsp {
     //! Check that each floating point value is roughly as expected
     virtual void check (float min=-10.0, float max=10.0);
 
-    //! Delete the current data buffer and attach to this one
-    virtual void attach (std::auto_ptr<float> _data);
-
-    //! Call this when you do not want to transfer ownership of the array
-    virtual void attach (float* _data);
-
-    //! Set the timeseries as containing zerod data
+    //! Set the zeroed data flag
     void set_zeroed_data (bool _zeroed_data) { zeroed_data = _zeroed_data; }
 
-    //! Set the timeseries as containing zerod data
+    //! Get the zeroed data flag
     bool get_zeroed_data () const { return zeroed_data; }
 
     void finite_check () const;

@@ -631,34 +631,6 @@ void dsp::TimeSeries::check (float min, float max)
     }
 }
 
-//! Delete the current data buffer and attach to this one
-/*! This is dangerous as it ASSUMES new data buffer has been
- pre-allocated and is big enough.  Beware of segmentation faults when
- using this routine.  Also do not try to delete the old memory once
- you have called this- the TimeSeries::data member now owns it. */
-void dsp::TimeSeries::attach (auto_ptr<float> _data)
-{
-  if( !_data.get() )
-    throw Error(InvalidState,"dsp::TimeSeries::attach()",
-		"NULL auto_ptr has been passed in- you haven't properly allocated it using 'new' before passing it into this method");
-
-  resize(0);
-  data = _data.release();
-  buffer = (unsigned char*)data;
-}
-
-//! Call this when you do not want to transfer ownership of the array
-void dsp::TimeSeries::attach (float* _data)
-{
-  if( !_data )
-    throw Error(InvalidState,"dsp::TimeSeries::attach()",
-		"NULL ptr has been passed in- you haven't properly allocated it using 'new' before passing it into this method");
-
-  resize(0);
-  data = _data;
-  buffer = (unsigned char*)data;
-}
-
 bool from_range(unsigned char* fr,const dsp::TimeSeries* tseries)
 {
   unsigned char* fr_min = (unsigned char*)tseries->get_datptr(0,0);
