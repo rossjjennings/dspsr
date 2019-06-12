@@ -133,3 +133,5 @@ config/lt~obsolete.m4
 /deviceQuery.txt
 /callgrind*
 /.cproject
+test/test_Apodization
+test/test_FIRFilter

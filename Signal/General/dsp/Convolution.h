@@ -14,7 +14,6 @@
 #include "dsp/Response.h"
 #include "dsp/ResponseProduct.h"
 #include "dsp/ScalarFilter.h"
-#include "dsp/DerippleResponse.h"
 
 #include "dsp/Transformation.h"
 #include "dsp/TimeSeries.h"
@@ -86,9 +85,6 @@ namespace dsp {
     //! Set the frequency response function
     virtual void set_response (Response* response);
 
-    //! Set deripple response function
-    // virtual void set_deripple (DerippleResponse* deripple);
-
     //! Set the apodization function
     virtual void set_apodization (Apodization* function);
 
@@ -101,14 +97,6 @@ namespace dsp {
     //! Return a pointer to the frequency response function
     virtual const Response* get_response() const;
     virtual Response* get_response();
-
-    //! Return true if the response attribute has been set
-    // bool has_deripple () const;
-
-    //! Return a pointer to the frequency deripple function
-    // virtual const DerippleResponse* get_deripple() const;
-    // virtual DerippleResponse* get_deripple();
-
 
     //! Return true if the passband attribute has been set
     bool has_passband () const;
@@ -148,9 +136,6 @@ namespace dsp {
 
     //! Frequency response (convolution kernel)
     Reference::To<Response> response;
-
-    //! Deripple response, for correcting FIR filtering
-    Reference::To<DerippleResponse> deripple;
 
     //! Product of response and normaliser
     Reference::To<ResponseProduct> response_product;
