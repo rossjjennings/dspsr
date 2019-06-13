@@ -230,7 +230,7 @@ Pulsar::Predictor*
 dsp::Fold::get_folding_predictor (const Pulsar::Parameters* params,
                                   const Observation* observation)
 {
-  MJD time = observation->get_start_time()-0.01;
+  MJD time = observation->get_start_time() - 864;
   Pulsar::Generator* generator = Pulsar::Generator::factory (params);
 
   Tempo::Predict* predict = dynamic_cast<Tempo::Predict*>( generator );
