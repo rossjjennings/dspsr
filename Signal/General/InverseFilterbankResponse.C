@@ -211,6 +211,7 @@ void dsp::InverseFilterbankResponse::match (const Observation* obs, unsigned cha
   if (verbose){
     std::cerr << "dsp::InverseFilterbankResponse::match obs->get_nchan() " << obs->get_nchan() << std::endl;
     std::cerr << "dsp::InverseFilterbankResponse::match ndat=" << ndat << std::endl;
+    std::cerr << "dsp::InverseFilterbankResponse::match input_overlap=" << input_overlap << std::endl;
   }
   input_nchan = obs->get_nchan();
   oversampling_factor = obs->get_oversampling_factor();
@@ -219,9 +220,9 @@ void dsp::InverseFilterbankResponse::match (const Observation* obs, unsigned cha
     impulse_pos = input_overlap;
     impulse_neg = input_overlap;
 
-    ndat = input_nchan*oversampling_factor.normalize(ndat);
-    impulse_pos = input_nchan*oversampling_factor.normalize(impulse_pos);
-    impulse_neg = input_nchan*oversampling_factor.normalize(impulse_neg);
+    ndat = (input_nchan/channels)*oversampling_factor.normalize(ndat);
+    impulse_pos = (input_nchan/channels)*oversampling_factor.normalize(impulse_pos);
+    impulse_neg = (input_nchan/channels)*oversampling_factor.normalize(impulse_neg);
 
     resize (npol, nchan, ndat, ndim);
     build();

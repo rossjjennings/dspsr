@@ -182,7 +182,7 @@ void dsp::InverseFilterbank::make_preparations ()
   } else {
     // this means that the input_fft_length has been specified in the
     // configuration
-    output_fft_length = input_nchan*get_oversampling_factor().normalize(input_fft_length);
+    output_fft_length = input_nchan*get_oversampling_factor().normalize(input_fft_length) / output_nchan;
     output_fft_length *= n_per_sample;
     input_fft_length *= n_per_sample;
     output_sample_step = output_fft_length;
