@@ -132,11 +132,12 @@ void dsp::InverseFilterbank::filterbank()
 
 inline unsigned output_to_input (
   unsigned n,
-  unsigned _output_nchan,
+  unsigned _input_n,
+  unsigned _output_n,
   const Rational& osf
 )
 {
-  return (n*osf.get_numerator()) / (osf.get_denominator()*_output_nchan);
+  return (n*osf.get_numerator()) / (osf.get_denominator()*(_input_n/_output_n));
 }
 
 
@@ -162,39 +163,12 @@ void dsp::InverseFilterbank::make_preparations ()
     response->match(input, output_nchan);
     output_discard_pos = response->get_impulse_pos();
     output_discard_neg = response->get_impulse_neg();
-    output_fft_length = response->get_ndat();
+    freq_res = response->get_ndat();
+    output_fft_length = freq_res;
 
-    input_discard_pos = output_to_input(output_discard_pos, input_nchan, osf);
-    input_discard_neg = output_to_input(output_discard_neg, input_nchan, osf);
-    input_fft_length = output_to_input(output_fft_length, input_nchan, osf);
-
-    // if (verbose) {
-    //   cerr << "dsp::InverseFilterbank::make_preparations:"
-    //       << " output_discard_neg(before)=" << output_discard_neg
-    //       << " output_discard_pos(before)=" << output_discard_pos
-    //       << " output_fft_length(before)=" << output_fft_length
-    //       << endl;
-    // }
-    //
-    // optimize_discard_region(
-    //   &input_discard_neg, &input_discard_pos,
-    //   &output_discard_neg, &output_discard_pos
-    // );
-    // optimize_fft_length(
-    //   &input_fft_length, &output_fft_length);
-
-    // if (verbose) {
-    //   cerr << "dsp::InverseFilterbank::make_preparations:"
-    //       << " input_discard_neg(after)=" << input_discard_neg
-    //       << " input_discard_pos(after)=" << input_discard_pos
-    //       << " input_fft_length(after)=" << input_fft_length
-    //       << " output_discard_neg(after)=" << output_discard_neg
-    //       << " output_discard_pos(after)=" << output_discard_pos
-    //       << " output_fft_length(after)=" << output_fft_length
-    //       << endl;
-    // }
-
-    freq_res = output_fft_length;
+    input_discard_pos = output_to_input(output_discard_pos, input_nchan, output_nchan, osf);
+    input_discard_neg = output_to_input(output_discard_neg, input_nchan, output_nchan, osf);
+    input_fft_length = output_to_input(freq_res, input_nchan, output_nchan, osf);
 
     input_fft_length *= n_per_sample;
     output_fft_length *= n_per_sample;
@@ -205,15 +179,6 @@ void dsp::InverseFilterbank::make_preparations ()
     output_discard_total = n_per_sample*(output_discard_neg + output_discard_pos);
     output_sample_step = output_fft_length - output_discard_total;
 
-
-    // response->set_impulse_neg(output_discard_neg);
-    // response->set_impulse_pos(output_discard_pos);
-    // Dedispersion* dedispersion = dynamic_cast<Dedispersion *>(response.ptr());
-  	// if (dedispersion)
-  	// {
-  	// 	dedispersion->set_frequency_resolution(output_fft_length);
-  	// 	dedispersion->build();
-  	// }
   } else {
     // this means that the input_fft_length has been specified in the
     // configuration
@@ -225,7 +190,26 @@ void dsp::InverseFilterbank::make_preparations ()
   }
 
   if (verbose) {
-    cerr << "dsp::InverseFilterbank::make_preparations: creating FFT window" << endl;
+    std::cerr << "dsp::InverseFilterbank::make_preparations: output_fft_length="
+      << output_fft_length << std::endl;
+    std::cerr << "dsp::InverseFilterbank::make_preparations: input_fft_length="
+      << input_fft_length << std::endl;
+    std::cerr << "dsp::InverseFilterbank::make_preparations: output_sample_step="
+      << output_sample_step << std::endl;
+    std::cerr << "dsp::InverseFilterbank::make_preparations: input_sample_step="
+      << input_sample_step << std::endl;
+    std::cerr << "dsp::InverseFilterbank::make_preparations:"
+      << " input_discard_neg=" << input_discard_neg
+      << " input_discard_pos=" << input_discard_pos
+      << std::endl;
+    std::cerr << "dsp::InverseFilterbank::make_preparations:"
+      << " output_discard_neg=" << output_discard_neg
+      << " output_discard_pos=" << output_discard_pos
+      << std::endl;
+
+    std::cerr << "dsp::InverseFilterbank::make_preparations: freq_res="
+      << freq_res << std::endl;
+    std::cerr << "dsp::InverseFilterbank::make_preparations: creating FFT window" << std::endl;
   }
 
   dsp::Apodization* fft_window = get_apodization();

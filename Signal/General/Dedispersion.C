@@ -324,9 +324,9 @@ void dsp::Dedispersion::build ()
     }
     if (oversampling_factor.doubleValue() > 1.0) {
       calc_oversampled_fft_length(
-        &ndat, input_nchan, oversampling_factor);
+        &ndat, input_nchan/nchan, oversampling_factor);
       calc_oversampled_discard_region(
-        &impulse_neg, &impulse_pos, input_nchan, oversampling_factor);
+        &impulse_neg, &impulse_pos, input_nchan/nchan, oversampling_factor);
     }
     if (verbose) {
       std::cerr << "dsp::Dedispersion::build:"

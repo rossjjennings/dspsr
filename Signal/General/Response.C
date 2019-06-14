@@ -730,7 +730,6 @@ void dsp::Response::calc_lcf (
 }
 
 void dsp::Response::calc_oversampled_fft_length (
-	// int* _input_fft_length,
   unsigned* _fft_length,
   unsigned _nchan,
   const Rational& osf

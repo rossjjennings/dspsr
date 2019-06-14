@@ -25,6 +25,9 @@ dsp::InverseFilterbankResponse::InverseFilterbankResponse ()
   ndat = 1;
   input_overlap = 0;
 
+  impulse_pos = 0;
+  impulse_neg = 0;
+
   pfb_dc_chan = false;
 
   built = false;
@@ -84,10 +87,12 @@ void dsp::InverseFilterbankResponse::build ()
     half_chan_shift = 1;
   }
 
+  unsigned total_ndat = ndat * nchan;
+
   std::vector<float> freq_response;
-  unsigned ndat_per_chan = ndat / input_nchan;
-  // calc_freq_response(freq_response, ndat*nchan/2);
-  calc_freq_response(freq_response, ndat/2);
+  unsigned ndat_per_chan = total_ndat / input_nchan;
+  // calc_freq_response(freq_response, total_ndat*nchan/2);
+  calc_freq_response(freq_response, total_ndat/2);
   // roll the array by the appropriate number of bins
   int shift_bins = -1*static_cast<int>(ndim*half_chan_shift*ndat_per_chan/2);
   if (verbose) {
@@ -161,7 +166,10 @@ void dsp::InverseFilterbankResponse::calc_freq_response (
 {
   // std::ofstream freq_response_file("freq_response.dat", std::ios::out | std::ios::binary);
   if (verbose) {
-    std::cerr << "dsp::InverseFilterbankResponse::calc_freq_response" << std::endl;
+    std::cerr << "dsp::InverseFilterbankResponse::calc_freq_response:"
+      << " freq_response.size()=" << freq_response.size()
+      << " n_freq=" << n_freq
+      << std::endl;
   }
   freq_response.resize(2*n_freq);
   std::vector<float> filter_coeff_padded (2*n_freq);
@@ -241,7 +249,7 @@ void dsp::InverseFilterbankResponse::match (const Response* response)
   resize (npol, response->get_nchan(), response->get_ndat(), ndim);
   impulse_pos = input_nchan*oversampling_factor.normalize(input_overlap);
   impulse_neg = input_nchan*oversampling_factor.normalize(input_overlap);
-  
+
 
   if (!built){
     build();
