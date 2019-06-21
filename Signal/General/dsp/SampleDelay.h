@@ -34,6 +34,9 @@ namespace dsp {
     void prepare ();
 
     //! Prepares the output data buffer
+    void prepare_output ();
+
+    //! Prepares the output data buffer
     void prepare_output (uint64_t);
 
     //! Get the minimum number of samples required for operation
