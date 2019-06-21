@@ -7,6 +7,8 @@
  *
  ***************************************************************************/
 
+#include "config.h"
+
 #include "dsp/ConvolutionCUDA.h"
 #include "CUFFTError.h"
 #include "debug.h"
@@ -53,79 +55,6 @@ __global__ void k_ncopy_conv (float2* output_data, unsigned output_stride,
   if (index < to_copy)
     output_data[index] = input_data[index];
 }
-
-
-#if HAVE_CUFFT_CALLBACKS
-/*
-// [0] channel offset ( ichan * npt)
-// [1] npt
-// [2] first_ipt ( nfilt_pos )
-// [3] last_ipt ( npt - nfilt_neg )
-// [4] nfilt_tot 
-__device__ __constant__ unsigned conv_params[5];
-
-/////////////////////////////////////////////////////////////////////////
-//
-// store with multiplication by dedispersion kernel [no FFT batching]
-//
-__device__ void CB_convolve_and_store (void * dataOut, size_t offset, cufftComplex d, void * callerInfo, void *sharedPtr)
-{
-  // the dedispersion kernel complex float for this element of the FFT
-  const cufftComplex k = ((cufftComplex *) callerInfo)[conv_params[0] + offset];
-  ((cufftComplex*)dataOut)[offset] = cuCmulf (d, k);
-}
-
-__device__ void CB_convolve_and_store_batch (void * dataOut, size_t offset, cufftComplex d, void * callerInfo, void *sharedPtr)
-{
-  // the dedispersion kernel value for this element of the FFT
-  const unsigned kernel_offset = conv_params[0] + (offset % conv_params[1]);
-  const cufftComplex k = ((cufftComplex *) callerInfo)[kernel_offset];
-
-  ((cufftComplex*)dataOut)[offset] = cuCmulf (d, k);
-}
-__device__ cufftCallbackStoreC d_store_fwd 			 = CB_convolve_and_store;
-__device__ cufftCallbackStoreC d_store_fwd_batch = CB_convolve_and_store_batch;
-
-/////////////////////////////////////////////////////////////////////////
-//
-// store with output filtering on
-//
-__device__ void CB_filtered_store (void * dataOut, size_t offset, cufftComplex d, void * callerInfo, void *sharedPtr)
-{
-	// if offset < nfilt_pos, discard
-  if (offset < conv_params[2])
-    return;
-
-	// if offset > (npt - nfilt_neg), discard
-  if (offset >= conv_params[3])
-    return;
-
-  ((cufftComplex*)dataOut)[offset - conv_params[2]] = d;
-}
-
-__device__ void CB_filtered_store_batch (void * dataOut, size_t offset, cufftComplex d, void * callerInfo, void *sharedPtr)
-{
-	const unsigned ibatch = offset / conv_params[1];
-	const unsigned ipt = offset - (ibatch * conv_params[1]);
-
-	// if ipt < nfilt_pos, discard
-	if (ipt < conv_params[2])
-		return;
-	
-	// if ipt > (npt - nfilt_neg), discard
-	if (ipt >= conv_params[3])
-		return;
-
-	// substract the required offsets
-	offset -= ((ibatch * conv_params[4]) + conv_params[2]);
-
-  ((cufftComplex*)dataOut)[offset] = d;
-}
-
-__device__ cufftCallbackStoreC d_store_bwd       = CB_filtered_store;
-__device__ cufftCallbackStoreC d_store_bwd_batch = CB_filtered_store_batch;
-*/
-#endif
 
 CUDA::ConvolutionEngine::ConvolutionEngine (cudaStream_t _stream)
 {

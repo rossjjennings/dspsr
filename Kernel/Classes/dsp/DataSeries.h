@@ -71,6 +71,18 @@ namespace dsp {
     //! Enforces that ndat*ndim must be an integer number of bytes
     virtual void set_ndim(uint64_t _ndim);
 
+    //! Set the number of polarizations
+    virtual void set_npol(uint64_t _npol);
+
+    //! Set the number of channels
+    virtual void set_nchan(uint64_t _chan);
+
+    //! return the number of samples the current buffer can hold
+    uint64_t get_ndat_allocated();
+
+    //! Return true if reshape of data series required
+    bool reshape_required () { return shape_changed; };
+
     //! Allocate the space required to store nsamples time samples.
     //! Note that the space used in each chan/pol group must be an integer
     //! number of bytes.
@@ -98,6 +110,9 @@ namespace dsp {
 
     //! Match the internal memory layout of another DataSeries
     virtual void internal_match (const DataSeries*);
+
+    //!
+    virtual void copy_configuration (const Observation* copy);
 
     //! Return the internal memory base address
     unsigned char* internal_get_buffer() { return buffer; }
@@ -128,6 +143,9 @@ namespace dsp {
 
     //! The number of BYTES in a data sub-division
     uint64_t subsize;
+
+    //! Flag for whether the shape of the data series has changed
+    bool shape_changed;
 
     //! The memory manager
     Reference::To<Memory> memory;

@@ -34,7 +34,7 @@ namespace dsp {
     void prepare ();
 
     //! Prepares the output data buffer
-    void prepare_output ();
+    void prepare_output (uint64_t);
 
     //! Get the minimum number of samples required for operation
     uint64_t get_minimum_samples () { return total_delay; }
@@ -80,7 +80,11 @@ namespace dsp {
 
     virtual void set_delays (unsigned npol, unsigned nchan, int64_t zero_delay, SampleDelayFunction * function) = 0;
 
+<<<<<<< HEAD
     virtual void retard(const TimeSeries* in, TimeSeries* out) = 0;
+=======
+    virtual void retard(const TimeSeries* in, TimeSeries* out, uint64_t output_ndat) = 0;
+>>>>>>> master
 
   };
 

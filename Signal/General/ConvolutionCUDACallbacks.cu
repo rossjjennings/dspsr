@@ -7,13 +7,17 @@
  *
  ***************************************************************************/
 
+#include "config.h"
 #include "dsp/ConvolutionCUDACallbacks.h"
-#include "CUFFTError.h"
 #include "debug.h"
+#include <stdio.h>
 
 #if HAVE_CUFFT_CALLBACKS
 #include <cufftXt.h>
 #endif
+
+#include <stdexcept>
+#include <iostream>
 
 using namespace std;
 
@@ -103,55 +107,47 @@ void setup_callbacks_ConvolutionCUDA (cufftHandle plan_fwd, cufftHandle plan_bwd
                                     sizeof(h_store_fwd), 0, 
                                     cudaMemcpyDeviceToHost, stream);
   if (error != cudaSuccess)
-    throw Error (FailedCall, "CUDA::ConvolutionEngine::setup_callbacks",
-                 "cudaMemcpyFromSymbolAsync failed for h_store_fwd");
+    throw runtime_error ("CUDA::ConvolutionEngine::setup_callbacks cudaMemcpyFromSymbolAsync failed for h_store_fwd");
 
   error = cudaMemcpyFromSymbolAsync(&h_store_bwd, d_store_bwd,
                                     sizeof(h_store_bwd), 0,
                                     cudaMemcpyDeviceToHost, stream);
   if (error != cudaSuccess)
-    throw Error (FailedCall, "CUDA::ConvolutionEngine::setup_callbacks",
-                 "cudaMemcpyFromSymbolAsync failed for h_store_bwd");
+    throw runtime_error ("CUDA::ConvolutionEngine::setup_callbacks cudaMemcpyFromSymbolAsync failed for h_store_bwd");
 
   error = cudaMemcpyFromSymbolAsync(&h_store_fwd_batch, d_store_fwd_batch,
                                     sizeof(h_store_fwd_batch), 0,
                                     cudaMemcpyDeviceToHost, stream);
   if (error != cudaSuccess)
-    throw Error (FailedCall, "CUDA::ConvolutionEngine::setup_callbacks",
-                 "cudaMemcpyFromSymbolAsync failed for h_store_fwd_batch");
+    throw runtime_error ("CUDA::ConvolutionEngine::setup_callbackscudaMemcpyFromSymbolAsync failed for h_store_fwd_batch");
 
   error = cudaMemcpyFromSymbolAsync(&h_store_bwd_batch, d_store_bwd_batch,
                                     sizeof(h_store_bwd_batch), 0,
                                     cudaMemcpyDeviceToHost, stream);
   if (error != cudaSuccess)
-    throw Error (FailedCall, "CUDA::ConvolutionEngine::setup_callbacks",
-                 "cudaMemcpyFromSymbolAsync failed for h_store_bwd_batch");
+    throw runtime_error ("CUDA::ConvolutionEngine::setup_callbacks cudaMemcpyFromSymbolAsync failed for h_store_bwd_batch");
 
   result = cufftXtSetCallback (plan_fwd, (void **)&h_store_fwd,
                                CUFFT_CB_ST_COMPLEX, (void **)&d_kernels);
   if (result != CUFFT_SUCCESS)
-    throw CUFFTError (result, "CUDA::ConvolutionEngine::setup_callbacks",
-      "cufftXtSetCallback (plan_fwd, h_store_fwd)");
+    throw runtime_error ("CUDA::ConvolutionEngine::setup_callbacks cufftXtSetCallback (plan_fwd, h_store_fwd)");
 
   result = cufftXtSetCallback (plan_bwd, (void **)&h_store_bwd,
                                CUFFT_CB_ST_COMPLEX, 0);
   if (result != CUFFT_SUCCESS)
-    throw CUFFTError (result, "CUDA::ConvolutionEngine::setup_callbacks",
-      "cufftXtSetCallback (plan_bwd, h_store_bwd)");
+    throw runtime_error ("CUDA::ConvolutionEngine::setup_callbacks cufftXtSetCallback (plan_bwd, h_store_bwd)");
 
   if (nbatch > 0)
   {
     result = cufftXtSetCallback (plan_fwd_batched, (void **)&h_store_fwd_batch,
                                  CUFFT_CB_ST_COMPLEX, (void **)&d_kernels);
     if (result != CUFFT_SUCCESS)
-      throw CUFFTError (result, "CUDA::ConvolutionEngine::setup_callbacks",
-        "cufftXtSetCallback (plan_fwd_batched, h_store_fwd_batch)");
+      throw runtime_error ("CUDA::ConvolutionEngine::setup_callbacks cufftXtSetCallback (plan_fwd_batched, h_store_fwd_batch)");
 
     result = cufftXtSetCallback (plan_bwd_batched, (void **)&h_store_bwd_batch,
                                  CUFFT_CB_ST_COMPLEX, 0);
     if (result != CUFFT_SUCCESS)
-      throw CUFFTError (result, "CUDA::ConvolutionEngine::setup_callbacks",
-        "cufftXtSetCallback (plan_bwd_batched, h_store_bwd_batch)");
+      throw runtime_error ("CUDA::ConvolutionEngine::setup_callbacks cufftXtSetCallback (plan_bwd_batched, h_store_bwd_batch)");
   }
 }
 
@@ -162,8 +158,7 @@ void setup_callbacks_conv_params (unsigned * h_ptr, unsigned h_size, cudaStream_
                                    cudaMemcpyHostToDevice, stream);
   if (error != cudaSuccess)
   {
-    throw Error (InvalidState, "CUDA::ConvolutionEngine::setup_kernel",
-     "could not initialize convolution params in device memory");
+    throw runtime_error ("CUDA::ConvolutionEngine::setup_kernel could not initialize convolution params in device memory");
   }
 
 }
@@ -172,9 +167,10 @@ void setup_callbacks_conv_params (unsigned * h_ptr, unsigned h_size, cudaStream_
 //
 //
 
-// [0] first_ipt ( nfilt_pos )
-// [1] last_ipt ( npt - nfilt_neg )
-__device__ __constant__ unsigned conv_params_spectral[2];
+// [0] output stride
+// [1] first_ipt ( nfilt_pos )
+// [2] last_ipt ( npt - nfilt_neg )
+__device__ __constant__ unsigned conv_params_spectral[3];
 
 /////////////////////////////////////////////////////////////////////////
 //
@@ -194,24 +190,28 @@ __device__ cufftCallbackStoreC d_store_fwd_spectral = CB_convolve_and_store_spec
 //
 __device__ void CB_filtered_store_spectral (void * dataOut, size_t offset, cufftComplex d, void * callerInfo, void *sharedPtr)
 {
+  // determine the offset within the channel
+  const unsigned chan_offset = offset % conv_params_spectral[0];
+
   // if offset < nfilt_pos, discard
-  if (offset < conv_params_spectral[0])
+  if (chan_offset < conv_params_spectral[1])
     return;
 
   // if offset > (npt - nfilt_neg), discard
-  if (offset >= conv_params_spectral[1])
+  if (chan_offset >= conv_params_spectral[2])
     return;
 
-  ((cufftComplex*)dataOut)[offset - conv_params_spectral[0]] = d;
+  ((cufftComplex*)dataOut)[offset - conv_params_spectral[1]] = d;
 }
 __device__ cufftCallbackStoreC d_store_bwd_spectral = CB_filtered_store_spectral;
 
-
+// configure callbacks for the Spectral Convolution case
 void setup_callbacks_ConvolutionCUDASpectral (cufftHandle plan_fwd, cufftHandle plan_bwd, cufftComplex * d_kernels, cudaStream_t stream)
 {
   cudaError_t error;
   cufftResult_t result;
 
+  // 2 store callbacks are used
   cufftCallbackStoreC h_store_fwd;
   cufftCallbackStoreC h_store_bwd;
 
@@ -219,27 +219,23 @@ void setup_callbacks_ConvolutionCUDASpectral (cufftHandle plan_fwd, cufftHandle 
                                     sizeof(h_store_fwd), 0,
                                     cudaMemcpyDeviceToHost, stream);
   if (error != cudaSuccess)
-    throw Error (FailedCall, "CUDA::ConvolutionEngineSpectral::setup_callbacks",
-                 "cudaMemcpyFromSymbolAsync failed for h_store_fwd");
+    throw runtime_error ("CUDA::ConvolutionEngineSpectral::setup_callbacks cudaMemcpyFromSymbolAsync failed for h_store_fwd");
 
   error = cudaMemcpyFromSymbolAsync(&h_store_bwd, d_store_bwd_spectral,
                                     sizeof(h_store_bwd), 0,
                                     cudaMemcpyDeviceToHost, stream);
   if (error != cudaSuccess)
-    throw Error (FailedCall, "CUDA::ConvolutionEngineSpectral::setup_callbacks",
-                 "cudaMemcpyFromSymbolAsync failed for h_store_bwd");
+    throw runtime_error ("CUDA::ConvolutionEngineSpectral::setup_callbacks cudaMemcpyFromSymbolAsync failed for h_store_bwd");
 
   result = cufftXtSetCallback (plan_fwd, (void **)&h_store_fwd,
                                CUFFT_CB_ST_COMPLEX, (void **)&d_kernels);
   if (result != CUFFT_SUCCESS)
-    throw CUFFTError (result, "CUDA::ConvolutionEngineSpectral::setup_callbacks",
-      "cufftXtSetCallback (plan_fwd, h_store_fwd)");
+    throw runtime_error ("CUDA::ConvolutionEngineSpectral::setup_callbacks cufftXtSetCallback (plan_fwd, h_store_fwd)");
 
   result = cufftXtSetCallback (plan_bwd, (void **)&h_store_bwd,
                                CUFFT_CB_ST_COMPLEX, 0);
   if (result != CUFFT_SUCCESS)
-    throw CUFFTError (result, "CUDA::ConvolutionEngineSpectral::setup_callbacks",
-      "cufftXtSetCallback (plan_bwd, h_store_bwd)");
+    throw runtime_error ("CUDA::ConvolutionEngineSpectral::setup_callbacks cufftXtSetCallback (plan_bwd, h_store_bwd)");
 }
 
 void setup_callbacks_conv_params_spectral (unsigned * h_ptr, unsigned h_size, cudaStream_t stream)
@@ -248,12 +244,8 @@ void setup_callbacks_conv_params_spectral (unsigned * h_ptr, unsigned h_size, cu
                                    h_size, 0, cudaMemcpyHostToDevice, stream);
   if (error != cudaSuccess)
   {
-    throw Error (InvalidState, "CUDA::ConvolutionEngineSpectral::setup_kernel",
-     "could not initialize convolution params in device memory");
+    throw runtime_error ("CUDA::ConvolutionEngineSpectral::setup_kernel could not initialize convolution params in device memory");
   }
 }
-
-
-
 
 #endif

@@ -21,6 +21,7 @@ dsp::SampleDelay::SampleDelay ()
   zero_delay = 0;
   total_delay = 0;
   built = false;
+  engine = NULL;
 
   set_buffering_policy (new InputBuffering (this));
 }
@@ -72,7 +73,7 @@ void dsp::SampleDelay::build ()
       for (unsigned ichan=0; ichan < input_nchan; ichan++)
         if (function->get_delay (ichan, ipol) > total_delay)
           total_delay = function->get_delay (ichan, ipol);
-    
+
     return;
   }
 
@@ -84,7 +85,7 @@ void dsp::SampleDelay::build ()
         zero_delay = function->get_delay (ichan, ipol);
 
   if (verbose)
-    cerr << "dsp::SampleDelay::build zero delay = " << zero_delay 
+    cerr << "dsp::SampleDelay::build zero delay = " << zero_delay
          << " samples" << endl;
 
   total_delay = 0;
@@ -99,7 +100,7 @@ void dsp::SampleDelay::build ()
     }
 
   if (verbose)
-    cerr << "dsp::SampleDelay::build total delay = " << total_delay 
+    cerr << "dsp::SampleDelay::build total delay = " << total_delay
          << " samples" << endl;
 
   if (engine)
@@ -168,6 +169,28 @@ void dsp::SampleDelay::prepare_output ()
   output->change_start_time (zero_delay);
 }
 
+//! prepare the output timeseries
+void dsp::SampleDelay::prepare_output (uint64_t output_ndat)
+{
+  // prepare the output timeseries
+  if (verbose)
+    cerr << "dsp::SampleDelay::prepare_output output->copy_configuration(input)" << endl;
+  get_output()->copy_configuration (get_input());
+
+  if (output != input)
+  {
+    output->resize (output_ndat);
+    get_output()->set_input_sample (get_input()->get_input_sample());
+  }
+  else
+  {
+    output->set_ndat (output_ndat);
+  }
+
+  // zero_delay
+  output->change_start_time (zero_delay);
+}
+
 /*!
   \pre input TimeSeries must contain complex (Analytic) data
 */
@@ -198,14 +221,17 @@ void dsp::SampleDelay::transformation ()
     cerr << "dsp::SampleDelay::transformation set_next_start(" << output_ndat << ")" << endl;
   get_buffering_policy()->set_next_start (output_ndat);
 
+  //prepare the output TimeSeries
+  prepare_output (output_ndat);
+
   if (!output_ndat)
     return;
 
   if (engine)
   {
     if (verbose)
-      cerr << "dsp::SampleDelay::transformation engine->retard (input, output)" << endl;
-    engine->retard (input, output);
+      cerr << "dsp::SampleDelay::transformation engine->retard (input, output, " << output_ndat << ")" << endl;
+    engine->retard (input, output, output_ndat);
   }
   else
   {

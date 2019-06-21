@@ -167,8 +167,15 @@ void dsp::TimeSeries::resize (uint64_t nsamples)
     cerr << "dsp::TimeSeries::resize reserve_ndat="
 	 << reserve_ndat << " fake_ndat=" << fake_ndat << endl;
 
+  // change in the required number of samples
+  int64_t ndat_change = int64_t(nsamples+fake_ndat) - int64_t(get_ndat_allocated());
+
   if (nsamples || auto_delete)
-    DataSeries::resize (nsamples+fake_ndat);
+  {
+    // only resize the data series when additional space is required
+    if (ndat_change > 0 || auto_delete || reshape_required())
+      DataSeries::resize (nsamples+fake_ndat);
+  }
 
   // offset the data pointer and reset the number of samples
   data = (float*)buffer + reserve_nfloat;
@@ -351,7 +358,7 @@ void dsp::TimeSeries::copy_configuration (const Observation* copy)
   if( copy==this )
     return;
 
-  Observation::operator=( *copy );
+  DataSeries::copy_configuration ( copy );
 
   if (verbose)
     cerr << "dsp::TimeSeries::copy_configuration ndat=" << get_ndat()
@@ -622,34 +629,6 @@ void dsp::TimeSeries::check (float min, float max)
 	  dat ++;
 	}
     }
-}
-
-//! Delete the current data buffer and attach to this one
-/*! This is dangerous as it ASSUMES new data buffer has been
- pre-allocated and is big enough.  Beware of segmentation faults when
- using this routine.  Also do not try to delete the old memory once
- you have called this- the TimeSeries::data member now owns it. */
-void dsp::TimeSeries::attach (auto_ptr<float> _data)
-{
-  if( !_data.get() )
-    throw Error(InvalidState,"dsp::TimeSeries::attach()",
-		"NULL auto_ptr has been passed in- you haven't properly allocated it using 'new' before passing it into this method");
-
-  resize(0);
-  data = _data.release();
-  buffer = (unsigned char*)data;
-}
-
-//! Call this when you do not want to transfer ownership of the array
-void dsp::TimeSeries::attach (float* _data)
-{
-  if( !_data )
-    throw Error(InvalidState,"dsp::TimeSeries::attach()",
-		"NULL ptr has been passed in- you haven't properly allocated it using 'new' before passing it into this method");
-
-  resize(0);
-  data = _data;
-  buffer = (unsigned char*)data;
 }
 
 bool from_range(unsigned char* fr,const dsp::TimeSeries* tseries)

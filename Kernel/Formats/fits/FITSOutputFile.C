@@ -224,7 +224,10 @@ void dsp::FITSOutputFile::write_header ()
   }
 
   archive-> set_telescope ( get_input()->get_telescope() );
-  archive-> set_type ( get_input()->get_type() );
+  archive-> set_type ( Signal::Unknown );
+
+  Pulsar::FITSArchive* fits_archive = dynamic_cast<Pulsar::FITSArchive *>(archive.get());
+  fits_archive->set_search_mode ();
 
   switch (get_input()->get_state())
   {
@@ -241,6 +244,7 @@ void dsp::FITSOutputFile::write_header ()
   default:
     archive-> set_state ( get_input()->get_state() );
   }
+
 
   // probably not correct for search mode
   //archive-> set_scale ( Signal::FluxDensity );
@@ -338,9 +342,10 @@ void dsp::FITSOutputFile::write_header ()
     output_filename = filename + get_extension();
     if (mangle_output)
     {
-      char buff [L_tmpnam];
-      tmpnam(buff);
-      mangled_output_filename = output_filename + (buff+strlen(buff)-6);
+      char buff[1024];
+      sprintf (buff, "%sXXXXXX", output_filename.c_str());
+      mkstemp(buff);
+      mangled_output_filename = buff;
     }
   }
   if (mangle_output)

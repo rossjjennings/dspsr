@@ -248,9 +248,11 @@ void dsp::DADABuffer::open_file (const char* filename)
 
   info = new ASCIIObservation (hdu->header);
 
+#ifdef HAVE_CUDA
   // check if the input data should be zeroed after reading
   if (ascii_header_get (hdu->header, "ZERO_INPUT", "%u", &zero_input) < 0)
     zero_input = 0;
+#endif
 
   if (ascii_header_get (hdu->header, "RESOLUTION", "%u", &byte_resolution) < 0)
     byte_resolution = 1;

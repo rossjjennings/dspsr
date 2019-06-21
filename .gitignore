@@ -9,6 +9,7 @@ web
 *.libs
 Makefile.in
 Makefile *.o
+Kernel/Applications/digihdr
 Kernel/Applications/Makefile
 Kernel/Applications/load_bits
 Kernel/Classes/Makefile

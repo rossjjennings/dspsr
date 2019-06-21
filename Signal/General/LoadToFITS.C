@@ -20,6 +20,7 @@
 
 #include "dsp/SampleDelay.h"
 #include "dsp/DedispersionSampleDelay.h"
+#include "dsp/DelayStartTime.h"
 
 #include "dsp/FScrunch.h"
 #include "dsp/TScrunch.h"
@@ -37,10 +38,12 @@
 #include "dsp/OptimalFilterbank.h"
 #include "dsp/TransferCUDA.h"
 #include "dsp/DetectionCUDA.h"
+#include "dsp/FScrunchCUDA.h"
 #include "dsp/TScrunchCUDA.h"
 #include "dsp/MemoryCUDA.h"
 #include "dsp/TimeSeriesCUDA.h"
 #include "dsp/SampleDelayCUDA.h"
+#include "dsp/DelayStartTimeCUDA.h"
 #include "dsp/FITSDigitizerCUDA.h"
 #include "dsp/TransferBitSeriesCUDA.h"
 #endif
@@ -74,17 +77,18 @@ dsp::LoadToFITS::Config::Config()
   block_size = 2.0;
 
   order = dsp::TimeSeries::OrderTFP;
- 
+
   filterbank.set_nchan(0);
   filterbank.set_freq_res(0);
   filterbank.set_convolve_when(Filterbank::Config::Never);
- 
+
   maximum_RAM = 256 * 1024 * 1024;
   times_minimum_ndat = 1;
 
   dispersion_measure = 0;
   dedisperse = false;
   coherent_dedisp = false;
+  start_time_delay = 0;
 
   rescale_seconds = -1;
   rescale_constant = false;
@@ -157,7 +161,7 @@ void dsp::LoadToFITS::construct () try
   // set up for optimal memory usage pattern
 
   Unpacker* unpacker = manager->get_unpacker();
-  
+
   if (!config->dedisperse && unpacker->get_order_supported (config->order))
     unpacker->set_output_order (config->order);
 
@@ -209,7 +213,7 @@ void dsp::LoadToFITS::construct () try
     nsample = config->nsblk * tres_factor;
   }
 
-  cerr << "digifits: requested tsamp=" << config->tsamp << " rate=" << rate << endl 
+  cerr << "digifits: requested tsamp=" << config->tsamp << " rate=" << rate << endl
        << "             actual tsamp=" << tsamp << " (tscrunch=" << tres_factor << ")" << endl;
   if (verbose)
     cerr << "digifits: nsblk=" << config->nsblk << endl;
@@ -223,12 +227,12 @@ void dsp::LoadToFITS::construct () try
   // NB this doesn't account for copies (yet)
 
   if (verbose)
-    cerr << "digifits: nsample * nbytes_per_sample=" << nsample * nbytes_per_sample 
+    cerr << "digifits: nsample * nbytes_per_sample=" << nsample * nbytes_per_sample
          << " config->maximum_RAM=" << config->maximum_RAM << endl;
   while (nsample * nbytes_per_sample > config->maximum_RAM) nsample /= 2;
 
   if (verbose)
-    cerr << "digifits: block_size=" << (nbytes_per_sample*nsample)/MB 
+    cerr << "digifits: block_size=" << (nbytes_per_sample*nsample)/MB
          << " MB " << "(" << nsample << " samp)" << endl;
 
   manager->set_block_size ( nsample );
@@ -337,20 +341,20 @@ void dsp::LoadToFITS::construct () try
 
       if (!convolution)
         convolution = new Convolution;
-      
+
       if (!config->input_buffering)
         convolution->set_buffering_policy (NULL);
-      
+
       convolution->set_response (kernel);
       //if (!config->integration_turns)
       //  convolution->set_passband (passband);
-      
-      convolution->set_input  (timeseries);  
+
+      convolution->set_input  (timeseries);
       convolution->set_output (timeseries = new_TimeSeries() );    // out of place
 
 #if HAVE_CUDA
       if (run_on_gpu)
-      { 
+      {
         timeseries->set_memory (device_memory);
         convolution->set_device (device_memory.ptr());
         unsigned nchan = manager->get_info()->get_nchan();
@@ -362,7 +366,7 @@ void dsp::LoadToFITS::construct () try
           convolution->set_engine (new CUDA::ConvolutionEngine (stream));
       }
 #endif
-    
+
       operations.push_back (convolution.get());
     }
 
@@ -386,7 +390,7 @@ void dsp::LoadToFITS::construct () try
     if (run_on_gpu)
     {
       detection->set_engine (new CUDA::DetectionEngine(stream) );
-      timeseries->set_memory (device_memory); 
+      timeseries->set_memory (device_memory);
     }
 #endif
 
@@ -400,24 +404,6 @@ void dsp::LoadToFITS::construct () try
     timeseries->set_engine (new CUDA::TimeSeriesEngine (device_memory));
   }
 #endif
-
-  if (tres_factor > 1)
-  {
-    TScrunch* tscrunch = new TScrunch;
-    tscrunch->set_factor ( tres_factor );
-    tscrunch->set_input ( timeseries );
-    tscrunch->set_output ( timeseries = new_TimeSeries() );
-
-#if HAVE_CUDA
-    if ( run_on_gpu )
-    {
-      tscrunch->set_engine ( new CUDA::TScrunchEngine(stream) );
-      timeseries->set_memory (device_memory);
-      timeseries->set_engine (new CUDA::TimeSeriesEngine (device_memory));
-    }
-#endif
-    operations.push_back( tscrunch );
-  }
 
   if ( config->dedisperse )
   {
@@ -440,6 +426,68 @@ void dsp::LoadToFITS::construct () try
 #endif
 
     operations.push_back( delay );
+  }
+
+  if (config->start_time_delay > 0)
+  {
+    MJD start = obs->get_start_time();
+    MJD new_start = start + config->start_time_delay;
+    MJD delay = new_start - start;
+    cerr << "obs start time=" << start.in_seconds() << " seconds" << endl;
+    if (verbose)
+      cerr << "digifits: delaying start time by " << delay.in_seconds() << endl;
+
+    DelayStartTime * start_delay = new DelayStartTime;
+    start_delay->set_input (timeseries);
+    start_delay->set_output (timeseries);
+    start_delay->set_start_time (new_start);
+#if HAVE_CUDA
+    if (run_on_gpu)
+    {
+      start_delay->set_engine (new CUDA::DelayStartTimeEngine (stream));
+      timeseries->set_memory (device_memory);
+      timeseries->set_engine (new CUDA::TimeSeriesEngine (device_memory));
+    }
+#endif
+    operations.push_back( start_delay );
+  }
+
+  if (tres_factor > 1)
+  {
+    TScrunch* tscrunch = new TScrunch;
+    tscrunch->set_factor ( tres_factor );
+    tscrunch->set_input ( timeseries );
+    tscrunch->set_output ( timeseries = new_TimeSeries() );
+
+#if HAVE_CUDA
+    if ( run_on_gpu )
+    {
+      tscrunch->set_engine ( new CUDA::TScrunchEngine(stream) );
+      timeseries->set_memory (device_memory);
+      timeseries->set_engine (new CUDA::TimeSeriesEngine (device_memory));
+    }
+#endif
+    operations.push_back( tscrunch );
+  }
+
+  if ( config->fscrunch_factor )
+  {
+    FScrunch* fscrunch = new FScrunch;
+
+    fscrunch->set_factor( config->fscrunch_factor );
+    fscrunch->set_input( timeseries );
+    fscrunch->set_output( timeseries );
+
+#if HAVE_CUDA
+    if (run_on_gpu)
+    {
+      fscrunch->set_engine (new CUDA::FScrunchEngine (stream));
+      timeseries->set_memory (device_memory);
+      timeseries->set_engine (new CUDA::TimeSeriesEngine (device_memory));
+    }
+#endif
+
+    operations.push_back( fscrunch );
   }
 
   if (verbose)
@@ -467,10 +515,10 @@ void dsp::LoadToFITS::construct () try
     bitseries->set_memory (device_memory);
   }
 #endif
-  
+
   // PSRFITS allows us to save the reference spectrum in each output block
   // "subint", so we can take advantage of this to store the exect
-  // reference spectrum for later use.  By default, we will rescale the 
+  // reference spectrum for later use.  By default, we will rescale the
   // spectrum using values for exactly one block (nsblk samples).  This
   // potentially improves the dynamic range, but makes the observaiton more
   // subject to transiennts.  By calling set_rescale_nblock(N), the path
@@ -530,7 +578,7 @@ void dsp::LoadToFITS::construct () try
 
   // add a callback for the PSRFITS reference spectrum
   digitizer->update.connect (
-      dynamic_cast<FITSOutputFile*> (outputFile.get()), 
+      dynamic_cast<FITSOutputFile*> (outputFile.get()),
       &FITSOutputFile::set_reference_spectrum);
 }
 catch (Error& error)
@@ -549,7 +597,7 @@ void dsp::LoadToFITS::prepare () try
          << " by " << freq_res << " back channel filterbank" << endl;
   else
     cerr << "digifits: processing " << manager->get_info()->get_nchan() << " channels" << endl;
-  
+
   // TODO -- set an optimal block size for search mode
   minimum_samples = 0;
   unsigned block_overlap = 0;
@@ -586,19 +634,19 @@ void dsp::LoadToFITS::prepare () try
 
     // need filterbank->get_minimum_samples samples
     manager->set_block_size (minimum_samples);
-          
+
 #if 0
     if (verbose)
-      cerr << "digifits: filterbank minimum samples = " 
-        << filterbank->get_minimum_samples() 
+      cerr << "digifits: filterbank minimum samples = "
+        << filterbank->get_minimum_samples()
         << endl;
 
-    if (filterbank->get_minimum_samples() > 
+    if (filterbank->get_minimum_samples() >
         manager->get_input()->get_block_size())
     {
-      cerr << "digifits: increasing data block size from " 
+      cerr << "digifits: increasing data block size from "
         << manager->get_input()->get_block_size()
-        << " to " << filterbank->get_minimum_samples() 
+        << " to " << filterbank->get_minimum_samples()
         << " samples" << endl;
       manager->set_block_size( filterbank->get_minimum_samples() );
     }
@@ -631,7 +679,8 @@ void dsp::LoadToFITS::prepare () try
     * config->get_times_minimum_ndat() + block_overlap;
 
   // set the block size to at least minimum_samples
-  manager->set_maximum_RAM( config->get_maximum_RAM() );
+  if (block_size == 0)
+    manager->set_maximum_RAM( config->get_maximum_RAM() );
   manager->set_copies( config->get_nbuffers() );
 
   manager->set_overlap( block_overlap );

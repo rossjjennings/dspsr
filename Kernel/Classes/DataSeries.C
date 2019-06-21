@@ -34,6 +34,8 @@ void dsp::DataSeries::initi()
   size = 0;
   subsize = 0;
   set_nbit( 8 * sizeof(float) );
+
+  shape_changed = true;
 }
   
 dsp::DataSeries::DataSeries (const DataSeries& ms)
@@ -80,7 +82,27 @@ void dsp::DataSeries::set_ndim (uint64_t _ndim)
                 "ndat="UI64" * ndim=%d * nbit=%d yields non-integer bytes",
                 get_ndat(), _ndim, get_nbit()); 
 
+  bool dim_shape_changed = (_ndim != get_ndim());
+  shape_changed |= dim_shape_changed;
   Observation::set_ndim( unsigned(_ndim) );
+}
+
+//! checks for change in npol
+void dsp::DataSeries::set_npol (uint64_t _npol)
+{
+  bool pol_shape_changed = (_npol != get_npol());
+  shape_changed |= pol_shape_changed;
+
+  Observation::set_npol( unsigned(_npol) );
+}
+
+//! checks for change in nchan
+void dsp::DataSeries::set_nchan (uint64_t _nchan)
+{
+  bool chan_shape_changed = (_nchan != get_nchan());
+  shape_changed |= chan_shape_changed;
+
+  Observation::set_nchan( unsigned(_nchan) );
 }
 
 //! Allocate the space required to store nsamples time samples.
@@ -103,6 +125,25 @@ void dsp::DataSeries::resize (uint64_t nsamples)
 }
 
 #define INTERACTIVE_MEMORY 0
+
+uint64_t dsp::DataSeries::get_ndat_allocated()
+{
+  uint64_t nval = get_ndim() * get_npol() * get_nchan ();
+  uint64_t bytes_per_dat = (get_nbit() * nval) / 8;
+  if (bytes_per_dat == 0)
+    throw Error (InvalidParam, "dsp::DataSeries::get_ndat_allocated",
+                 "bytes_per_dat==0");
+  uint64_t allocated_ndat = size / bytes_per_dat;
+
+  if (verbose)
+    cerr << "dsp::DataSeries::get_ndat_allocated " << " size=" << size
+         << " nval=" << nval << " bytes_per_dat=" << bytes_per_dat
+         << " subsize=" << subsize << " allocated_ndat=" << allocated_ndat
+         << endl;
+
+  return allocated_ndat;
+}
+
 
 void dsp::DataSeries::resize (uint64_t nsamples, unsigned char*& old_buffer)
 {
@@ -202,6 +243,7 @@ void dsp::DataSeries::zero ()
 void dsp::DataSeries::reshape ()
 {
   subsize = (get_ndim() * get_ndat() * get_nbit()) / 8;
+  shape_changed = false;
   
   if (subsize*get_npol()*get_nchan() > size)
     throw Error (InvalidState, "dsp::DataSeries::reshape",
@@ -342,5 +384,22 @@ void dsp::DataSeries::internal_match (const DataSeries* other)
 
   subsize = other->subsize;
   copy_dimensions( other );
+}
+
+void dsp::DataSeries::copy_configuration (const Observation* copy)
+{
+  if( copy==this )
+    return;
+
+  // check if shape changes are required
+  set_ndim (copy->get_ndim());
+  set_npol (copy->get_npol());
+  set_nchan (copy->get_nchan());
+
+  Observation::operator=( *copy );
+
+  if (verbose)
+    cerr << "dsp::Dataseries::copy_configuration ndat=" << get_ndat()
+         << endl;
 }
 

@@ -10,8 +10,8 @@
 #define __baseband_cuda_ConvolutionSpectral_h
 
 #include <cufft.h>
-#include <config.h>
 
+#include "config.h"
 #include "dsp/Convolution.h"
 #include "dsp/LaunchConfig.h"
 
@@ -36,7 +36,7 @@ namespace CUDA
     void setup_kernel (const dsp::Response * response);
 
     //! configure batched FFT
-    void setup_batched (const dsp::TimeSeries* input, dsp::TimeSeries * output, unsigned npart);
+    void setup_batched (const dsp::TimeSeries* input, dsp::TimeSeries * output);
 
     void perform (const dsp::TimeSeries* input, dsp::TimeSeries* output,
                   unsigned npart);
@@ -104,7 +104,9 @@ namespace CUDA
     unsigned nfilt_neg;
 
 #if HAVE_CUFFT_CALLBACKS
-		unsigned h_conv_params[2];
+    unsigned * h_conv_params;
+
+    size_t h_conv_params_size;
 #endif
 
   };

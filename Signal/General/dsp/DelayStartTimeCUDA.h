@@ -6,29 +6,27 @@
  *
  ***************************************************************************/
 
-#ifndef __baseband_cuda_SampleDelay_h
-#define __baseband_cuda_SampleDelay_h
+#ifndef __baseband_cuda_DelayStartTime_h
+#define __baseband_cuda_DelayStartTime_h
 
-#include "dsp/SampleDelay.h"
-#include "dsp/SampleDelayFunction.h"
+#include "dsp/DelayStartTime.h"
 
 #include <cuda_runtime.h>
 
 namespace CUDA
 {
-  class SampleDelayEngine : public dsp::SampleDelay::Engine
+  class DelayStartTimeEngine : public dsp::DelayStartTime::Engine
   {
   public:
 
     //! Default Constructor
-    SampleDelayEngine (cudaStream_t stream);
+    DelayStartTimeEngine (cudaStream_t stream);
 
-    ~SampleDelayEngine ();
+    ~DelayStartTimeEngine ();
 
-    void set_delays (unsigned npol, unsigned nchan, int64_t zero_delay,
-                     dsp::SampleDelayFunction * function);
+    void set_delays (unsigned npol, unsigned nchan, int64_t delay_samples);
 
-    void retard (const dsp::TimeSeries* in, dsp::TimeSeries* out, uint64_t output_ndat);
+    void delay (const dsp::TimeSeries* in, dsp::TimeSeries* out, uint64_t output_ndat, int64_t delay_samples);
 
   protected:
 
@@ -48,3 +46,4 @@ namespace CUDA
 }
 
 #endif
+
