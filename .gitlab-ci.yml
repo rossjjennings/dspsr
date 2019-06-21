@@ -6,6 +6,8 @@ build:
   tags:
     - dspsr-build
   script:
+    - echo $LD_LIBRARY_FLAGS
+    - echo $PATH
     - ./bootstrap
     - ./configure --enable-shared
     - make
