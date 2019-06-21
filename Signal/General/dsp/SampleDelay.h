@@ -80,11 +80,7 @@ namespace dsp {
 
     virtual void set_delays (unsigned npol, unsigned nchan, int64_t zero_delay, SampleDelayFunction * function) = 0;
 
-<<<<<<< HEAD
-    virtual void retard(const TimeSeries* in, TimeSeries* out) = 0;
-=======
     virtual void retard(const TimeSeries* in, TimeSeries* out, uint64_t output_ndat) = 0;
->>>>>>> master
 
   };
 
