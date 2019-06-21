@@ -67,7 +67,7 @@ void dsp::TScrunch::set_engine( Engine* _engine )
   engine = _engine;
 }
 
-// Prepare all relevant attributes
+// Initial preparation of relevant attributes
 void dsp::TScrunch::prepare ()
 {
   sfactor = get_factor();
@@ -84,11 +84,15 @@ void dsp::TScrunch::prepare ()
   if (verbose)
     cerr << "dsp::TScrunch::prepare prepare_output()" << endl;
   prepare_output ();
+
+  prepared = true;
 }
 
 // reserve the maximum required output space
 void dsp::TScrunch::reserve ()
 {
+  output_ndat = get_input()->get_ndat() / sfactor;
+
   prepare_output();
 
   if (verbose)
@@ -103,23 +107,17 @@ void dsp::TScrunch::reserve ()
 // preapre the output TimeSeries
 void dsp::TScrunch::prepare_output ()
 {
-  sfactor = get_factor();
-  output_ndat = get_input()->get_ndat() / sfactor;
-
   if (input.get() != output.get())
   {
     if (verbose)
       cerr << "dsp::TScrunch::prepare_output copying configuration" << endl;
     get_output()->copy_configuration (get_input());
-
-    // this is necessary if we buffer further down the line otherwise, samples are misaligned
-    get_output()->set_input_sample (get_input()->get_input_sample() / sfactor);
   }
 
+  // this is necessary if we buffer further down the line otherwise, samples are misaligned
+  get_output()->set_input_sample (get_input()->get_input_sample() / sfactor);
   output->rescale (sfactor);
   output->set_rate (input->get_rate() / sfactor);
-  if (verbose)
-    cerr << "dsp::TScrunch::prepare_output done" << endl;
 }
 
 void dsp::TScrunch::transformation ()
@@ -127,7 +125,8 @@ void dsp::TScrunch::transformation ()
   if (verbose)
     cerr << "dsp::TScrunch::transformation" << endl;
 
-  prepare ();
+  if (!prepared)
+    prepare ();
 
   // ensure the output TimeSeries is large enough
   reserve ();
@@ -176,7 +175,7 @@ void dsp::TScrunch::transformation ()
   }
 
   if( input.get() == output.get() )
-    output->set_ndat( input->get_ndat()/sfactor );
+    output->set_ndat( output_ndat );
 }
 
 void dsp::TScrunch::fpt_tscrunch ()
