@@ -1,0 +1,12 @@
+stages:
+  - build
+
+build:
+  stage: build
+  tags:
+    - dspsr-build
+  script:
+    - ./bootstrap
+    - ./configure --enable-shared
+    - make
+    - make install
