@@ -9,6 +9,6 @@ build:
     - echo $LD_LIBRARY_FLAGS
     - echo $PATH
     - ./bootstrap
-    - ./configure --enable-shared
+    - echo "apsr bpsr cpsr2 caspsr mopsr sigproc dada" > backends.list && ./configure --enable-shared
     - make
     - make install
