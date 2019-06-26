@@ -18,4 +18,11 @@ test_Apodization_SOURCES = test_Apodization.C
 test_InverseFilterbankConfig_SOURCES = test_InverseFilterbankConfig.C
 test_InverseFilterbankPipeline_SOURCES = test_InverseFilterbankPipeline.C
 
+
+if HAVE_CUFFT
+  bin_PROGRAMS += test_InverseFilterbankEngineCUDA
+  test_InverseFilterbankEngineCUDA_SOURCES = test_InverseFilterbankEngineCUDA.cu
+endif
+
+
 include $(top_srcdir)/config/Makefile.local

@@ -134,5 +134,11 @@ config/lt~obsolete.m4
 /deviceQuery.txt
 /callgrind*
 /.cproject
-test/test_Apodization
 test/test_FIRFilter
+test/test_Apodization
+test/test_InverseFilterbank
+test/test_InverseFilterbankConfig
+test/test_InverseFilterbankPipeline
+test/test_InverseFilterbankResponse
+test/test_InverseFilterbankEngineCUDA
+*.ar
