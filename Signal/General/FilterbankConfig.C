@@ -53,7 +53,7 @@ dsp::Filterbank* dsp::Filterbank::Config::create ()
   {
     cudaStream_t cuda_stream = reinterpret_cast<cudaStream_t>( stream );
 
-    filterbank->set_engine (new CUDA::FilterbankEngineCUDA (cuda_stream));
+    filterbank->set_engine (new CUDA::FilterbankEngine (cuda_stream));
 
     Scratch* gpu_scratch = new Scratch;
     gpu_scratch->set_memory (device_memory);
