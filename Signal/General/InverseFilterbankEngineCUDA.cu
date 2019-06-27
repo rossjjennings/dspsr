@@ -19,7 +19,7 @@
  * \param t_out the output data array pointer
  * \param discard the overlap discard region, in *complex samples*
  */
-__global__ k_apodization_overlap (
+__global__ void k_apodization_overlap (
   float2* t_in,
   float2* apodization,
   float2* t_out,
@@ -45,7 +45,7 @@ __global__ k_apodization_overlap (
  * \param oversampled_discard tthe number of *complex samples* to discard
  *    from either side of the input spectra.
  */
-__global__ k_response_stitch (
+__global__ void k_response_stitch (
   float2* f_in,
   float2* response,
   float2* f_out,
@@ -61,7 +61,7 @@ __global__ k_response_stitch (
  * \param t_out output time domain pointer
  * \param discard discard region on output data.
  */
-__global__ k_overlap (
+__global__ void k_overlap (
   float2* t_in,
   float2* t_out,
   int discard
@@ -69,7 +69,7 @@ __global__ k_overlap (
 { }
 
 
-CUDA::InverseFilterbankEngineCUDA::InverseFilterbankEngineCUDA ()
+CUDA::InverseFilterbankEngineCUDA::InverseFilterbankEngineCUDA (cudaStream_t stream)
 { }
 
 CUDA::InverseFilterbankEngineCUDA::~InverseFilterbankEngineCUDA ()

@@ -9,8 +9,8 @@
 
 // dspsr/Signal/General/dsp/FilterbankCUDA.h
 
-#ifndef __FilterbankEngine_h
-#define __FilterbankEngine_h
+#ifndef __FilterbankEngineCUDA_h
+#define __FilterbankEngineCUDA_h
 
 #include "dsp/FilterbankEngine.h"
 #include "dsp/LaunchConfig.h"
