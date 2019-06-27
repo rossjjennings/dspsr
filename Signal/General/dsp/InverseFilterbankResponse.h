@@ -73,21 +73,22 @@ namespace dsp {
 
     //! Get oversampling ratio
     const Rational& get_oversampling_factor () {return oversampling_factor; }
-    
+
     //! Set the size of the input overlap discard region
     void set_input_overlap (unsigned n) { input_overlap = n; }
 
     //! Set the size of the input overlap discard region
     unsigned get_input_overlap () const { return input_overlap; }
 
-  protected:
-
-    //! Roll array `arr` by `shift` number of points
+    //! Roll vector `arr` by `shift` number of points
     template<typename T>
     void roll (std::vector<T>& arr, int shift);
 
+    //! Roll array `arr` of length `len` by `shift` number of points
     template<typename T>
     void roll (T* arr, unsigned len, int shift);
+
+  protected:
 
     //! FIR filter that contains time domain filter coefficients
     FIRFilter fir_filter;
@@ -124,29 +125,29 @@ void dsp::InverseFilterbankResponse::roll (T* buffer, unsigned len, int shift) {
       << " shift=" << shift
       << std::endl;
   }
-	unsigned abs_shift = static_cast<unsigned>(abs(shift));
+  unsigned abs_shift = static_cast<unsigned>(abs(shift));
   T* scratch = new T[abs_shift];
 
-	if (shift == 0) {
-		return;
-	}
-	if (shift > 0) {
-		std::memcpy(scratch, buffer + len - abs_shift, abs_shift*sizeof(T));
-		std::memcpy(buffer + abs_shift, buffer, (len - abs_shift)*sizeof(T));
-		std::memcpy(buffer, scratch, abs_shift*sizeof(T));
-	} else {
-		std::memcpy(scratch, buffer, abs_shift*sizeof(T));
-		std::memcpy(buffer, buffer + abs_shift, (len - abs_shift)*sizeof(T));
-		std::memcpy(buffer + len - abs_shift, scratch, abs_shift*sizeof(T));
-	}
-	delete [] scratch;
+  if (shift == 0) {
+    return;
+  }
+  if (shift > 0) {
+    std::memcpy(scratch, buffer + len - abs_shift, abs_shift*sizeof(T));
+    std::memcpy(buffer + abs_shift, buffer, (len - abs_shift)*sizeof(T));
+    std::memcpy(buffer, scratch, abs_shift*sizeof(T));
+  } else {
+    std::memcpy(scratch, buffer, abs_shift*sizeof(T));
+    std::memcpy(buffer, buffer + abs_shift, (len - abs_shift)*sizeof(T));
+    std::memcpy(buffer + len - abs_shift, scratch, abs_shift*sizeof(T));
+  }
+  delete [] scratch;
 }
 
 template<typename T>
 void dsp::InverseFilterbankResponse::roll (std::vector<T>& arr, int shift) {
-	unsigned len = arr.size();
-	T* buffer = arr.data();
-	roll<T> (buffer, len, shift);
+  unsigned len = arr.size();
+  T* buffer = arr.data();
+  roll<T> (buffer, len, shift);
 }
 
 #endif

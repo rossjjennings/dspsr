@@ -228,12 +228,14 @@ void dsp::InverseFilterbankEngineCPU::perform (
   // std::ofstream deripple_after_file("deripple.after.dat", std::ios::out | std::ios::binary);
 
   if (verbose) {
-    std::cerr << "dsp::InverseFilterbankEngineCPU::perform: fft_window.get_type() "
-      << fft_window->get_type() << std::endl;
-    std::cerr << "dsp::InverseFilterbankEngineCPU::perform: fft_window.get_ndim() "
-      << fft_window->get_ndim() << std::endl;
-    std::cerr << "dsp::InverseFilterbankEngineCPU::perform: fft_window.get_ndat() "
-      << fft_window->get_ndat() << std::endl;
+    if (fft_window) {
+      std::cerr << "dsp::InverseFilterbankEngineCPU::perform: fft_window.get_type() "
+        << fft_window->get_type() << std::endl;
+      std::cerr << "dsp::InverseFilterbankEngineCPU::perform: fft_window.get_ndim() "
+        << fft_window->get_ndim() << std::endl;
+      std::cerr << "dsp::InverseFilterbankEngineCPU::perform: fft_window.get_ndat() "
+        << fft_window->get_ndat() << std::endl;
+    }
     std::cerr << "dsp::InverseFilterbankEngineCPU::perform: output_nchan="
       << output_nchan << std::endl;
     std::cerr << "dsp::InverseFilterbankEngineCPU::perform:"
@@ -335,9 +337,9 @@ void dsp::InverseFilterbankEngineCPU::perform (
         output_freq_dom_ptr = stitch_scratch;
         for (unsigned output_ichan=0; output_ichan<output_nchan; output_ichan++) {
 
-          std::cerr << "dsp::InverseFilterbankEngineCPU::perform: before fft" << std::endl;
+          // std::cerr << "dsp::InverseFilterbankEngineCPU::perform: before fft" << std::endl;
           backward->bcc1d(output_fft_length, output_fft_scratch, output_freq_dom_ptr);
-          std::cerr << "dsp::InverseFilterbankEngineCPU::perform: after fft" << std::endl;
+          // std::cerr << "dsp::InverseFilterbankEngineCPU::perform: after fft" << std::endl;
           // ifft_file.write(
           //   reinterpret_cast<const char*>(output_fft_scratch),
           //   output_fft_length*sizeof_complex
@@ -351,7 +353,7 @@ void dsp::InverseFilterbankEngineCPU::perform (
               ipart*output_sample_step*floats_per_complex);
           std::memcpy(destinationPtr, sourcePtr, output_sample_step*sizeof_complex);
           output_freq_dom_ptr += output_fft_length*n_dims;
-          std::cerr << "dsp::InverseFilterbankEngineCPU::perform: after copy" << std::endl;
+          // std::cerr << "dsp::InverseFilterbankEngineCPU::perform: after copy" << std::endl;
           // out_file.write(
           //   reinterpret_cast<const char*>(destinationPtr),
           //   output_sample_step*sizeof_complex

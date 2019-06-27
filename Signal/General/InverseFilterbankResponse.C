@@ -124,6 +124,9 @@ void dsp::InverseFilterbankResponse::build ()
     int shift_bins_pos =  static_cast<int>(ndat) + shift_bins/static_cast<int>(ndim);
     roll<std::complex<float>>(phasors, ndat, shift_bins_pos);
   }
+  if (verbose) {
+    std::cerr << "dsp::InverseFilterbankResponse::build: done" << std::endl;
+  }
 
 
   built = true;
@@ -216,7 +219,7 @@ void dsp::InverseFilterbankResponse::match (const Observation* obs, unsigned cha
   input_nchan = obs->get_nchan();
   oversampling_factor = obs->get_oversampling_factor();
 
-  if (!built && ndat > 1) {
+  if (!built && ndat>1) {
     impulse_pos = input_overlap;
     impulse_neg = input_overlap;
 

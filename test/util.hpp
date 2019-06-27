@@ -20,42 +20,15 @@ namespace util {
   template<typename T>
   void load_binary_data (std::string file_path, std::vector<T>& test_data);
 
-  class TestDataLoader {
-    public:
-      void setup_class () {}
-      void teardown_class () {}
-      void setup ();
-      void teardown () {}
+  template<typename T>
+  void write_binary_data (std::string file_path, std::vector<T>& data);
 
-      void set_verbose (bool verbosity) ;
+  template<typename T>
+  void write_binary_data (std::string file_path, T* buffer, int len);
 
-      void set_test_data_file_path (std::string _test_data_file_path)
-        { test_data_file_path = _test_data_file_path; }
+  void load_psr_data (dsp::IOManager manager, int block_size, dsp::TimeSeries* ts);
 
-      std::string get_test_data_file_path () { return test_data_file_path; }
-
-    protected:
-
-      void load_data (dsp::TimeSeries* ts, int block_size);
-
-      dsp::IOManager manager ;
-      dsp::Input* input;
-      dsp::Observation* info;
-      std::string test_data_file_path;
-
-    };
-
-    template<class T>
-    class TestRunner {
-      public:
-        TestRunner () {}
-        void register_test_method (void (T::*x)());
-        void run (T& obj);
-      private:
-        std::vector<void (T::*)()> test_methods;
-    };
-
-
+  void set_verbose (bool val);
 }
 
 template<typename T>
@@ -83,11 +56,28 @@ void util::load_binary_data (std::string file_path, std::vector<T>& test_data)
   }
 }
 
+template<typename T>
+void util::write_binary_data (std::string file_path, std::vector<T> buffer)
+{
+  util::write_binary_data(file_path, buffer.data(), buffer.size());
+}
+
+template<typename T>
+void util::write_binary_data (std::string file_path, T* buffer, int len)
+{
+  std::ofstream file(file_path, std::ios::out | std::ios::binary);
+
+  file.write(
+    reinterpret_cast<const char*>(buffer),
+    len*sizeof(T)
+  );
+  file.close();
+}
 
 template<typename T>
 bool util::compare_test_data (T* a, T* b, int size, T atol, T rtol)
 {
-  bool ret;
+  bool ret = true;
   bool val;
   for (int i=0; i<size; i++) {
     val = util::isclose(a[i], b[i], atol, rtol);
@@ -99,62 +89,10 @@ bool util::compare_test_data (T* a, T* b, int size, T atol, T rtol)
   return ret;
 }
 
-
-
 template<typename T>
 bool util::isclose (T a, T b, T atol, T rtol)
 {
   return abs(a - b) <= (atol + rtol * abs(b));
 }
-
-
-
-void util::TestDataLoader::load_data (dsp::TimeSeries* ts, int block_size)
-{
-	// std::cerr << "util::TestDataLoader::load_data" << std::endl;
-	input->set_block_size(block_size);
-	while (! manager.get_input()->eod()) {
-		manager.load(ts);
-	}
-}
-
-
-void util::TestDataLoader::setup () {
-  dsp::IOManager _manager;
-  _manager.open(test_data_file_path);
-  dsp::Input* _input = _manager.get_input();
-  dsp::Observation* _info = _input->get_info();
-
-  manager = _manager;
-  input = _input;
-  info = _info;
-}
-
-
-void util::TestDataLoader::set_verbose (bool verbosity)
-{
-  dsp::Input::verbose = verbosity;
-  dsp::Operation::verbose = verbosity;
-  dsp::Shape::verbose = verbosity;
-}
-
-template<class T>
-void util::TestRunner<T>::register_test_method (void (T::*x)())
-{
-  test_methods.push_back(x);
-}
-
-template<class T>
-void util::TestRunner<T>::run (T& obj)
-{
-  obj.setup_class();
-  for (unsigned i=0; i<test_methods.size(); i++) {
-    obj.setup();
-    (obj.*test_methods[i])();
-    obj.teardown();
-  }
-  obj.teardown_class();
-}
-
 
 #endif

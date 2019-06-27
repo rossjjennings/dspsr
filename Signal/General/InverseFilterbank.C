@@ -209,18 +209,25 @@ void dsp::InverseFilterbank::make_preparations ()
 
     std::cerr << "dsp::InverseFilterbank::make_preparations: freq_res="
       << freq_res << std::endl;
-    std::cerr << "dsp::InverseFilterbank::make_preparations: creating FFT window" << std::endl;
   }
 
-  dsp::Apodization* fft_window = get_apodization();
-  dsp::Apodization::Type fft_window_type = dsp::Apodization::type_map[fft_window_str];
-  fft_window->set_shape(
+  if (has_apodization()) {
+    if (verbose) {
+      std::cerr << "dsp::InverseFilterbank::make_preparations: creating FFT window" << std::endl;
+      std::cerr << "dsp::InverseFilterbank::make_preparations: fft_window_str=" << fft_window_str << std::endl;
+    }
+
+    dsp::Apodization* fft_window = get_apodization();
+    dsp::Apodization::Type fft_window_type = dsp::Apodization::type_map[fft_window_str];
+    fft_window->set_shape(
       input_fft_length,
       fft_window_type,
       true,
       input_discard_pos,
       0
-  );
+    );
+  }
+
 
   if (verbose) {
     cerr << "dsp::InverseFilterbank::make_preparations: done optimizing fft lengths and discard regions" << endl;
