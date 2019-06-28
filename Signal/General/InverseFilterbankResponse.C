@@ -4,6 +4,8 @@
  *   Licensed under the Academic Free License version 2.1
  *
  ***************************************************************************/
+#include "FTransform.h"
+
 #include "dsp/InverseFilterbankResponse.h"
 #include "dsp/Observation.h"
 #include "dsp/OptimalFFT.h"

@@ -15,6 +15,7 @@
 
 #include "dsp/Response.h"
 #include "dsp/FIRFilter.h"
+#include "FTransformAgent.h"
 
 namespace dsp {
   class InverseFilterbankResponse : public Response {
