@@ -19,11 +19,11 @@ _dspsr_la_LIBADD = \
 SWIG_FLAGS = -Wall -python -I$(top_builddir)/local_include @PSRCHIVE_INCLUDE@
 
 dspsr_wrap.cxx: $(srcdir)/dspsr.i
-	$(SWIG) $(SWIG_FLAGS) $(srcdir)/dspsr.i
-
+	$(SWIG) $(SWIG_FLAGS) -outdir $(builddir) $(srcdir)/dspsr.i
+ 
 CLEANFILES = dspsr.py dspsr.pyc dspsr_wrap.cxx
 
 #############################################################################
 #
 
-AM_CPPFLAGS = @SWIG_PYTHON_CPPFLAGS@ -I$(top_builddir)/local_include @PSRCHIVE_CFLAGS@
+AM_CPPFLAGS = @SWIG_PYTHON_CPPFLAGS@ -I$(top_builddir)/local_include @PSRCHIVE_CPPFLAGS@

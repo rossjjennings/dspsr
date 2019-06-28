@@ -150,7 +150,7 @@ template class dsp::Transformation<dsp::TimeSeries, dsp::TimeSeries>;
 %include "dsp/BitSeries.h"
 %include "dsp/TimeSeries.h"
 // Detection::Engine is screwing this up...
-%include "dsp/Detection.h"
+/* %include "dsp/Detection.h" */
 %include "dsp/Dedispersion.h"
 %include "dsp/Response.h"
 /* %include "dsp/InverseFilterbank.h" */
