@@ -1,8 +1,8 @@
-AM_CPPFLAGS = -I$(top_srcdir)/local_include
-LDADD = $(top_srcdir)/Signal/Pulsar/libdspsr.la \
-        $(top_srcdir)/Signal/General/libdspdsp.la \
-        $(top_srcdir)/Signal/Statistics/libdspstats.la \
-        $(top_srcdir)/Kernel/libdspbase.la
+AM_CPPFLAGS = -I$(top_builddir)/local_include
+LDADD = $(top_builddir)/Signal/Pulsar/libdspsr.la \
+        $(top_builddir)/Signal/General/libdspdsp.la \
+        $(top_builddir)/Signal/Statistics/libdspstats.la \
+        $(top_builddir)/Kernel/libdspbase.la
 
 bin_PROGRAMS = test_main
 
