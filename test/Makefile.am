@@ -1,4 +1,7 @@
-AM_CPPFLAGS = -I$(top_builddir)/local_include
+include $(top_srcdir)/config/Makefile.local
+include $(top_srcdir)/config/Makefile.cuda
+
+AM_CPPFLAGS = -I$(top_builddir)/local_include @PSRCHIVE_CFLAGS@
 LDADD = $(top_builddir)/Signal/Pulsar/libdspsr.la \
         $(top_builddir)/Signal/General/libdspdsp.la \
         $(top_builddir)/Signal/Statistics/libdspstats.la \
@@ -18,5 +21,3 @@ test_main_SOURCES = test_main.C \
 if HAVE_CUFFT
   test_main_SOURCES += test_InverseFilterbankEngineCUDA.cu
 endif
-
-include $(top_srcdir)/config/Makefile.local
