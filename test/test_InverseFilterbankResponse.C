@@ -18,7 +18,7 @@
 
 #include "util.hpp"
 
-const std::string file_path = "/home/SWIN/dshaff/ska/test_data/fir.768.dada";
+const std::string file_path = util::get_test_data_dir() + "/fir.768.dada";
 
 const unsigned ntaps_expected = 81;
 const unsigned input_fft_length = 128;
@@ -47,7 +47,7 @@ TEST_CASE("InverseFilterbankResponse attributes can be manipulated", "[InverseFi
 
 TEST_CASE ("InverseFilterbankResponse roll should produce expected result", "[InverseFilterbankResponse]")
 {
-  
+
 }
 
 

@@ -18,7 +18,7 @@
 
 #include "util.hpp"
 
-const std::string file_path = "/home/SWIN/dshaff/ska/test_data/channelized.simulated_pulsar.noise_0.0.nseries_3.ndim_2.dump";
+const std::string file_path = util::get_test_data_dir() + "/channelized.simulated_pulsar.noise_0.0.nseries_3.ndim_2.dump";
 const unsigned block_size = 699048; // this is taken from dspsr logs
 const double dm = 2.64476;
 const unsigned freq_res = 1024;

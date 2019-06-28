@@ -29,6 +29,8 @@ namespace util {
   void load_psr_data (dsp::IOManager manager, int block_size, dsp::TimeSeries* ts);
 
   void set_verbose (bool val);
+
+  std::string get_test_data_dir ();
 }
 
 template<typename T>
