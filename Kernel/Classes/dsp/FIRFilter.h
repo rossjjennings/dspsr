@@ -13,7 +13,6 @@
 
 #include <vector>
 #include "Rational.h"
-#include "FTransformAgent.h"
 
 namespace dsp {
   class FIRFilter  {
