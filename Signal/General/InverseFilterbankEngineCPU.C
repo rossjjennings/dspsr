@@ -92,6 +92,7 @@ double dsp::InverseFilterbankEngineCPU::setup_fft_plans (
   }
 
   // Compute FFT scale factors
+  scalefac = 1.0;
   if (FTransform::get_norm() == FTransform::unnormalized) {
     scalefac = pow(double(output_fft_length), 2);
     scalefac *= pow(filterbank->get_oversampling_factor().doubleValue(), 2);

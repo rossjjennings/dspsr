@@ -29,16 +29,17 @@ namespace CUDA
     cudaEvent_t after;
   };
 
-  //! Discrete convolution filterbank step implemented using CUDA streams
+  //! FFT based PFB inversion implemented using CUDA streams.
   class InverseFilterbankEngineCUDA : public dsp::InverseFilterbank::Engine
   {
     unsigned nstream;
 
   public:
 
-    //! Default Constructor
+    //! Default Constructor. This also allocates memory for cuFFT plans
     InverseFilterbankEngineCUDA (cudaStream_t stream);
 
+    //! Default Destructor. This frees up cuFFT plan memory.
     ~InverseFilterbankEngineCUDA ();
 
     //! Use the parent `InverseFilterbank` object to set properties used in the
@@ -52,14 +53,31 @@ namespace CUDA
     //! Setup scratch space used in the `perform` member function.
     void set_scratch (float *);
 
+    //! Implements FFT based PFB inversion algorithm using the GPU.
     void perform (const dsp::TimeSeries* in, dsp::TimeSeries* out,
                   uint64_t npart, uint64_t in_step, uint64_t out_step);
 
     //! Get the scaling factor that will correctly scale the result of the
-    //! backward FFT used in `perform`
+    //! backward FFT used in `perform`.
     double get_scalefac() const {return scalefac;}
 
+    //! Do any actions to clean up after `perform`.
     void finish ();
+
+    //! Apply the k_apodization_overlap kernel to some data.
+    //! This function copies arrays from host to device, so it is not intended
+    //! to be performant.
+    //! \param in input array buffer
+    //! \param apodization time domain windowing function, as float buffer
+    //! \param out output array buffer
+    //! \param discard the size of the discard region, in complex samples
+    //! \param size the size of the input array buffer, in complex samples
+    static void apply_k_apodization_overlap (
+      std::complex<float>* in,
+      std::complex<float>* apodization,
+      std::complex<float>* out,
+      int discard,
+      int size);
 
   protected:
 
@@ -69,13 +87,16 @@ namespace CUDA
     //! backward fft plan
     cufftHandle backward;
 
+    //! The type of the forward FFT. The backward plan is always complex to complex.
+    cufftType type_forward;
+
     //! Complex-valued data
     bool real_to_complex;
 
     //! inplace FFT in CUDA memory
     float2* d_fft;
 
-    //! convolution kernel in CUDA memory
+    //! response or response product in CUDA memory
     float2* d_kernel;
 
     //! device scratch sapce
