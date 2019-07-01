@@ -211,9 +211,9 @@ static void CUDA::InverseFilterbankEngineCUDA::apply_k_apodization_overlap (
   int discard,
   int size)
 {
-  std::complex<float>* in_device;
-  std::complex<float>* apod_device;
-  std::complex<float>* out_device;
+  float2* in_device;
+  float2* apod_device;
+  float2* out_device;
 
   size_t sz = sizeof(std::complex<float>);
 
@@ -221,8 +221,8 @@ static void CUDA::InverseFilterbankEngineCUDA::apply_k_apodization_overlap (
   cudaMalloc((void **), &apod_device, (size - 2*discard)*sz);
   cudaMalloc((void **), &out_device, (size - 2*discard)*sz);
 
-  cudaMemcpy(in_device, in, size, cudaMemcpyHostToDevice);
-  cudaMemcpy(apod_device, apod, size, cudaMemcpyHostToDevice);
+  cudaMemcpy(in_device, static_cast<float2*>(in), size, cudaMemcpyHostToDevice);
+  cudaMemcpy(apod_device, static_cast<float2*>(apod), size, cudaMemcpyHostToDevice);
 
   int threads = 1024;
   int blocks = 10;
@@ -230,7 +230,7 @@ static void CUDA::InverseFilterbankEngineCUDA::apply_k_apodization_overlap (
   k_apodization_overlap<<<blocks, threads>>>(
     in_device, apod_device, out_device, discard, size);
 
-  cudaMemcpy(out, out_device, (size - 2*discard)*sz);
+  cudaMemcpy(out, static_cast<float2*>(out_device), (size - 2*discard)*sz);
 
   cudaFree(in_device);
   cudaFree(apod_device);
