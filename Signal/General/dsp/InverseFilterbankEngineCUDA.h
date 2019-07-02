@@ -108,6 +108,23 @@ namespace CUDA
       bool pfb_dc_chan,
       bool pfb_all_chan);
 
+    //! Apply the k_overlap_discard kernel to some data.
+    //! This function copies arrays from host to device, so it is not intended
+    //! to be performant.
+    //! \param in input array buffer
+    //! \param in_dim dimensions of in array
+    //! \param out output array buffer
+    //! \param out_dim dimensions of out array
+    //! \param discard number of samples to discard from either side of each
+    //!     channel
+    static void apply_k_overlap_discard (
+      std::vector<std::complex<float>>& in,
+      dim3 in_dim,
+      std::vector<std::complex<float>>& out,
+      dim3 out_dim,
+      int discard
+    );
+
   protected:
 
     //! forward fft plan

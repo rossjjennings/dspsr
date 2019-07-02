@@ -143,18 +143,41 @@ __global__ void k_response_stitch (
 
 /*!
  * Kernel for discarding overlap regions on output time domain data.
- * \method k_overlap
+ * \method k_overlap_discard
  * \param t_in input time domain pointer
  * \param t_out output time domain pointer
  * \param discard discard region on output data.
+ * \param t_in_dim the dimensions of t_in. should be two dimensional
  */
-__global__ void k_overlap (
+__global__ void k_overlap_discard (
   float2* t_in,
   float2* t_out,
-  int discard
+  int discard,
+  dim3 t_in_dim
 )
 {
+  int total_size_x = blockDim.x * gridDim.x; // for idat
+  int total_size_y = blockDim.y;
 
+  int idx = blockIdx.x*blockDim.x + threadIdx.x;
+  int idy = blockIdx.y;
+
+  if (idy > t_in_dim.x || idx > t_in_dim.y - discard) {
+    return;
+  }
+
+  int t_out_ndat = t_in_dim.y - 2*discard;
+  float2 val;
+  for (int ichan=idy; ichan < t_in_dim.x; ichan += total_size_y) {
+    for (int idat=idx; idat < t_in_dim.y - discard; idat += total_size_x) {
+      if (idat < discard) {
+        continue;
+      }
+      val = t_in[ichan*t_in_dim.y + idat];
+      // printf("ichan=%d, idat=%d, t_in=(%f, %f)\n", ichan, idat, val.x, val.y);
+      t_out[ichan*t_out_ndat + (idat - discard)] = t_in[ichan*t_in_dim.y + idat];
+    }
+  }
 }
 
 CUDA::InverseFilterbankEngineCUDA::InverseFilterbankEngineCUDA (cudaStream_t _stream)
@@ -356,5 +379,42 @@ void CUDA::InverseFilterbankEngineCUDA::apply_k_apodization_overlap (
 
   cudaFree(in_device);
   cudaFree(apod_device);
+  cudaFree(out_device);
+}
+
+
+void CUDA::InverseFilterbankEngineCUDA::apply_k_overlap_discard (
+  std::vector<std::complex<float>>& in,
+  dim3 in_dim,
+  std::vector<std::complex<float>>& out,
+  dim3 out_dim,
+  int discard
+)
+{
+  float2* in_device;
+  float2* out_device;
+
+  size_t sz = sizeof(float2);
+
+  int in_size = in_dim.x * in_dim.y * in_dim.z;
+  int out_size = out_dim.x * out_dim.y * out_dim.z;
+
+  cudaMalloc((void **) &in_device, in_size*sz);
+  cudaMalloc((void **) &out_device, out_size*sz);
+
+  cudaMemcpy(
+    in_device, (float2*) in.data(), in_size*sz, cudaMemcpyHostToDevice);
+
+  // 10 is sort of arbitrary here.
+  dim3 grid (10, in_dim.y, 1);
+  dim3 threads (64, 1, 1);
+
+  dim3 in_dim_k(in_dim.x * in_dim.y, in_dim.z);
+
+  k_overlap_discard<<<grid, threads>>>(in_device, out_device, discard, in_dim_k);
+
+  cudaMemcpy((float2*) out.data(), out_device, out_size*sz, cudaMemcpyDeviceToHost);
+
+  cudaFree(in_device);
   cudaFree(out_device);
 }

@@ -4,7 +4,7 @@
 
 #include "catch.hpp"
 
-#include "util.hpp"
+#include "util.cuda.hpp"
 
 #include "Rational.h"
 #include "dsp/InverseFilterbankEngineCUDA.h"
@@ -116,5 +116,57 @@ TEST_CASE ("reponse stitch kernel should produce expected output", "")
 
 TEST_CASE ("output overlap discard kernel should produce expected output", "")
 {
+  int ndat = 10;
+  int nchan = 3;
+  int npol = 2;
+  int discard = 2;
 
+  dim3 in_dim(npol, nchan, ndat);
+  dim3 out_dim(npol, nchan, ndat - 2*discard);
+
+  // generate some data.
+  std::vector<std::complex<float>> in(
+    in_dim.x * in_dim.y * in_dim.z, std::complex<float>(0.0, 0.0));
+  std::vector<std::complex<float>> out(
+    out_dim.x * out_dim.y * out_dim.z, std::complex<float>(0.0, 0.0));
+
+  // fill up input data such that each time sample in each channel has the same value.
+  int in_idx;
+  float val;
+  for (int ipol=0; ipol<npol; ipol++) {
+    for (int ichan=0; ichan<nchan; ichan++) {
+      val = (ipol + 1) * (ichan + 1);
+      for (int idat=0; idat<ndat; idat++) {
+        in_idx = ipol*nchan*ndat + ichan*ndat + idat;
+        in[in_idx] = std::complex<float>(val, val);
+      }
+    }
+  }
+
+  // util::print_array(in, in_dim);
+
+  CUDA::InverseFilterbankEngineCUDA::apply_k_overlap_discard(
+    in, in_dim, out, out_dim, discard
+  );
+
+  // Now we have to check the output array -- every value should be double initial value
+  bool allclose = true;
+  std::complex<float> comp;
+  int out_idx;
+  for (int ipol=0; ipol<npol; ipol++) {
+    for (int ichan=0; ichan<nchan; ichan++) {
+      val = (ipol + 1) * (ichan + 1);
+      comp = std::complex<float>(val, val);
+      for (int idat=0; idat < out_dim.z; idat++) {
+        out_idx = ipol*nchan*out_dim.z + ichan*out_dim.z + idat;
+        if (out[out_idx] != comp) {
+          allclose = false;
+        }
+      }
+    }
+  }
+
+  // util::print_array(out, out_dim);
+
+  REQUIRE(allclose == true);
 }

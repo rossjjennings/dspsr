@@ -4,6 +4,7 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <complex>
 
 #include "dsp/IOManager.h"
 #include "dsp/Input.h"
@@ -26,11 +27,15 @@ namespace util {
   template<typename T>
   void write_binary_data (std::string file_path, T* buffer, int len);
 
+  template<typename T>
+  void print_array (std::vector<T>& arr, std::vector<int>& dim);
+
   void load_psr_data (dsp::IOManager manager, int block_size, dsp::TimeSeries* ts);
 
   void set_verbose (bool val);
 
   std::string get_test_data_dir ();
+
 }
 
 template<typename T>
@@ -95,6 +100,20 @@ template<typename T>
 bool util::isclose (T a, T b, T atol, T rtol)
 {
   return abs(a - b) <= (atol + rtol * abs(b));
+}
+
+template<typename T>
+void util::print_array (std::vector<T>& arr, std::vector<int>& dim)
+{
+  for (int i=0; i<dim[0]; i++) {
+    for (int j=0; j<dim[1]; j++) {
+      for (int k=0; k<dim[2]; k++) {
+        std::cerr << arr[i*dim[1]*dim[2] + j*dim[2] + k] << " ";
+      }
+      std::cerr << std::endl;
+    }
+    std::cerr << std::endl;
+  }
 }
 
 #endif
