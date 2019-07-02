@@ -30,6 +30,9 @@ namespace util {
   template<typename T>
   void print_array (std::vector<T>& arr, std::vector<int>& dim);
 
+  template<typename T>
+  void print_array (T* arr, std::vector<int>& dim);
+
   void load_psr_data (dsp::IOManager manager, int block_size, dsp::TimeSeries* ts);
 
   void set_verbose (bool val);
@@ -105,10 +108,26 @@ bool util::isclose (T a, T b, T atol, T rtol)
 template<typename T>
 void util::print_array (std::vector<T>& arr, std::vector<int>& dim)
 {
-  for (int i=0; i<dim[0]; i++) {
-    for (int j=0; j<dim[1]; j++) {
-      for (int k=0; k<dim[2]; k++) {
-        std::cerr << arr[i*dim[1]*dim[2] + j*dim[2] + k] << " ";
+  util::print_array<T>(arr.data(), dim);
+}
+
+template<typename T>
+void util::print_array (T* arr, std::vector<int>& dim)
+{
+  if (dim.size() > 2) {
+    int head_dim = dim[0];
+    std::vector<int> tail_dim(dim.begin() + 1, dim.end());
+    int stride = 1;
+    for (int d=0; d<dim.size() - 1; d++) {
+      stride *= dim[d];
+    }
+    for (int i=0; i<head_dim; i++) {
+      util::print_array<T>(arr + stride*i, tail_dim);
+    }
+  } else {
+    for (int i=0; i<dim[0]; i++) {
+      for (int j=0; j<dim[1]; j++) {
+        std::cerr << arr[i*dim[1] + j] << " ";
       }
       std::cerr << std::endl;
     }
