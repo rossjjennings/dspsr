@@ -71,13 +71,15 @@ namespace CUDA
     //! \param apodization time domain windowing function, as float buffer
     //! \param out output array buffer
     //! \param discard the size of the discard region, in complex samples
-    //! \param size the size of the input array buffer, in complex samples
+    //! \param ndat the size of the input array buffer, in complex samples
+    //! \param nchan the number of channels in the input array
     static void apply_k_apodization_overlap (
       std::complex<float>* in,
       std::complex<float>* apodization,
       std::complex<float>* out,
       int discard,
-      int size);
+      int ndat,
+      int nchan);
 
   protected:
 

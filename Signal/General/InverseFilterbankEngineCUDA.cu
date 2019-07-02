@@ -5,42 +5,63 @@
  *   Licensed under the Academic Free License version 2.1
  *
  ***************************************************************************/
-
-#include "dsp/InverseFilterbankEngineCUDA.h"
+#include <cstdio>
+#include <vector>
 
 #include <cuda_runtime.h>
 
-#include <vector>
+#include "CUFFTError.h"
+#include "dsp/InverseFilterbankEngineCUDA.h"
 
 
 /*!
  * Kernel for multiplying a time domain array by an apodization kernel,
  * removing any overlap discard regions in the process.
  * \method k_apodization_overlap
- * \param t_in the input data array pointer
+ * \param t_in the input data array pointer. The shape of the array should be
+ *    (nchan, ndat)
  * \param apodization the apodization kernel
  * \param t_out the output data array pointer
  * \param discard the overlap discard region, in *complex samples*
- * \param size the number of samples in t_in
+ * \param ndat the number of time samples in t_in
+ * \param nchan the number of channels in t_in
  */
 __global__ void k_apodization_overlap (
   float2* t_in,
   float2* apodization,
   float2* t_out,
   int discard,
-  int size
+  int ndat,
+  int nchan
 )
 {
-  int total_size = blockDim.x * gridDim.x;
+  int total_size_x = blockDim.x * gridDim.x;
+  int total_size_y = blockDim.y * gridDim.y;
 
-  // for single dimension multiplication we do the following:
   int idx = blockIdx.x*blockDim.x + threadIdx.x;
-  // ignore overlap region
-  if (idx < discard || idx > size - discard) {
+  int apod_ndat = ndat - 2*discard;
+  // printf("ndat=%d, nchan=%d, idx=%d, total_size_x=%d, total_size_y=%d\n", ndat, nchan, idx, total_size_x, total_size_y);
+
+  // make sure we're not trying to access channels that don't exist
+  if (blockIdx.y > nchan) {
     return;
   }
-  for (; idx < size; idx += size) {
-    t_out[idx - discard] = cuCmulf(apodization[idx - discard], t_in[i]);
+  // ignore top of overlap region
+  if (idx > (ndat - discard)) {
+    return;
+  }
+
+  for (int ichan=blockIdx.y; ichan < nchan; ichan += total_size_y) {
+    for (int idat=idx; idat < (ndat - discard); idat += total_size_x) {
+      // printf("ichan=%d, nchan=%d, idat=%d, t_in=(%f, %f), apodization=(%f, %f)\n",
+      //   ichan, nchan, idat, t_in[ichan*ndat + idat].x, t_in[ichan*ndat + idat].y,
+      //   apodization[idat-discard].x, apodization[idat-discard].y);
+      // ignore bottom of overlap region
+      if (idat < discard) {
+        continue;
+      }
+      t_out[ichan*apod_ndat + (idat - discard)] = cuCmulf(apodization[idat - discard], t_in[ichan*ndat + idat]);
+    }
   }
 }
 
@@ -100,7 +121,7 @@ CUDA::InverseFilterbankEngineCUDA::InverseFilterbankEngineCUDA (cudaStream_t _st
 
   pfb_dc_chan = 0;
   pfb_all_chan = 0;
-  verbose = Observation::verbose;
+  verbose = dsp::Observation::verbose;
 
   cufftHandle plans[] = {forward, backward};
   int nplans = sizeof(plans) / sizeof(plans[0]);
@@ -123,7 +144,7 @@ CUDA::InverseFilterbankEngineCUDA::~InverseFilterbankEngineCUDA ()
 
   cufftResult result;
   for (int i=0; i<nplans; i++) {
-    result = cufftDestroy (&plans[i]);
+    result = cufftDestroy (plans[i]);
     if (result != CUFFT_SUCCESS) {
       throw CUFFTError (
         result,
@@ -152,7 +173,7 @@ double CUDA::InverseFilterbankEngineCUDA::setup_fft_plans (dsp::InverseFilterban
   }
 
   // setup forward plan
-  cufftResult result = cufftPlan1d (&forward, input_fft_length, type_fwd, 1);
+  cufftResult result = cufftPlan1d (&forward, input_fft_length, type_forward, 1);
   if (result != CUFFT_SUCCESS)
     throw CUFFTError (result, "CUDA::InverseFilterbankEngineCUDA::setup_fft_plans",
                       "cufftPlan1d(forward)");
@@ -163,22 +184,22 @@ double CUDA::InverseFilterbankEngineCUDA::setup_fft_plans (dsp::InverseFilterban
           "cufftSetStream(forward)");
 
   // setup backward plan
-  result = cufftPlan1d (&plan_bwd, output_fft_length, CUFFT_C2C, 1);
+  result = cufftPlan1d (&backward, output_fft_length, CUFFT_C2C, 1);
   if (result != CUFFT_SUCCESS)
     throw CUFFTError (result, "CUDA::InverseFilterbankEngineCUDA::setup_fft_plans",
-                      "cufftPlan1d(plan_bwd)");
+                      "cufftPlan1d(backward)");
 
-  result = cufftSetStream (plan_bwd, stream);
+  result = cufftSetStream (backward, stream);
   if (result != CUFFT_SUCCESS)
     throw CUFFTError (result, "CUDA::InverseFilterbankEngineCUDA::setup_fft_plans",
-                      "cufftSetStream(plan_bwd)");
+                      "cufftSetStream(backward)");
 
-  size_t buffer_size = output_fft_length * sizeof (cufftComplex);
-  cudaError_t error = cudaMalloc ((void **) &buf, buffer_size);
-  if (error != cudaSuccess)
-    throw Error (FailedCall, "CUDA::InverseFilterbankEngineCUDA::setup_fft_plans",
-                 "cudaMalloc(%x, %u): %s", &buf, buffer_size,
-                 cudaGetErrorString (error));
+  // size_t buffer_size = output_fft_length * sizeof (cufftComplex);
+  // cudaError_t error = cudaMalloc ((void **) &buf, buffer_size);
+  // if (error != cudaSuccess)
+  //   throw Error (FailedCall, "CUDA::InverseFilterbankEngineCUDA::setup_fft_plans",
+  //                "cudaMalloc(%x, %u): %s", &buf, buffer_size,
+  //                cudaGetErrorString (error));
 
   // Compute FFT scale factors
   scalefac = 1.0;
@@ -204,33 +225,40 @@ void CUDA::InverseFilterbankEngineCUDA::perform (const dsp::TimeSeries* in, dsp:
 void CUDA::InverseFilterbankEngineCUDA::finish ()
 { }
 
-static void CUDA::InverseFilterbankEngineCUDA::apply_k_apodization_overlap (
+//! This method is static
+void CUDA::InverseFilterbankEngineCUDA::apply_k_apodization_overlap (
   std::complex<float>* in,
   std::complex<float>* apodization,
   std::complex<float>* out,
   int discard,
-  int size)
+  int ndat,
+  int nchan)
 {
   float2* in_device;
   float2* apod_device;
   float2* out_device;
 
-  size_t sz = sizeof(std::complex<float>);
+  size_t sz = sizeof(float2);
+  int ndat_apod = (ndat - 2*discard);
 
-  cudaMalloc((void **), &in_device, size*sz);
-  cudaMalloc((void **), &apod_device, (size - 2*discard)*sz);
-  cudaMalloc((void **), &out_device, (size - 2*discard)*sz);
+  cudaMalloc((void **) &in_device, ndat*nchan*sz);
+  cudaMalloc((void **) &apod_device, ndat_apod*sz);
+  cudaMalloc((void **) &out_device, ndat_apod*nchan*sz);
 
-  cudaMemcpy(in_device, static_cast<float2*>(in), size, cudaMemcpyHostToDevice);
-  cudaMemcpy(apod_device, static_cast<float2*>(apod), size, cudaMemcpyHostToDevice);
+  cudaMemcpy(
+    in_device, (float2*) in, ndat*nchan*sz, cudaMemcpyHostToDevice);
+  cudaMemcpy(
+    apod_device, (float2*) apodization, ndat_apod*sz, cudaMemcpyHostToDevice);
 
-  int threads = 1024;
-  int blocks = 10;
+  // 10 is sort of arbitrary here.
+  dim3 grid (10, nchan, 1);
+  dim3 threads (64, 1, 1);
 
-  k_apodization_overlap<<<blocks, threads>>>(
-    in_device, apod_device, out_device, discard, size);
 
-  cudaMemcpy(out, static_cast<float2*>(out_device), (size - 2*discard)*sz);
+  k_apodization_overlap<<<grid, threads>>>(
+    in_device, apod_device, out_device, discard, ndat, nchan);
+
+  cudaMemcpy((float2*) out, out_device, ndat_apod*nchan*sz, cudaMemcpyDeviceToHost);
 
   cudaFree(in_device);
   cudaFree(apod_device);
