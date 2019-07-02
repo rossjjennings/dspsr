@@ -7,6 +7,7 @@
  ***************************************************************************/
 #include <cstdio>
 #include <vector>
+#include <complex>
 
 #include <cuda_runtime.h>
 
@@ -67,9 +68,8 @@ __global__ void k_apodization_overlap (
 
 
 /*!
- * Kernel for multiplying a Response or ResponseProduct's internal
- * buffer by result of forward FFTs. After multiplying, this stitches
- * output spectra together.
+ * Kernel for stitching together the result of forward FFTs, and multiplying
+ * Response or ResponseProduct's internal buffer by stitched result.
  * \method k_response_stitch
  * \param f_in the frequency domain input data pointer.
  *    Dimensions are (npol*input_nchan, input_ndat).
@@ -80,17 +80,64 @@ __global__ void k_apodization_overlap (
  *    Here, output_ndat is equal to the size of the backward FFT,
  *    which is in turn equal to input_nchan * input_ndat normalized by
  *    the oversampling factor.
- * \param oversampled_discard the number of *complex samples* to discard
+ * \param os_discard the number of *complex samples* to discard
  *    from either side of the input spectra.
+ * \param npol the number of polarisations
+ * \param in_nchan the number of channels in the input data. The first dimension
+ *    of the input data is in_nchan*npol.
+ * \param in_ndat the second dimension of the input data.
+ * \param out_ndat the second dimension of the output data.
+ * \param pfb_dc_chan whether or not the DC channel of the PFB channeliser is
+ *    present.
+ * \param pfb_all_chan whether or not all the channels from the PFB channeliser
+ *    are present.
  */
 __global__ void k_response_stitch (
   float2* f_in,
   float2* response,
   float2* f_out,
-  int oversampled_discard
+  int os_discard,
+  int npol,
+  int in_nchan,
+  int in_ndat,
+  int out_ndat,
+  bool pfb_dc_chan,
+  bool pfb_all_chan
 )
 {
+  int total_size_x = blockDim.x * gridDim.x; // for idat
+  int total_size_y = blockDim.y * gridDim.y; // for ichan
+  int total_size_z = blockDim.z * gridDim.z; // for ipol
 
+  int idx = blockIdx.x*blockDim.x + threadIdx.x;
+  int idy = blockIdx.y;
+  int idz = blockIdx.z;
+
+  // don't overstep the data
+  if (idx > in_ndat - os_discard || idy > in_nchan || idz > npol) {
+    return;
+  }
+
+  int in_ndat_keep = in_ndat - 2*os_discard;
+
+  int in_idx;
+  int out_idx;
+  int response_idx;
+
+  for (int ipol=idz; ipol < npol; ipol += total_size_z) {
+    for (int ichan=idy; ichan < in_nchan; ichan += total_size_y) {
+      for (int idat=idx; idat < (in_ndat - os_discard); idat += total_size_x) {
+        if (idat < os_discard) {
+          continue;
+        }
+        // need to take into account the pfb_dc_chan and pfb_all_chan flags.
+        in_idx = ipol*in_nchan*in_ndat + ichan*in_ndat + idat;
+        response_idx = ichan*in_ndat_keep + (idat - os_discard);
+        out_idx = ipol*out_ndat + response_idx;
+        f_out[out_idx] = cuCmulf(response[response_idx], f_in[in_idx]);
+      }
+    }
+  }
 }
 
 
@@ -225,11 +272,58 @@ void CUDA::InverseFilterbankEngineCUDA::perform (const dsp::TimeSeries* in, dsp:
 void CUDA::InverseFilterbankEngineCUDA::finish ()
 { }
 
+
+//! This method is static
+void CUDA::InverseFilterbankEngineCUDA::apply_k_response_stitch (
+  std::vector<std::complex<float>>& in,
+  std::vector<std::complex<float>>& response,
+  std::vector<std::complex<float>>& out,
+  Rational os_factor,
+  int npol,
+  int in_nchan,
+  int in_ndat,
+  int out_ndat,
+  bool pfb_dc_chan,
+  bool pfb_all_chan)
+{
+  float2* in_device;
+  float2* resp_device;
+  float2* out_device;
+
+  int os_keep = os_factor.normalize(in_ndat);
+  int os_discard = (in_ndat - os_keep)/2;
+
+  size_t sz = sizeof(float2);
+
+  cudaMalloc((void **) &in_device, in_ndat*npol*in_nchan*sz);
+  cudaMalloc((void **) &resp_device, out_ndat*sz);
+  cudaMalloc((void **) &out_device, npol*out_ndat*sz);
+
+  cudaMemcpy(
+    in_device, (float2*) in.data(), in_ndat*npol*in_nchan*sz, cudaMemcpyHostToDevice);
+  cudaMemcpy(
+    resp_device, (float2*) response.data(), out_ndat*sz, cudaMemcpyHostToDevice);
+
+  // 10 is sort of arbitrary here.
+  dim3 grid (10, in_nchan, npol);
+  dim3 threads (64, 1, 1);
+
+  k_response_stitch<<<grid, threads>>>(
+    in_device, resp_device, out_device, os_discard,
+    npol, in_nchan, in_ndat, out_ndat, pfb_dc_chan, pfb_all_chan);
+
+  cudaMemcpy((float2*) out.data(), out_device, npol*out_ndat*sz, cudaMemcpyDeviceToHost);
+
+  cudaFree(in_device);
+  cudaFree(resp_device);
+  cudaFree(out_device);
+}
+
 //! This method is static
 void CUDA::InverseFilterbankEngineCUDA::apply_k_apodization_overlap (
-  std::complex<float>* in,
-  std::complex<float>* apodization,
-  std::complex<float>* out,
+  std::vector<std::complex<float>>& in,
+  std::vector<std::complex<float>>& apodization,
+  std::vector<std::complex<float>>& out,
   int discard,
   int ndat,
   int nchan)
@@ -246,9 +340,9 @@ void CUDA::InverseFilterbankEngineCUDA::apply_k_apodization_overlap (
   cudaMalloc((void **) &out_device, ndat_apod*nchan*sz);
 
   cudaMemcpy(
-    in_device, (float2*) in, ndat*nchan*sz, cudaMemcpyHostToDevice);
+    in_device, (float2*) in.data(), ndat*nchan*sz, cudaMemcpyHostToDevice);
   cudaMemcpy(
-    apod_device, (float2*) apodization, ndat_apod*sz, cudaMemcpyHostToDevice);
+    apod_device, (float2*) apodization.data(), ndat_apod*sz, cudaMemcpyHostToDevice);
 
   // 10 is sort of arbitrary here.
   dim3 grid (10, nchan, 1);
@@ -258,7 +352,7 @@ void CUDA::InverseFilterbankEngineCUDA::apply_k_apodization_overlap (
   k_apodization_overlap<<<grid, threads>>>(
     in_device, apod_device, out_device, discard, ndat, nchan);
 
-  cudaMemcpy((float2*) out, out_device, ndat_apod*nchan*sz, cudaMemcpyDeviceToHost);
+  cudaMemcpy((float2*) out.data(), out_device, ndat_apod*nchan*sz, cudaMemcpyDeviceToHost);
 
   cudaFree(in_device);
   cudaFree(apod_device);

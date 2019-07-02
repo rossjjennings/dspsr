@@ -6,6 +6,7 @@
 
 #include "util.hpp"
 
+#include "Rational.h"
 #include "dsp/InverseFilterbankEngineCUDA.h"
 
 
@@ -38,7 +39,7 @@ TEST_CASE ("apodization overlap kernel should produce expected output", "")
 
 
   CUDA::InverseFilterbankEngineCUDA::apply_k_apodization_overlap(
-    in.data(), apod.data(), out.data(), overlap, N, nchan
+    in, apod, out, overlap, N, nchan
   );
 
   // Now we have to check the output array -- every value should be double initial value
@@ -59,7 +60,58 @@ TEST_CASE ("apodization overlap kernel should produce expected output", "")
 
 TEST_CASE ("reponse stitch kernel should produce expected output", "")
 {
+  int in_ndat = 512;
+  int nchan = 4;
+  int npol = 2;
+  Rational os_factor(4, 3);
+  int in_ndat_keep = os_factor.normalize(in_ndat);
+  int out_ndat = nchan * in_ndat_keep;
 
+  // generate some data.
+  std::vector<std::complex<float>> in(npol*nchan*in_ndat, std::complex<float>(0.0, 0.0));
+  std::vector<std::complex<float>> resp(out_ndat, std::complex<float>(0.0, 0.0));
+  std::vector<std::complex<float>> out(npol*out_ndat, std::complex<float>(0.0, 0.0));
+
+  // fill up input data such that each time sample in each channel has the same value.
+  int in_idx;
+  float val;
+  for (int ipol=0; ipol<npol; ipol++) {
+    for (int ichan=0; ichan<nchan; ichan++) {
+      val = (ipol + 1) * (ichan + 1);
+      for (int idat=0; idat<in_ndat; idat++) {
+        in_idx = ipol*nchan*in_ndat + ichan*in_ndat + idat;
+        in[in_idx] = std::complex<float>(val, val);
+      }
+    }
+  }
+
+  // response is just multiplying by 2.
+  for (int i=0; i<out_ndat; i++) {
+    resp[i] = std::complex<float>(2.0, 0.0);
+  }
+
+
+  CUDA::InverseFilterbankEngineCUDA::apply_k_response_stitch(
+    in, resp, out, os_factor, npol, nchan, in_ndat, out_ndat, false, false
+  );
+
+  // Now we have to check the output array -- every value should be double initial value
+  bool allclose = true;
+  std::complex<float> comp;
+  int out_idx;
+  for (int ipol=0; ipol<npol; ipol++) {
+    for (int ichan=0; ichan<nchan; ichan++) {
+      val = 2*((ipol + 1) * (ichan + 1));
+      comp = std::complex<float>(val, val);
+      for (int idat=0; idat<in_ndat_keep; idat++) {
+        out_idx = ipol*nchan*in_ndat_keep + ichan*in_ndat_keep + idat;
+        if (out[out_idx] != comp) {
+          allclose = false;
+        }
+      }
+    }
+  }
+  REQUIRE(allclose == true);
 }
 
 TEST_CASE ("output overlap discard kernel should produce expected output", "")

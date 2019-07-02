@@ -12,10 +12,11 @@
 #ifndef __InverseFilterbankEngineCUDA_h
 #define __InverseFilterbankEngineCUDA_h
 
+#include <cufft.h>
+
 #include "dsp/InverseFilterbankEngine.h"
 #include "dsp/LaunchConfig.h"
 
-#include <cufft.h>
 
 namespace CUDA
 {
@@ -68,18 +69,44 @@ namespace CUDA
     //! This function copies arrays from host to device, so it is not intended
     //! to be performant.
     //! \param in input array buffer
-    //! \param apodization time domain windowing function, as float buffer
+    //! \param apodization time domain windowing function, as complex buffer
     //! \param out output array buffer
     //! \param discard the size of the discard region, in complex samples
     //! \param ndat the size of the input array buffer, in complex samples
     //! \param nchan the number of channels in the input array
     static void apply_k_apodization_overlap (
-      std::complex<float>* in,
-      std::complex<float>* apodization,
-      std::complex<float>* out,
+      std::vector<std::complex<float>>& in,
+      std::vector<std::complex<float>>& apodization,
+      std::vector<std::complex<float>>& out,
       int discard,
       int ndat,
       int nchan);
+
+    //! Apply the k_apodization_overlap kernel to some data.
+    //! This function copies arrays from host to device, so it is not intended
+    //! to be performant.
+    //! \param in input array buffer, dimensions (in_nchan*npol, in_ndat)
+    //! \param response array buffer, dimensions (out_ndat)
+    //! \param out output array buffer, dimensions (npol, out_ndat)
+    //! \param os_factor the oversampling factor associated with the
+    //!     channelized input data
+    //! \param npol the number of polarizations present in the data.
+    //! \param in_nchan the number of channels in the input array
+    //! \param in_ndat the second dimension in the input array
+    //! \param out_ndat the second dimension of the output array
+    //! \param pfb_dc_chan whether or not the PFB DC channel is present
+    //! \param pfb_all_chan whether or not all the PFB channels are present
+    static void apply_k_response_stitch (
+      std::vector<std::complex<float>>& in,
+      std::vector<std::complex<float>>& response,
+      std::vector<std::complex<float>>& out,
+      Rational os_factor,
+      int npol,
+      int in_nchan,
+      int in_ndat,
+      int out_ndat,
+      bool pfb_dc_chan,
+      bool pfb_all_chan);
 
   protected:
 
