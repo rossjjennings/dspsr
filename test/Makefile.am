@@ -16,9 +16,10 @@ endif
 include $(top_srcdir)/config/Makefile.local
 include $(top_srcdir)/config/Makefile.cuda
 
-AM_CPPFLAGS = -I$(top_builddir)/local_include @PSRCHIVE_CPPFLAGS@
+AM_CPPFLAGS = -I$(top_builddir)/local_include @PSRCHIVE_CPPFLAGS@ @PSRCHIVE_CFLAGS@
 LDADD = $(top_builddir)/Signal/Pulsar/libdspsr.la \
         $(top_builddir)/Signal/General/libdspdsp.la \
         $(top_builddir)/Signal/Statistics/libdspstats.la \
         $(top_builddir)/Kernel/libdspbase.la \
+				@PSRCHIVE_LIBS@ \
 				@CUFFT_LIBS@ @CUDA_LIBS@

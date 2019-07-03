@@ -61,7 +61,7 @@ TEST_CASE ("apodization overlap kernel should produce expected output", "")
 TEST_CASE ("reponse stitch kernel should produce expected output", "")
 {
   int in_ndat = 512;
-  int nchan = 4;
+  int nchan = 256;
   int npol = 2;
   Rational os_factor(4, 3);
   int in_ndat_keep = os_factor.normalize(in_ndat);
@@ -84,6 +84,8 @@ TEST_CASE ("reponse stitch kernel should produce expected output", "")
       }
     }
   }
+  // std::vector<int> dim = {npol, nchan, in_ndat};
+  // util::print_array(in, dim);
 
   // response is just multiplying by 2.
   for (int i=0; i<out_ndat; i++) {
@@ -111,6 +113,9 @@ TEST_CASE ("reponse stitch kernel should produce expected output", "")
       }
     }
   }
+  // dim = {npol, out_ndat};
+  // util::print_array(out, dim);
+
   REQUIRE(allclose == true);
 }
 

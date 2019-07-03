@@ -118,7 +118,7 @@ void util::print_array (T* arr, std::vector<int>& dim)
     int head_dim = dim[0];
     std::vector<int> tail_dim(dim.begin() + 1, dim.end());
     int stride = 1;
-    for (int d=0; d<dim.size() - 1; d++) {
+    for (int d=1; d<dim.size(); d++) {
       stride *= dim[d];
     }
     for (int i=0; i<head_dim; i++) {

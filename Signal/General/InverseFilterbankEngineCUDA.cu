@@ -66,6 +66,23 @@ __global__ void k_apodization_overlap (
   }
 }
 
+/*!
+ * fft shift an index.
+ * \method d_fft_shift_idx
+ * \param idx the index to shift
+ * \ndat the number of points about which to shift
+ * \return circularly shifted index.
+ */
+__device__ int d_fft_shift_idx (int idx, int ndat)
+{
+  int ndat_2 = ndat / 2;
+  if (idx >= ndat_2) {
+    return idx - ndat_2;
+  } else {
+    return idx + ndat_2;
+  }
+}
+
 
 /*!
  * Kernel for stitching together the result of forward FFTs, and multiplying
@@ -130,7 +147,9 @@ __global__ void k_response_stitch (
         if (idat < os_discard) {
           continue;
         }
-        // need to take into account the pfb_dc_chan and pfb_all_chan flags.
+        if (pfb_dc_chan) {
+
+        }
         in_idx = ipol*in_nchan*in_ndat + ichan*in_ndat + idat;
         response_idx = ichan*in_ndat_keep + (idat - os_discard);
         out_idx = ipol*out_ndat + response_idx;
@@ -335,6 +354,10 @@ void CUDA::InverseFilterbankEngineCUDA::apply_k_response_stitch (
     in_device, resp_device, out_device, os_discard,
     npol, in_nchan, in_ndat, out_ndat, pfb_dc_chan, pfb_all_chan);
 
+  if (dsp::Operation::verbose) {
+    // check_error ("CUDA::InverseFilterbankEngineCUDA::apply_k_response_stitch");
+  }
+
   cudaMemcpy((float2*) out.data(), out_device, npol*out_ndat*sz, cudaMemcpyDeviceToHost);
 
   cudaFree(in_device);
@@ -374,6 +397,9 @@ void CUDA::InverseFilterbankEngineCUDA::apply_k_apodization_overlap (
 
   k_apodization_overlap<<<grid, threads>>>(
     in_device, apod_device, out_device, discard, ndat, nchan);
+  if (dsp::Operation::verbose) {
+    // check_error ("CUDA::InverseFilterbankEngineCUDA::apply_k_apodization_overlap");
+  }
 
   cudaMemcpy((float2*) out.data(), out_device, ndat_apod*nchan*sz, cudaMemcpyDeviceToHost);
 
@@ -412,7 +438,9 @@ void CUDA::InverseFilterbankEngineCUDA::apply_k_overlap_discard (
   dim3 in_dim_k(in_dim.x * in_dim.y, in_dim.z);
 
   k_overlap_discard<<<grid, threads>>>(in_device, out_device, discard, in_dim_k);
-
+  if (dsp::Operation::verbose) {
+    // check_error ("CUDA::InverseFilterbankEngineCUDA::apply_k_overlap_discard");
+  }
   cudaMemcpy((float2*) out.data(), out_device, out_size*sz, cudaMemcpyDeviceToHost);
 
   cudaFree(in_device);

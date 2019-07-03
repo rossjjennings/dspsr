@@ -6,7 +6,8 @@
 #include "util.hpp"
 
 
-namespace util {
+namespace util
+{
 
   template<typename T>
   void print_array (std::vector<T>& arr, dim3 dim);
