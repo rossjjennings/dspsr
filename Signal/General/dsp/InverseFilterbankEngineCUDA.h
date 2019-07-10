@@ -101,10 +101,10 @@ namespace CUDA
       std::vector<std::complex<float>>& response,
       std::vector<std::complex<float>>& out,
       Rational os_factor,
+      int npart,
       int npol,
-      int in_nchan,
-      int in_ndat,
-      int out_ndat,
+      int nchan,
+      int ndat,
       bool pfb_dc_chan,
       bool pfb_all_chan);
 

@@ -67,7 +67,7 @@ __global__ void k_apodization_overlap (
 }
 
 /*!
- * fft shift an index.
+ * fft shift an index. Returns -1 if ``idx`` is greater than ``ndat``
  * \method d_fft_shift_idx
  * \param idx the index to shift
  * \ndat the number of points about which to shift
@@ -76,6 +76,9 @@ __global__ void k_apodization_overlap (
 __device__ int d_fft_shift_idx (int idx, int ndat)
 {
   int ndat_2 = ndat / 2;
+  if (idx >= ndat) {
+    return -1;
+  }
   if (idx >= ndat_2) {
     return idx - ndat_2;
   } else {
@@ -114,6 +117,7 @@ __global__ void k_response_stitch (
   float2* response,
   float2* f_out,
   int os_discard,
+  int npart,
   int npol,
   int in_nchan,
   int in_ndat,
@@ -124,39 +128,112 @@ __global__ void k_response_stitch (
 {
   int total_size_x = blockDim.x * gridDim.x; // for idat
   int total_size_y = blockDim.y * gridDim.y; // for ichan
-  int total_size_z = blockDim.z * gridDim.z; // for ipol
+  int total_size_z = blockDim.z * gridDim.z; // for ipol and ipart
+  int npol_incr = total_size_z < npol ? 1: npol;
 
   int idx = blockIdx.x*blockDim.x + threadIdx.x;
-  int idy = blockIdx.y;
-  int idz = blockIdx.z;
+  int idy = blockIdx.y*blockDim.y + threadIdx.y;
+  int idz = blockIdx.z*blockDim.z + threadIdx.z;
 
   // don't overstep the data
-  if (idx > in_ndat - os_discard || idy > in_nchan || idz > npol) {
+  if (idx > in_ndat - os_discard || idy > in_nchan || idz > (npol*npart)) {
     return;
   }
 
   int in_ndat_keep = in_ndat - 2*os_discard;
+  int in_ndat_keep_2 = in_ndat_keep / 2;
 
-  int in_idx;
-  int out_idx;
-  int response_idx;
+  int in_offset;
+  int out_offset;
 
-  for (int ipol=idz; ipol < npol; ipol += total_size_z) {
-    for (int ichan=idy; ichan < in_nchan; ichan += total_size_y) {
-      for (int idat=idx; idat < (in_ndat - os_discard); idat += total_size_x) {
-        if (idat < os_discard) {
-          continue;
+  int in_idx_bot;
+  int in_idx_top;
+
+  int out_idx_bot;
+  int out_idx_top;
+
+
+  for (int ipart=idz/npol; ipart < npart; ipart += total_size_z/npol) {
+    for (int ipol=idz%npol; ipol < npol; ipol += npol_incr) {
+      for (int ichan=idy; ichan < in_nchan; ichan += total_size_y) {
+        in_offset = ipart*npol*in_ndat*in_nchan + ipol*in_ndat*in_nchan + ichan*in_ndat;
+        out_offset = ipart*npol*out_ndat + ipol*out_ndat;
+        // std::cerr << "in_offset=" << in_offset << ", out_offset=" << out_offset << std::endl;
+
+        for (int idat=idx; idat<in_ndat_keep_2; idat += total_size_x) {
+          in_idx_top = idat;
+          in_idx_bot = in_idx_top + (in_ndat - in_ndat_keep_2);
+
+          out_idx_bot = idat + in_ndat_keep*ichan;
+          out_idx_top = out_idx_bot + in_ndat_keep_2;
+
+          if (pfb_dc_chan) {
+            if (ichan == 0) {
+              out_idx_top = idat;
+              out_idx_bot = idat + (out_ndat - in_ndat_keep_2);
+            } else {
+              out_idx_bot = idat + in_ndat_keep*(ichan-1) + in_ndat_keep_2;
+              out_idx_top = out_idx_bot + in_ndat_keep_2;
+            }
+          }
+
+          // std::cerr << in_offset + in_idx_bot << ", " << in_offset + in_idx_top << std::endl;
+          // std::cerr << out_offset + out_idx_bot << ", " << out_offset + out_idx_top << std::endl;
+          //
+          // if (in_offset + in_idx_bot > in_size ||
+          //     out_offset + out_idx_top > out_size ||
+          //     in_offset + in_idx_top > in_size ||
+          //     out_offset + out_idx_bot > out_size) {
+          //   std::cerr << "watch out!" << std::endl;
+          // }
+          // std::cerr << "in=[" << in_idx_bot << "," << in_idx_top << "] out=["
+          //   << out_idx_bot << "," << out_idx_top << "]" << std::endl;
+
+          f_out[out_offset + out_idx_bot] = cuCmulf(response[out_idx_bot], f_in[in_offset + in_idx_bot]);
+          f_out[out_offset + out_idx_top] = cuCmulf(response[out_idx_top], f_in[in_offset + in_idx_top]);
+
+          if (! pfb_all_chan && pfb_dc_chan && ichan == 0) {
+            f_out[out_offset + out_idx_bot].x = 0.0;
+            f_out[out_offset + out_idx_bot].y = 0.0;
+          }
         }
-        if (pfb_dc_chan) {
-
-        }
-        in_idx = ipol*in_nchan*in_ndat + ichan*in_ndat + idat;
-        response_idx = ichan*in_ndat_keep + (idat - os_discard);
-        out_idx = ipol*out_ndat + response_idx;
-        f_out[out_idx] = cuCmulf(response[response_idx], f_in[in_idx]);
       }
     }
   }
+  // for (int ipol=idz; ipol < npol; ipol += total_size_z) {
+  //   for (int ichan=idy; ichan < in_nchan; ichan += total_size_y) {
+  //     for (int idat=idx; idat < (in_ndat - os_discard); idat += total_size_x) {
+  //       if (idat < os_discard) {
+  //         continue;
+  //       }
+  //       in_offset = ipol*in_nchan*in_ndat + ichan*in_ndat;
+  //       out_offset = ipol*out_ndat;
+  //
+  //       in_idx_top = in_offset + (idat - os_discard);
+  //       in_idx_bot = in_idx_top + (in_ndat - in_ndat_keep_2);
+  //
+  //       out_idx_bot = ichan*in_ndat_keep + (idat - os_discard);
+  //       out_idx_top = out_idx_bot + in_ndat_keep_2;
+  //
+  //       if (pfb_dc_chan) {
+  //         if (ichan == 0) {
+  //           out_idx_bot = idat - os_discard;
+  //           out_idx_top = out_idx_bot + out_ndat - in_ndat_keep_2;
+  //         } else {
+  //           out_idx_bot += in_ndat_keep_2;
+  //           out_idx_top += in_ndat_keep_2;
+  //         }
+  //       }
+  //       f_out[out_idx_bot + out_offset] = cuCmulf(response[out_idx_bot], f_in[in_idx_bot]);
+  //       f_out[out_idx_top + out_offset] = cuCmulf(response[out_idx_top], f_in[in_idx_top]);
+  //
+  //       if (pfb_dc_chan && ! pfb_all_chan) {
+  //         f_out[out_idx_top + out_offset].x = 0.0;
+  //         f_out[out_idx_top + out_offset].y = 0.0;
+  //       }
+  //     }
+  //   }
+  // }
 }
 
 
@@ -186,13 +263,13 @@ __global__ void k_overlap_discard (
   }
 
   int t_out_ndat = t_in_dim.y - 2*discard;
-  float2 val;
+  // float2 val;
   for (int ichan=idy; ichan < t_in_dim.x; ichan += total_size_y) {
     for (int idat=idx; idat < t_in_dim.y - discard; idat += total_size_x) {
       if (idat < discard) {
         continue;
       }
-      val = t_in[ichan*t_in_dim.y + idat];
+      // val = t_in[ichan*t_in_dim.y + idat];
       // printf("ichan=%d, idat=%d, t_in=(%f, %f)\n", ichan, idat, val.x, val.y);
       t_out[ichan*t_out_ndat + (idat - discard)] = t_in[ichan*t_in_dim.y + idat];
     }
@@ -321,10 +398,10 @@ void CUDA::InverseFilterbankEngineCUDA::apply_k_response_stitch (
   std::vector<std::complex<float>>& response,
   std::vector<std::complex<float>>& out,
   Rational os_factor,
+  int npart,
   int npol,
-  int in_nchan,
-  int in_ndat,
-  int out_ndat,
+  int nchan,
+  int ndat,
   bool pfb_dc_chan,
   bool pfb_all_chan)
 {
@@ -332,33 +409,41 @@ void CUDA::InverseFilterbankEngineCUDA::apply_k_response_stitch (
   float2* resp_device;
   float2* out_device;
 
+  int in_ndat = ndat;
   int os_keep = os_factor.normalize(in_ndat);
   int os_discard = (in_ndat - os_keep)/2;
+  int out_ndat = nchan * os_keep;
+  int out_size = npart * npol * out_ndat;
+  int in_size = npart * npol * nchan * ndat;
+
+  if (out.size() != out_size) {
+    out.resize(out_size);
+  }
 
   size_t sz = sizeof(float2);
 
-  cudaMalloc((void **) &in_device, in_ndat*npol*in_nchan*sz);
+  cudaMalloc((void **) &in_device, in_size*sz);
   cudaMalloc((void **) &resp_device, out_ndat*sz);
-  cudaMalloc((void **) &out_device, npol*out_ndat*sz);
+  cudaMalloc((void **) &out_device, out_size*sz);
 
   cudaMemcpy(
-    in_device, (float2*) in.data(), in_ndat*npol*in_nchan*sz, cudaMemcpyHostToDevice);
+    in_device, (float2*) in.data(), in_size*sz, cudaMemcpyHostToDevice);
   cudaMemcpy(
     resp_device, (float2*) response.data(), out_ndat*sz, cudaMemcpyHostToDevice);
 
   // 10 is sort of arbitrary here.
-  dim3 grid (10, in_nchan, npol);
-  dim3 threads (64, 1, 1);
+  dim3 grid (1, nchan, npart*npol);
+  dim3 threads (in_ndat, 1, 1);
 
   k_response_stitch<<<grid, threads>>>(
-    in_device, resp_device, out_device, os_discard,
-    npol, in_nchan, in_ndat, out_ndat, pfb_dc_chan, pfb_all_chan);
+    in_device, resp_device, out_device, os_discard, npart,
+    npol, nchan, in_ndat, out_ndat, pfb_dc_chan, pfb_all_chan);
 
   if (dsp::Operation::verbose) {
     // check_error ("CUDA::InverseFilterbankEngineCUDA::apply_k_response_stitch");
   }
 
-  cudaMemcpy((float2*) out.data(), out_device, npol*out_ndat*sz, cudaMemcpyDeviceToHost);
+  cudaMemcpy((float2*) out.data(), out_device, out_size*sz, cudaMemcpyDeviceToHost);
 
   cudaFree(in_device);
   cudaFree(resp_device);

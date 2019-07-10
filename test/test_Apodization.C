@@ -30,7 +30,7 @@ TEST_CASE("Apodization produces correct window functions") {
     window.Tukey(1024, 0, 128, false);
     std::vector<float> expected_data;
     util::load_binary_data(tukey_file_path, expected_data);
-    bool output_equal = util::compare_test_data<float>(
+    bool output_equal = util::allclose<float>(
       window.get_datptr(0, 0),
       expected_data.data(),
       expected_data.size());
@@ -42,7 +42,7 @@ TEST_CASE("Apodization produces correct window functions") {
     window.TopHat(1024, 128, false);
     std::vector<float> expected_data;
     util::load_binary_data(tophat_file_path, expected_data);
-    bool output_equal = util::compare_test_data<float>(
+    bool output_equal = util::allclose<float>(
       window.get_datptr(0, 0),
       expected_data.data(),
       expected_data.size());
@@ -54,7 +54,7 @@ TEST_CASE("Apodization produces correct window functions") {
   {
     window.None(1024, false);
     std::vector<float> expected_data (1024, 1.0);
-    bool output_equal = util::compare_test_data<float>(
+    bool output_equal = util::allclose<float>(
       window.get_datptr(0, 0),
       expected_data.data(),
       expected_data.size());

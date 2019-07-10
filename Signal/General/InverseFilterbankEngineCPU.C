@@ -258,6 +258,7 @@ void dsp::InverseFilterbankEngineCPU::perform (
         freq_dom_ptr = input_fft_scratch;
         time_dom_ptr = const_cast<float*>(in->get_datptr(input_ichan, ipol));
         time_dom_ptr += n_dims*ipart*(input_fft_length - input_discard_total);
+        
         memcpy(
           input_time_scratch,
           time_dom_ptr,

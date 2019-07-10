@@ -9,14 +9,18 @@
 #include "dsp/IOManager.h"
 #include "dsp/Input.h"
 #include "dsp/TimeSeries.h"
+#include "Rational.h"
 
 namespace util {
 
   template<typename T>
-  bool isclose (T a, T b, T atol, T rtol);
+  bool isclose (T a, T b, float atol=1e-7, float rtol=1e-5);
 
   template<typename T>
-  bool compare_test_data (T* a, T* b, int size, T atol=1e-7, T rtol=1e-5);
+  bool allclose (T* a, T* b, int size, float atol=1e-7, float rtol=1e-5);
+
+  template<typename T>
+  bool allclose (std::vector<T> a, std::vector<T> b, float atol=1e-7, float rtol=1e-5);
 
   template<typename T>
   void load_binary_data (std::string file_path, std::vector<T>& test_data);
@@ -38,6 +42,21 @@ namespace util {
   void set_verbose (bool val);
 
   std::string get_test_data_dir ();
+
+  template<typename T>
+  void response_stitch_cpu (
+    std::vector<T> in,
+    std::vector<T> resp,
+    std::vector<T>& out,
+    Rational os_factor,
+    int npart,
+    int npol,
+    int nchan,
+    int ndat,
+    bool pfb_dc_chan,
+    bool pfb_all_chan
+  );
+
 
 }
 
@@ -84,23 +103,28 @@ void util::write_binary_data (std::string file_path, T* buffer, int len)
   file.close();
 }
 
+
 template<typename T>
-bool util::compare_test_data (T* a, T* b, int size, T atol, T rtol)
+bool util::allclose (std::vector<T> a, std::vector<T> b, float atol, float rtol) {
+  if (a.size() != b.size()) {
+     return false;
+  }
+  return util::allclose(a.data(), b.data(), (int) a.size(), atol, rtol);
+}
+
+
+template<typename T>
+bool util::allclose (T* a, T* b, int size, float atol, float rtol)
 {
   bool ret = true;
-  bool val;
   for (int i=0; i<size; i++) {
-    val = util::isclose(a[i], b[i], atol, rtol);
-    if (! val) {
-      ret = false;
-      std::cerr << "i=" << i << " ("<< a[i] << ", " << b[i] << ")" << std::endl;
-    }
+    ret = util::isclose<T>(a[i], b[i], atol, rtol);
   }
   return ret;
 }
 
 template<typename T>
-bool util::isclose (T a, T b, T atol, T rtol)
+bool util::isclose (T a, T b, float atol, float rtol)
 {
   return abs(a - b) <= (atol + rtol * abs(b));
 }
@@ -134,5 +158,99 @@ void util::print_array (T* arr, std::vector<int>& dim)
     std::cerr << std::endl;
   }
 }
+
+template<typename T>
+void util::response_stitch_cpu (
+  std::vector<T> in,
+  std::vector<T> resp,
+  std::vector<T>& out,
+  Rational os_factor,
+  int npart,
+  int npol,
+  int nchan,
+  int ndat,
+  bool pfb_dc_chan,
+  bool pfb_all_chan
+)
+{
+  int in_ndat = ndat;
+  int in_ndat_keep = os_factor.normalize(in_ndat);
+  int in_ndat_keep_2 = in_ndat_keep / 2;
+  int out_ndat = nchan * in_ndat_keep;
+  int out_size = npart * out_ndat * npol;
+  int in_size = npart * npol * nchan * in_ndat;
+
+  if (out.size() != out_size) {
+    out.resize(out_size);
+  }
+
+  T* in_ptr;
+  T* out_ptr;
+
+  int in_offset;
+  int out_offset;
+
+  int in_idx_bot;
+  int in_idx_top;
+
+  int out_idx_bot;
+  int out_idx_top;
+
+
+  for (int ipart=0; ipart < npart; ipart++) {
+    for (int ipol=0; ipol < npol; ipol++) {
+      for (int ichan=0; ichan < nchan; ichan++) {
+        in_offset = ipart*npol*in_ndat*nchan + ipol*in_ndat*nchan + ichan*in_ndat;
+        out_offset = ipart*npol*out_ndat + ipol*out_ndat;
+        // std::cerr << "in_offset=" << in_offset << ", out_offset=" << out_offset << std::endl;
+        in_ptr = in.data() + in_offset;
+        out_ptr = out.data() + out_offset;
+
+        for (int idat=0; idat<in_ndat_keep_2; idat++) {
+          in_idx_top = idat;
+          in_idx_bot = in_idx_top + (in_ndat - in_ndat_keep_2);
+
+          out_idx_bot = idat + in_ndat_keep*ichan;
+          out_idx_top = out_idx_bot + in_ndat_keep_2;
+
+          if (pfb_dc_chan) {
+            if (ichan == 0) {
+              out_idx_top = idat;
+              out_idx_bot = idat + (out_ndat - in_ndat_keep_2);
+            } else {
+              out_idx_bot = idat + in_ndat_keep*(ichan-1) + in_ndat_keep_2;
+              out_idx_top = out_idx_bot + in_ndat_keep_2;
+            }
+          }
+
+          // std::cerr << in_offset + in_idx_bot << ", " << in_offset + in_idx_top << std::endl;
+          // std::cerr << out_offset + out_idx_bot << ", " << out_offset + out_idx_top << std::endl;
+          //
+          if (in_offset + in_idx_bot > in_size ||
+              out_offset + out_idx_top > out_size ||
+              in_offset + in_idx_top > in_size ||
+              out_offset + out_idx_bot > out_size) {
+            std::cerr << "watch out!" << std::endl;
+          }
+          // std::cerr << "in=[" << in_idx_bot << "," << in_idx_top << "] out=["
+          //   << out_idx_bot << "," << out_idx_top << "]" << std::endl;
+
+          out_ptr[out_idx_bot] = resp[out_idx_bot] * in_ptr[in_idx_bot];
+          out_ptr[out_idx_top] = resp[out_idx_top] * in_ptr[in_idx_top];
+
+          if (! pfb_all_chan && pfb_dc_chan && ichan == 0) {
+            out_ptr[out_idx_bot] = 0.0;
+          }
+        }
+      }
+    }
+  }
+
+
+
+
+
+}
+
 
 #endif

@@ -4,11 +4,13 @@
 
 #include "catch.hpp"
 
+#include "util.hpp"
 #include "util.cuda.hpp"
 
 #include "Rational.h"
 #include "dsp/InverseFilterbankEngineCUDA.h"
 
+const float thresh = 1e-5;
 
 TEST_CASE ("InverseFilterbankEngineCUDA") {}
 
@@ -60,63 +62,75 @@ TEST_CASE ("apodization overlap kernel should produce expected output", "")
 
 TEST_CASE ("reponse stitch kernel should produce expected output", "")
 {
-  int in_ndat = 512;
-  int nchan = 256;
-  int npol = 2;
-  Rational os_factor(4, 3);
-  int in_ndat_keep = os_factor.normalize(in_ndat);
-  int out_ndat = nchan * in_ndat_keep;
 
+  int npart = 10;
+  int ndat = 8;
+  int nchan = 4;
+  int npol = 2;
+
+  Rational os_factor(4, 3);
+  int in_ndat_keep = os_factor.normalize(ndat);
+  int out_ndat = nchan * in_ndat_keep;
+  int out_size = out_ndat * npol * npart;
+  int in_size = ndat * nchan * npol * npart;
   // generate some data.
-  std::vector<std::complex<float>> in(npol*nchan*in_ndat, std::complex<float>(0.0, 0.0));
+  std::vector<std::complex<float>> in(in_size, std::complex<float>(0.0, 0.0));
   std::vector<std::complex<float>> resp(out_ndat, std::complex<float>(0.0, 0.0));
-  std::vector<std::complex<float>> out(npol*out_ndat, std::complex<float>(0.0, 0.0));
+  std::vector<std::complex<float>> out_cpu(out_size, std::complex<float>(0.0, 0.0));
+  std::vector<std::complex<float>> out_gpu(out_size, std::complex<float>(0.0, 0.0));
 
   // fill up input data such that each time sample in each channel has the same value.
   int in_idx;
   float val;
-  for (int ipol=0; ipol<npol; ipol++) {
-    for (int ichan=0; ichan<nchan; ichan++) {
-      val = (ipol + 1) * (ichan + 1);
-      for (int idat=0; idat<in_ndat; idat++) {
-        in_idx = ipol*nchan*in_ndat + ichan*in_ndat + idat;
-        in[in_idx] = std::complex<float>(val, val);
+  for (int ipart=0; ipart<npart; ipart++) {
+    for (int ipol=0; ipol<npol; ipol++) {
+      val = 0;
+      for (int ichan=0; ichan<nchan; ichan++) {
+        for (int idat=0; idat<ndat; idat++) {
+          val += 1;
+          in_idx = ipart*npol*nchan*ndat + ipol*nchan*ndat + ichan*ndat + idat;
+          in[in_idx] = std::complex<float>(val, val);
+        }
       }
     }
   }
-  // std::vector<int> dim = {npol, nchan, in_ndat};
-  // util::print_array(in, dim);
+
+  std::vector<int> dim_in = {npart, npol, nchan, ndat};
+  std::vector<int> dim_out = {npart, npol, out_ndat};
+
+  // util::print_array<std::complex<float>>(in, dim_in);
 
   // response is just multiplying by 2.
   for (int i=0; i<out_ndat; i++) {
     resp[i] = std::complex<float>(2.0, 0.0);
   }
 
+  std::vector<bool> pfb_dc_chan = {true, false};
+  std::vector<bool> pfb_all_chan = {true, false};
 
-  CUDA::InverseFilterbankEngineCUDA::apply_k_response_stitch(
-    in, resp, out, os_factor, npol, nchan, in_ndat, out_ndat, false, false
-  );
-
-  // Now we have to check the output array -- every value should be double initial value
+  // std::vector<bool> pfb_dc_chan = {true}; //, false};
+  // std::vector<bool> pfb_all_chan = {true}; //, false};
   bool allclose = true;
-  std::complex<float> comp;
-  int out_idx;
-  for (int ipol=0; ipol<npol; ipol++) {
-    for (int ichan=0; ichan<nchan; ichan++) {
-      val = 2*((ipol + 1) * (ichan + 1));
-      comp = std::complex<float>(val, val);
-      for (int idat=0; idat<in_ndat_keep; idat++) {
-        out_idx = ipol*nchan*in_ndat_keep + ichan*in_ndat_keep + idat;
-        if (out[out_idx] != comp) {
-          allclose = false;
-        }
-      }
+  for (auto dc_it=pfb_dc_chan.begin(); dc_it != pfb_dc_chan.end(); dc_it++) {
+    for (auto all_it=pfb_all_chan.begin(); all_it != pfb_all_chan.end(); all_it++){
+      out_cpu.assign(out_cpu.size(), std::complex<float>(0.0, 0.0));
+      out_gpu.assign(out_gpu.size(), std::complex<float>(0.0, 0.0));
+
+      util::response_stitch_cpu<std::complex<float>>(
+        in, resp, out_cpu, os_factor, npart, npol, nchan, ndat, *dc_it, *all_it
+      );
+
+      CUDA::InverseFilterbankEngineCUDA::apply_k_response_stitch(
+        in, resp, out_gpu, os_factor, npart, npol, nchan, ndat, *dc_it, *all_it
+      );
+
+      // util::print_array<std::complex<float>>(out_cpu, dim_out);
+      // util::print_array<std::complex<float>>(out_gpu, dim_out);
+      allclose = util::allclose<std::complex<float>>(out_cpu, out_gpu, thresh);
+
+      REQUIRE(allclose == true);
     }
   }
-  // dim = {npol, out_ndat};
-  // util::print_array(out, dim);
-
-  REQUIRE(allclose == true);
 }
 
 TEST_CASE ("output overlap discard kernel should produce expected output", "")
