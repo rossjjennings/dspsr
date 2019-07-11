@@ -5,6 +5,10 @@
 
 #include "util.hpp"
 
+std::chrono::time_point<std::chrono::high_resolution_clock> util::now ()
+{
+  return std::chrono::high_resolution_clock::now();
+}
 
 void util::load_psr_data (dsp::IOManager manager, int block_size, dsp::TimeSeries* ts)
 {

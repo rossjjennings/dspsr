@@ -38,31 +38,44 @@ __global__ void k_overlap_discard (
   int ndat
 )
 {
-  int total_size_x = blockDim.x * gridDim.x;
-  int total_size_y = blockDim.y * gridDim.y;
+  int total_size_x = blockDim.x * gridDim.x; // for ndat
+  int total_size_y = blockDim.y * gridDim.y; // for nchan
+  int total_size_z = blockDim.z * gridDim.z; // for npart and npol
+  int npol_incr = total_size_z <= npol ? 1: npol;
+  int npart_incr = total_size_z/npol == 0 ? 1: total_size_z/npol;
 
   int idx = blockIdx.x*blockDim.x + threadIdx.x;
+  int idy = blockIdx.y*blockDim.y + threadIdx.y;
+  int idz = blockIdx.z*blockDim.z + threadIdx.z;
+
+  // if (npol == 2){
+  //   printf("total_size_z=%d, npol_incr=%d, idz=%d, idz%%npol=%d, idz/npol=%d\n",
+  //     total_size_z, npol_incr, idz, idz%npol, idz/npol
+  //   );
+  // }
+
   int out_ndat = ndat - 2*discard;
-  // printf("ndat=%d, nchan=%d, idx=%d, total_size_x=%d, total_size_y=%d\n", ndat, nchan, idx, total_size_x, total_size_y);
 
   // make sure we're not trying to access channels that don't exist
-  if (blockIdx.y > nchan) {
-    return;
-  }
-  // ignore top of overlap region
-  if (idx > (ndat - discard)) {
+  if (idx > out_ndat || idy > nchan || idz > npol*npart) {
     return;
   }
 
-  for (int ichan=blockIdx.y; ichan < nchan; ichan += total_size_y) {
-    for (int idat=idx; idat < (ndat - discard); idat += total_size_x) {
-      if (idat < discard) {
-        continue;
-      }
-      if (resp == nullptr) {
-        t_out[ichan*out_ndat + (idat - discard)] = t_in[ichan*ndat + idat];
-      } else {
-        t_out[ichan*out_ndat + (idat - discard)] = cuCmulf(resp[idat - discard], t_in[ichan*ndat + idat]);
+  int in_offset;
+  int out_offset;
+
+  for (int ipart=idz/npol; ipart<npart; ipart+=npart_incr) {
+    for (int ipol=idz%npol; ipol<npol; ipol+=npol_incr) {
+      for (int ichan=idy; ichan < nchan; ichan += total_size_y) {
+        for (int idat=idx; idat < out_ndat; idat += total_size_x) {
+          in_offset = ipart*npol*nchan*ndat + ipol*nchan*ndat + ichan*ndat;
+          out_offset = ipart*npol*nchan*out_ndat + ipol*nchan*out_ndat + ichan*out_ndat;
+          if (resp == nullptr) {
+            t_out[out_offset + idat] = t_in[in_offset + idat + discard];
+          } else {
+            t_out[out_offset + idat] = cuCmulf(resp[ichan*out_ndat + idat], t_in[in_offset + idat + discard]);
+          }
+        }
       }
     }
   }
@@ -131,7 +144,9 @@ __global__ void k_response_stitch (
   int total_size_x = blockDim.x * gridDim.x; // for idat
   int total_size_y = blockDim.y * gridDim.y; // for ichan
   int total_size_z = blockDim.z * gridDim.z; // for ipol and ipart
-  int npol_incr = total_size_z < npol ? 1: npol;
+  int npol_incr = total_size_z <= npol ? 1: npol;
+  int npart_incr = total_size_z/npol == 0 ? 1: total_size_z/npol;
+
 
   int idx = blockIdx.x*blockDim.x + threadIdx.x;
   int idy = blockIdx.y*blockDim.y + threadIdx.y;
@@ -155,7 +170,7 @@ __global__ void k_response_stitch (
   int out_idx_top;
 
 
-  for (int ipart=idz/npol; ipart < npart; ipart += total_size_z/npol) {
+  for (int ipart=idz/npol; ipart < npart; ipart += npart_incr) {
     for (int ipol=idz%npol; ipol < npol; ipol += npol_incr) {
       for (int ichan=idy; ichan < in_nchan; ichan += total_size_y) {
         in_offset = ipart*npol*in_ndat*in_nchan + ipol*in_ndat*in_nchan + ichan*in_ndat;
@@ -434,20 +449,21 @@ void CUDA::InverseFilterbankEngineCUDA::apply_k_apodization_overlap (
   int out_ndat = ndat - 2*discard;
   int in_size = npart * npol * nchan * ndat;
   int out_size = npart * npol * nchan * out_ndat;
-
+  int apod_size = nchan * out_ndat;
 
   cudaMalloc((void **) &in_device, in_size*sz);
-  cudaMalloc((void **) &apod_device, out_ndat*sz);
-  cudaMalloc((void **) &out_device, out_size*nchan*sz);
+  cudaMalloc((void **) &apod_device, apod_size*sz);
+  cudaMalloc((void **) &out_device, out_size*sz);
 
   cudaMemcpy(
     in_device, (float2*) in.data(), in_size*sz, cudaMemcpyHostToDevice);
   cudaMemcpy(
-    apod_device, (float2*) apodization.data(), out_ndat*sz, cudaMemcpyHostToDevice);
+    apod_device, (float2*) apodization.data(), apod_size*sz, cudaMemcpyHostToDevice);
 
   // 10 is sort of arbitrary here.
-  dim3 grid (10, nchan, 1);
-  dim3 threads (64, 1, 1);
+  dim3 grid (1, nchan, npol*npart);
+  dim3 threads (1024, 1, 1);
+  grid.x = (ndat / threads.x) + 1;
 
 
   k_overlap_discard<<<grid, threads>>>(
@@ -487,9 +503,11 @@ void CUDA::InverseFilterbankEngineCUDA::apply_k_overlap_discard (
   cudaMemcpy(
     in_device, (float2*) in.data(), in_size*sz, cudaMemcpyHostToDevice);
 
-  // 10 is sort of arbitrary here.
-  dim3 grid (10, nchan, 1);
-  dim3 threads (64, 1, 1);
+  dim3 grid (1, nchan, npol*npart);
+  dim3 threads (1024, 1, 1);
+
+  grid.x = (ndat / threads.x) + 1;
+
 
   k_overlap_discard<<<grid, threads>>>(
     in_device, nullptr, out_device, discard, npart, npol, nchan, ndat);

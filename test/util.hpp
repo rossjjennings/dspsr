@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <complex>
+#include <chrono>
 
 #include "dsp/IOManager.h"
 #include "dsp/Input.h"
@@ -12,6 +13,11 @@
 #include "Rational.h"
 
 namespace util {
+
+  template<typename unit>
+  using delta = std::chrono::duration<double, unit>;
+
+  std::chrono::time_point<std::chrono::high_resolution_clock> now ();
 
   template<typename T>
   bool isclose (T a, T b, float atol=1e-7, float rtol=1e-5);
