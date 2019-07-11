@@ -123,13 +123,13 @@ namespace dsp {
     const Rational& get_oversampling_factor () {return input->get_oversampling_factor();}
 
     //! Get the `pfb_dc_chan` flag
-    const bool get_pfb_dc_chan () const { return pfb_dc_chan; }
+    bool get_pfb_dc_chan () const { return pfb_dc_chan; }
 
     //! Set the `pfb_dc_chan` flag
     void set_pfb_dc_chan (bool _pfb_dc_chan) { pfb_dc_chan = _pfb_dc_chan; }
 
     //! Get the `pfb_all_chan` flag
-    const bool get_pfb_all_chan () const { return pfb_all_chan; }
+    bool get_pfb_all_chan () const { return pfb_all_chan; }
 
     //! Set the `pfb_all_chan` flag
     void set_pfb_all_chan (bool _pfb_all_chan) { pfb_all_chan = _pfb_all_chan; }

@@ -15,48 +15,111 @@ const float thresh = 1e-5;
 TEST_CASE ("InverseFilterbankEngineCUDA") {}
 
 
-TEST_CASE ("apodization overlap kernel should produce expected output", "")
+
+TEST_CASE ("output overlap discard kernel should produce expected output", "")
 {
-  int N = 1e4;
-  int nchan = 256;
-  int overlap = 100;
-  int N_apod = N - 2*overlap;
+  int npart = 3;
+  int npol = 1;
+  int nchan = 4;
+  int ndat = 4;
+  int overlap = 1;
+
+  int out_ndat = ndat - 2*overlap;
+
+  int in_size = npart * npol * nchan * ndat;
+  int out_size = npart * npol * nchan * out_ndat;
 
   // generate some data.
-  std::vector<std::complex<float>> in(N*nchan, std::complex<float>(0.0, 0.0));
-  std::vector<std::complex<float>> apod(N_apod, std::complex<float>(0.0, 0.0));
-  std::vector<std::complex<float>> out(N_apod*nchan, std::complex<float>(0.0, 0.0));
+  std::vector<std::complex<float>> in(in_size, std::complex<float>(0.0, 0.0));
+  std::vector<std::complex<float>> out_cpu(out_size, std::complex<float>(0.0, 0.0));
+  std::vector<std::complex<float>> out_gpu(out_size, std::complex<float>(0.0, 0.0));
 
   // fill up input data such that each time sample in each channel has the same value.
-  for (int i=0; i<nchan; i++) {
-    for (int j=0; j<N; j++) {
-      in[i*N + j] = std::complex<float>(i+1, i+1);
-    }
-  }
+  int idx;
+  float val;
 
-  // apodization filter is just multiplying by 2.
-  for (int i=0; i<N_apod; i++) {
-    apod[i] = std::complex<float>(2.0, 0.0);
-  }
-
-
-  CUDA::InverseFilterbankEngineCUDA::apply_k_apodization_overlap(
-    in, apod, out, overlap, N, nchan
-  );
-
-  // Now we have to check the output array -- every value should be double initial value
-  bool allclose = true;
-  std::complex<float> comp;
-  for (int i=0; i<nchan; i++) {
-    comp = std::complex<float>(2*(i+1), 2*(i+1));
-    for (int j=0; j<N_apod; j++) {
-      // std::cerr << "[" << i << "," << j << "] " << out[i*N_apod + j] << std::endl;
-      if (out[i*N_apod + j] != comp) {
-        allclose = false;
+  for (int ipart=0; ipart<npart; ipart++) {
+    for (int ipol=0; ipol<npol; ipol++) {
+      val = 0;
+      for (int ichan=0; ichan<nchan; ichan++) {
+        for (int idat=0; idat<ndat; idat++) {
+          idx = ipart*npol*nchan*ndat + ipol*nchan*ndat + ichan*ndat + idat;
+          in[idx] = std::complex<float>(val, val);
+          val++;
+        }
       }
     }
   }
+  std::vector<int> in_dim = {npart, npol, nchan, ndat};
+  std::vector<int> out_dim = {npart, npol, nchan, out_ndat};
 
+  util::overlap_discard_cpu(
+    in, out_cpu, overlap, npart, npol, nchan, ndat
+  );
+
+  CUDA::InverseFilterbankEngineCUDA::apply_k_overlap_discard(
+    in, out_gpu, overlap, npart, npol, nchan, ndat
+  );
+
+  bool allclose = util::allclose(out_cpu, out_gpu, thresh);
+  REQUIRE(allclose == true);
+}
+
+
+
+TEST_CASE ("apodization overlap kernel should produce expected output", "")
+{
+  int npart = 3;
+  int npol = 1;
+  int nchan = 4;
+  int ndat = 4;
+  int overlap = 1;
+
+  int out_ndat = ndat - 2*overlap;
+
+  int in_size = npart * npol * nchan * ndat;
+  int out_size = npart * npol * nchan * out_ndat;
+  int apod_size = nchan * out_ndat;
+
+  // generate some data.
+  std::vector<std::complex<float>> in(in_size, std::complex<float>(0.0, 0.0));
+  std::vector<std::complex<float>> apod(apod_size, std::complex<float>(0.0, 0.0));
+  std::vector<std::complex<float>> out_cpu(out_size, std::complex<float>(0.0, 0.0));
+  std::vector<std::complex<float>> out_gpu(out_size, std::complex<float>(0.0, 0.0));
+
+  // fill up input data such that each time sample in each channel has the same value.
+  int idx;
+  float val;
+
+  for (int ipart=0; ipart<npart; ipart++) {
+    for (int ipol=0; ipol<npol; ipol++) {
+      val = 0;
+      for (int ichan=0; ichan<nchan; ichan++) {
+        for (int idat=0; idat<ndat; idat++) {
+          idx = ipart*npol*nchan*ndat + ipol*nchan*ndat + ichan*ndat + idat;
+          in[idx] = std::complex<float>(val, val);
+          val++;
+        }
+      }
+    }
+  }
+  std::vector<int> in_dim = {npart, npol, nchan, ndat};
+  std::vector<int> out_dim = {npart, npol, nchan, out_ndat};
+
+  // apodization filter is just multiplying by 2.
+  for (int i=0; i<apod_size; i++) {
+    apod[i] = std::complex<float>(2.0, 0.0);
+  }
+
+  util::apodization_overlap_cpu< std::complex<float> >(
+    in, apod, out_cpu, overlap, npart, npol, nchan, ndat
+  );
+
+  CUDA::InverseFilterbankEngineCUDA::apply_k_apodization_overlap(
+    in, apod, out_gpu, overlap, npart, npol, nchan, ndat
+  );
+
+  bool allclose = util::allclose(out_cpu, out_gpu, thresh);
   REQUIRE(allclose == true);
 }
 
@@ -131,61 +194,4 @@ TEST_CASE ("reponse stitch kernel should produce expected output", "")
       REQUIRE(allclose == true);
     }
   }
-}
-
-TEST_CASE ("output overlap discard kernel should produce expected output", "")
-{
-  int ndat = 10;
-  int nchan = 3;
-  int npol = 2;
-  int discard = 2;
-
-  dim3 in_dim(npol, nchan, ndat);
-  dim3 out_dim(npol, nchan, ndat - 2*discard);
-
-  // generate some data.
-  std::vector<std::complex<float>> in(
-    in_dim.x * in_dim.y * in_dim.z, std::complex<float>(0.0, 0.0));
-  std::vector<std::complex<float>> out(
-    out_dim.x * out_dim.y * out_dim.z, std::complex<float>(0.0, 0.0));
-
-  // fill up input data such that each time sample in each channel has the same value.
-  int in_idx;
-  float val;
-  for (int ipol=0; ipol<npol; ipol++) {
-    for (int ichan=0; ichan<nchan; ichan++) {
-      val = (ipol + 1) * (ichan + 1);
-      for (int idat=0; idat<ndat; idat++) {
-        in_idx = ipol*nchan*ndat + ichan*ndat + idat;
-        in[in_idx] = std::complex<float>(val, val);
-      }
-    }
-  }
-
-  // util::print_array(in, in_dim);
-
-  CUDA::InverseFilterbankEngineCUDA::apply_k_overlap_discard(
-    in, in_dim, out, out_dim, discard
-  );
-
-  // Now we have to check the output array -- every value should be double initial value
-  bool allclose = true;
-  std::complex<float> comp;
-  int out_idx;
-  for (int ipol=0; ipol<npol; ipol++) {
-    for (int ichan=0; ichan<nchan; ichan++) {
-      val = (ipol + 1) * (ichan + 1);
-      comp = std::complex<float>(val, val);
-      for (int idat=0; idat < out_dim.z; idat++) {
-        out_idx = ipol*nchan*out_dim.z + ichan*out_dim.z + idat;
-        if (out[out_idx] != comp) {
-          allclose = false;
-        }
-      }
-    }
-  }
-
-  // util::print_array(out, out_dim);
-
-  REQUIRE(allclose == true);
 }

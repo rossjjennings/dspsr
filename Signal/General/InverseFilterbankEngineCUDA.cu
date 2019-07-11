@@ -16,9 +16,9 @@
 
 
 /*!
- * Kernel for multiplying a time domain array by an apodization kernel,
- * removing any overlap discard regions in the process.
- * \method k_apodization_overlap
+ * Kernel for removing any overlap discard regions, optionally multiplying
+ * by a response kernel in the process.
+ * \method k_overlap_discard
  * \param t_in the input data array pointer. The shape of the array should be
  *    (nchan, ndat)
  * \param apodization the apodization kernel
@@ -27,20 +27,22 @@
  * \param ndat the number of time samples in t_in
  * \param nchan the number of channels in t_in
  */
-__global__ void k_apodization_overlap (
+__global__ void k_overlap_discard (
   float2* t_in,
-  float2* apodization,
+  float2* resp,
   float2* t_out,
   int discard,
-  int ndat,
-  int nchan
+  int npart,
+  int npol,
+  int nchan,
+  int ndat
 )
 {
   int total_size_x = blockDim.x * gridDim.x;
   int total_size_y = blockDim.y * gridDim.y;
 
   int idx = blockIdx.x*blockDim.x + threadIdx.x;
-  int apod_ndat = ndat - 2*discard;
+  int out_ndat = ndat - 2*discard;
   // printf("ndat=%d, nchan=%d, idx=%d, total_size_x=%d, total_size_y=%d\n", ndat, nchan, idx, total_size_x, total_size_y);
 
   // make sure we're not trying to access channels that don't exist
@@ -54,14 +56,14 @@ __global__ void k_apodization_overlap (
 
   for (int ichan=blockIdx.y; ichan < nchan; ichan += total_size_y) {
     for (int idat=idx; idat < (ndat - discard); idat += total_size_x) {
-      // printf("ichan=%d, nchan=%d, idat=%d, t_in=(%f, %f), apodization=(%f, %f)\n",
-      //   ichan, nchan, idat, t_in[ichan*ndat + idat].x, t_in[ichan*ndat + idat].y,
-      //   apodization[idat-discard].x, apodization[idat-discard].y);
-      // ignore bottom of overlap region
       if (idat < discard) {
         continue;
       }
-      t_out[ichan*apod_ndat + (idat - discard)] = cuCmulf(apodization[idat - discard], t_in[ichan*ndat + idat]);
+      if (resp == nullptr) {
+        t_out[ichan*out_ndat + (idat - discard)] = t_in[ichan*ndat + idat];
+      } else {
+        t_out[ichan*out_ndat + (idat - discard)] = cuCmulf(resp[idat - discard], t_in[ichan*ndat + idat]);
+      }
     }
   }
 }
@@ -237,45 +239,6 @@ __global__ void k_response_stitch (
 }
 
 
-/*!
- * Kernel for discarding overlap regions on output time domain data.
- * \method k_overlap_discard
- * \param t_in input time domain pointer
- * \param t_out output time domain pointer
- * \param discard discard region on output data.
- * \param t_in_dim the dimensions of t_in. should be two dimensional
- */
-__global__ void k_overlap_discard (
-  float2* t_in,
-  float2* t_out,
-  int discard,
-  dim3 t_in_dim
-)
-{
-  int total_size_x = blockDim.x * gridDim.x; // for idat
-  int total_size_y = blockDim.y;
-
-  int idx = blockIdx.x*blockDim.x + threadIdx.x;
-  int idy = blockIdx.y;
-
-  if (idy > t_in_dim.x || idx > t_in_dim.y - discard) {
-    return;
-  }
-
-  int t_out_ndat = t_in_dim.y - 2*discard;
-  // float2 val;
-  for (int ichan=idy; ichan < t_in_dim.x; ichan += total_size_y) {
-    for (int idat=idx; idat < t_in_dim.y - discard; idat += total_size_x) {
-      if (idat < discard) {
-        continue;
-      }
-      // val = t_in[ichan*t_in_dim.y + idat];
-      // printf("ichan=%d, idat=%d, t_in=(%f, %f)\n", ichan, idat, val.x, val.y);
-      t_out[ichan*t_out_ndat + (idat - discard)] = t_in[ichan*t_in_dim.y + idat];
-    }
-  }
-}
-
 CUDA::InverseFilterbankEngineCUDA::InverseFilterbankEngineCUDA (cudaStream_t _stream)
 {
   stream = _stream;
@@ -394,9 +357,9 @@ void CUDA::InverseFilterbankEngineCUDA::finish ()
 
 //! This method is static
 void CUDA::InverseFilterbankEngineCUDA::apply_k_response_stitch (
-  std::vector<std::complex<float>>& in,
-  std::vector<std::complex<float>>& response,
-  std::vector<std::complex<float>>& out,
+  std::vector< std::complex<float> >& in,
+  std::vector< std::complex<float> >& response,
+  std::vector< std::complex<float> >& out,
   Rational os_factor,
   int npart,
   int npol,
@@ -452,41 +415,45 @@ void CUDA::InverseFilterbankEngineCUDA::apply_k_response_stitch (
 
 //! This method is static
 void CUDA::InverseFilterbankEngineCUDA::apply_k_apodization_overlap (
-  std::vector<std::complex<float>>& in,
-  std::vector<std::complex<float>>& apodization,
-  std::vector<std::complex<float>>& out,
+  std::vector< std::complex<float> >& in,
+  std::vector< std::complex<float> >& apodization,
+  std::vector< std::complex<float> >& out,
   int discard,
-  int ndat,
-  int nchan)
+  int npart,
+  int npol,
+  int nchan,
+  int ndat
+)
 {
   float2* in_device;
   float2* apod_device;
   float2* out_device;
 
   size_t sz = sizeof(float2);
-  int ndat_apod = (ndat - 2*discard);
 
-  cudaMalloc((void **) &in_device, ndat*nchan*sz);
-  cudaMalloc((void **) &apod_device, ndat_apod*sz);
-  cudaMalloc((void **) &out_device, ndat_apod*nchan*sz);
+  int out_ndat = ndat - 2*discard;
+  int in_size = npart * npol * nchan * ndat;
+  int out_size = npart * npol * nchan * out_ndat;
+
+
+  cudaMalloc((void **) &in_device, in_size*sz);
+  cudaMalloc((void **) &apod_device, out_ndat*sz);
+  cudaMalloc((void **) &out_device, out_size*nchan*sz);
 
   cudaMemcpy(
-    in_device, (float2*) in.data(), ndat*nchan*sz, cudaMemcpyHostToDevice);
+    in_device, (float2*) in.data(), in_size*sz, cudaMemcpyHostToDevice);
   cudaMemcpy(
-    apod_device, (float2*) apodization.data(), ndat_apod*sz, cudaMemcpyHostToDevice);
+    apod_device, (float2*) apodization.data(), out_ndat*sz, cudaMemcpyHostToDevice);
 
   // 10 is sort of arbitrary here.
   dim3 grid (10, nchan, 1);
   dim3 threads (64, 1, 1);
 
 
-  k_apodization_overlap<<<grid, threads>>>(
-    in_device, apod_device, out_device, discard, ndat, nchan);
-  if (dsp::Operation::verbose) {
-    // check_error ("CUDA::InverseFilterbankEngineCUDA::apply_k_apodization_overlap");
-  }
+  k_overlap_discard<<<grid, threads>>>(
+    in_device, apod_device, out_device, discard, npart, npol, nchan, ndat);
 
-  cudaMemcpy((float2*) out.data(), out_device, ndat_apod*nchan*sz, cudaMemcpyDeviceToHost);
+  cudaMemcpy((float2*) out.data(), out_device, out_size*sz, cudaMemcpyDeviceToHost);
 
   cudaFree(in_device);
   cudaFree(apod_device);
@@ -495,11 +462,13 @@ void CUDA::InverseFilterbankEngineCUDA::apply_k_apodization_overlap (
 
 
 void CUDA::InverseFilterbankEngineCUDA::apply_k_overlap_discard (
-  std::vector<std::complex<float>>& in,
-  dim3 in_dim,
-  std::vector<std::complex<float>>& out,
-  dim3 out_dim,
-  int discard
+  std::vector< std::complex<float> >& in,
+  std::vector< std::complex<float> >& out,
+  int discard,
+  int npart,
+  int npol,
+  int nchan,
+  int ndat
 )
 {
   float2* in_device;
@@ -507,8 +476,10 @@ void CUDA::InverseFilterbankEngineCUDA::apply_k_overlap_discard (
 
   size_t sz = sizeof(float2);
 
-  int in_size = in_dim.x * in_dim.y * in_dim.z;
-  int out_size = out_dim.x * out_dim.y * out_dim.z;
+  int out_ndat = ndat - 2*discard;
+
+  int in_size = npart * npol * nchan * ndat;
+  int out_size = npart * npol * nchan * out_ndat;
 
   cudaMalloc((void **) &in_device, in_size*sz);
   cudaMalloc((void **) &out_device, out_size*sz);
@@ -517,15 +488,12 @@ void CUDA::InverseFilterbankEngineCUDA::apply_k_overlap_discard (
     in_device, (float2*) in.data(), in_size*sz, cudaMemcpyHostToDevice);
 
   // 10 is sort of arbitrary here.
-  dim3 grid (10, in_dim.y, 1);
+  dim3 grid (10, nchan, 1);
   dim3 threads (64, 1, 1);
 
-  dim3 in_dim_k(in_dim.x * in_dim.y, in_dim.z);
+  k_overlap_discard<<<grid, threads>>>(
+    in_device, nullptr, out_device, discard, npart, npol, nchan, ndat);
 
-  k_overlap_discard<<<grid, threads>>>(in_device, out_device, discard, in_dim_k);
-  if (dsp::Operation::verbose) {
-    // check_error ("CUDA::InverseFilterbankEngineCUDA::apply_k_overlap_discard");
-  }
   cudaMemcpy((float2*) out.data(), out_device, out_size*sz, cudaMemcpyDeviceToHost);
 
   cudaFree(in_device);

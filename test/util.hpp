@@ -57,6 +57,28 @@ namespace util {
     bool pfb_all_chan
   );
 
+  template<typename T>
+  void apodization_overlap_cpu (
+    std::vector<T> in,
+    std::vector<T> apodization,
+    std::vector<T>& out,
+    int discard,
+    int npart,
+    int npol,
+    int nchan,
+    int ndat
+  );
+
+  template<typename T>
+  void overlap_discard_cpu (
+    std::vector<T> in,
+    std::vector<T>& out,
+    int discard,
+    int npart,
+    int npol,
+    int nchan,
+    int ndat
+  );
 
 }
 
@@ -245,11 +267,72 @@ void util::response_stitch_cpu (
       }
     }
   }
+}
 
+template<typename T>
+void util::apodization_overlap_cpu (
+  std::vector<T> in,
+  std::vector<T> apodization,
+  std::vector<T>& out,
+  int discard,
+  int npart,
+  int npol,
+  int nchan,
+  int ndat
+)
+{
+  int out_ndat = ndat - 2*discard;
 
+  int in_size = npart * npol * nchan * ndat;
+  int out_size = npart * npol * nchan * out_ndat;
+  int apod_size = nchan * out_ndat;
 
+  int in_offset;
+  int out_offset;
+  int apod_offset;
 
+  for (int ipart=0; ipart<npart; ipart++) {
+    for (int ipol=0; ipol<npol; ipol++) {
+      for (int ichan=0; ichan<nchan; ichan++) {
+        in_offset = ipart*npol*nchan*ndat + ipol*nchan*ndat + ichan*ndat;
+        out_offset = ipart*npol*nchan*out_ndat + ipol*nchan*out_ndat + ichan*out_ndat;
+        apod_offset = ichan*out_ndat;
+        for (int idat=0; idat<out_ndat; idat++) {
 
+          if (
+            idat + out_offset > out_size ||
+            apod_offset + idat > apod_size ||
+            idat + discard + in_offset > in_size
+          ) {
+            std::cerr << "util::apodization_overlap_cpu: watch out!" << std::endl;
+          }
+
+          if (apodization.size() != 0) {
+            out[idat + out_offset] = apodization[apod_offset + idat]*in[idat + discard + in_offset];
+          } else {
+            out[idat + out_offset] = in[idat + discard + in_offset];
+          }
+        }
+      }
+    }
+  }
+}
+
+template<typename T>
+void util::overlap_discard_cpu (
+  std::vector<T> in,
+  std::vector<T>& out,
+  int discard,
+  int npart,
+  int npol,
+  int nchan,
+  int ndat
+)
+{
+  std::vector<T> empty;
+  util::apodization_overlap_cpu<T>(
+    in, empty, out, discard, npart, npol, nchan, ndat
+  );
 }
 
 

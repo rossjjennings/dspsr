@@ -84,6 +84,7 @@ void PipelineConfig::setup_input (std::string file_path) {
   input = file.release();
 }
 
+
 TEST_CASE("InverseFilterbank works in larger LoadToFold context", "[.]")
 {
   // util::set_verbose(true);

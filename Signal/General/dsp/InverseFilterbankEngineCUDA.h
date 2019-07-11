@@ -75,12 +75,15 @@ namespace CUDA
     //! \param ndat the size of the input array buffer, in complex samples
     //! \param nchan the number of channels in the input array
     static void apply_k_apodization_overlap (
-      std::vector<std::complex<float>>& in,
-      std::vector<std::complex<float>>& apodization,
-      std::vector<std::complex<float>>& out,
+      std::vector< std::complex<float> >& in,
+      std::vector< std::complex<float> >& apodization,
+      std::vector< std::complex<float> >& out,
       int discard,
-      int ndat,
-      int nchan);
+      int npart,
+      int npol,
+      int nchan,
+      int ndat
+    );
 
     //! Apply the k_apodization_overlap kernel to some data.
     //! This function copies arrays from host to device, so it is not intended
@@ -97,16 +100,17 @@ namespace CUDA
     //! \param pfb_dc_chan whether or not the PFB DC channel is present
     //! \param pfb_all_chan whether or not all the PFB channels are present
     static void apply_k_response_stitch (
-      std::vector<std::complex<float>>& in,
-      std::vector<std::complex<float>>& response,
-      std::vector<std::complex<float>>& out,
+      std::vector< std::complex<float> >& in,
+      std::vector< std::complex<float> >& response,
+      std::vector< std::complex<float> >& out,
       Rational os_factor,
       int npart,
       int npol,
       int nchan,
       int ndat,
       bool pfb_dc_chan,
-      bool pfb_all_chan);
+      bool pfb_all_chan
+    );
 
     //! Apply the k_overlap_discard kernel to some data.
     //! This function copies arrays from host to device, so it is not intended
@@ -118,11 +122,13 @@ namespace CUDA
     //! \param discard number of samples to discard from either side of each
     //!     channel
     static void apply_k_overlap_discard (
-      std::vector<std::complex<float>>& in,
-      dim3 in_dim,
-      std::vector<std::complex<float>>& out,
-      dim3 out_dim,
-      int discard
+      std::vector< std::complex<float> >& in,
+      std::vector< std::complex<float> >& out,
+      int discard,
+      int npart,
+      int npol,
+      int nchan,
+      int ndat
     );
 
   protected:
