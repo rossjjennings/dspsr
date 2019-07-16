@@ -1,14 +1,16 @@
 #include <complex>
 #include <vector>
 #include <iostream>
+#include <algorithm> // for all_of
 
 #include "catch.hpp"
 
 #include "util.hpp"
 #include "util.cuda.hpp"
 
-#include "Rational.h"
 #include "dsp/InverseFilterbankEngineCUDA.h"
+#include "dsp/InverseFilterbank.h"
+#include "Rational.h"
 
 const float thresh = 1e-5;
 
@@ -46,45 +48,80 @@ struct TestDims<DoublePol> : TestDims<SinglePol> {
 };
 
 
-TEST_CASE ("InverseFilterbankEngineCUDA") {}
+TEST_CASE ("InverseFilterbankEngineCUDA") {
 
+  void* stream = 0;
+  cudaStream_t cuda_stream = reinterpret_cast<cudaStream_t>(stream);
 
+  CUDA::InverseFilterbankEngineCUDA engine(cuda_stream);
 
-TEST_CASE (
-  "forward FFT kernel can operate on data", "[.]"
-)
-{
-  int fft_length = 1024;
-  int nchan = 8;
-  int ndat = fft_length * nchan;
+  auto pred_setup_fft_plan = [] (cufftResult r) -> bool { return r == CUFFT_SUCCESS; };
 
-  std::vector<std::complex<float>> in_c (ndat);
-  std::vector<float> in_r (ndat);
-  std::vector<std::complex<float>> out (ndat);
+  SECTION ("can create forward cufft plan")
+  {
+    std::vector<cufftResult> results = engine.setup_forward_fft_plan(
+      1024, 8, CUFFT_R2C);
+    REQUIRE(all_of(results.begin(), results.end(), pred_setup_fft_plan) == true);
 
-  CUDA::InverseFilterbankEngineCUDA::apply_cufft_forward<CUFFT_R2C>(in_r, out);
-  CUDA::InverseFilterbankEngineCUDA::apply_cufft_forward<CUFFT_C2C>(in_c, out);
+    results = engine.setup_forward_fft_plan(1024, 8, CUFFT_C2C);
+    REQUIRE(all_of(results.begin(), results.end(), pred_setup_fft_plan) == true);
+
+  }
+
+  SECTION ("can create backward cufft plan")
+  {
+    std::vector<cufftResult> results = engine.setup_backward_fft_plan(1024, 8);
+    REQUIRE(all_of(results.begin(), results.end(), pred_setup_fft_plan) == true);
+  }
 }
 
-TEST_CASE (
-  "backward FFT kernel can operate on data", "[.]"
-)
-{
-  int fft_length = 1024;
-  int nchan = 8;
-  int ndat = fft_length * nchan;
 
-  std::vector<std::complex<float>> in (ndat);
-  std::vector<std::complex<float>> out (ndat);
-
-  CUDA::InverseFilterbankEngineCUDA::apply_cufft_backward(in, out);
-}
-
+// TEST_CASE ("cufft kernels can operate on data")
+// {
+//   int input_nchan = 8;
+//   int output_nchan = 2;
+//
+//   void* stream = 0;
+//   cudaStream_t cuda_stream = reinterpret_cast<cudaStream_t>(stream);
+//
+//   CUDA::InverseFilterbankEngineCUDA engine(cuda_stream);
+//
+//
+//   SECTION (
+//     "forward FFT kernel can operate on data"
+//   )
+//   {
+//     int fft_length = 1024;
+//     int nchan = 8;
+//     int ndat = fft_length * nchan;
+//
+//     std::vector<std::complex<float>> in_c (ndat);
+//     std::vector<float> in_r (ndat);
+//     std::vector<std::complex<float>> out (ndat);
+//
+//     CUDA::InverseFilterbankEngineCUDA::apply_cufft_forward<CUFFT_R2C>(in_r, out);
+//     CUDA::InverseFilterbankEngineCUDA::apply_cufft_forward<CUFFT_C2C>(in_c, out);
+//   }
+//
+//   SECTION (
+//     "backward FFT kernel can operate on data"
+//   )
+//   {
+//     int fft_length = 1024;
+//     int nchan = 8;
+//     int ndat = fft_length * nchan;
+//
+//     std::vector<std::complex<float>> in (ndat);
+//     std::vector<std::complex<float>> out (ndat);
+//
+//     CUDA::InverseFilterbankEngineCUDA::apply_cufft_backward(in, out);
+//   }
+// }
 
 TEMPLATE_TEST_CASE (
   "output overlap discard kernel should produce expected output",
   "[overlap_discard][template]",
-  TestDims<SmallSinglePol>, TestDims<SmallDoublePol>, TestDims<SinglePol>, TestDims<DoublePol>
+  TestDims<SmallSinglePol>, TestDims<SmallDoublePol>//, TestDims<SinglePol>, TestDims<DoublePol>
 )
 {
   int npart = TestType::npart;
@@ -147,7 +184,7 @@ TEMPLATE_TEST_CASE (
 TEMPLATE_TEST_CASE (
   "apodization overlap kernel should produce expected output",
   "[apodization_overlap][template]",
-  TestDims<SmallSinglePol>, TestDims<SmallDoublePol>, TestDims<SinglePol>, TestDims<DoublePol>
+  TestDims<SmallSinglePol>, TestDims<SmallDoublePol>//, TestDims<SinglePol>, TestDims<DoublePol>
 )
 {
   int npart = TestType::npart;
@@ -163,10 +200,10 @@ TEMPLATE_TEST_CASE (
   int apod_size = nchan * out_ndat;
 
   // generate some data.
-  std::vector<std::complex<float>> in(in_size, std::complex<float>(0.0, 0.0));
-  std::vector<std::complex<float>> apod(apod_size, std::complex<float>(0.0, 0.0));
-  std::vector<std::complex<float>> out_cpu(out_size, std::complex<float>(0.0, 0.0));
-  std::vector<std::complex<float>> out_gpu(out_size, std::complex<float>(0.0, 0.0));
+  std::vector< std::complex<float> > in(in_size, std::complex<float>(0.0, 0.0));
+  std::vector< std::complex<float> > apod(apod_size, std::complex<float>(0.0, 0.0));
+  std::vector< std::complex<float> > out_cpu(out_size, std::complex<float>(0.0, 0.0));
+  std::vector< std::complex<float> > out_gpu(out_size, std::complex<float>(0.0, 0.0));
 
   // fill up input data such that each time sample in each channel has the same value.
   int idx;
@@ -216,7 +253,7 @@ TEMPLATE_TEST_CASE (
 TEMPLATE_TEST_CASE (
   "reponse stitch kernel should produce expected output",
   "[response_stitch][template]",
-  TestDims<SmallSinglePol>, TestDims<SmallDoublePol>, TestDims<SinglePol>, TestDims<DoublePol>
+  TestDims<SmallSinglePol>, TestDims<SmallDoublePol>//, TestDims<SinglePol>, TestDims<DoublePol>
 )
 {
   int npart = TestType::npart;

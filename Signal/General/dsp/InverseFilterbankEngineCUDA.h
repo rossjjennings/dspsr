@@ -90,15 +90,28 @@ namespace CUDA
     //! Do any actions to clean up after `perform`.
     void finish ();
 
+    //! setup backward fft plans. This is public so we can test it.
+    std::vector<cufftResult> setup_backward_fft_plan (
+      int _output_fft_length,
+      int _output_nchan
+    );
+
+    //! setup forward fft plans. This is public so we can test it.
+    std::vector<cufftResult> setup_forward_fft_plan (
+      int _input_fft_length,
+      int _input_nchan,
+      cufftType _type_forward
+    );
+
 
     template<int i>
-    static void apply_cufft_forward (
+    void apply_cufft_forward (
       std::vector< typename cufftTypeMap<i>::input_std_type >& in,
       std::vector< typename cufftTypeMap<i>::output_std_type >& out
     );
 
     //! Apply the cufft backwards FFT plan to some data.
-    static void apply_cufft_backward (
+    void apply_cufft_backward (
       std::vector< std::complex<float> >& in,
       std::vector< std::complex<float> >& out
     );
@@ -198,7 +211,7 @@ void CUDA::InverseFilterbankEngineCUDA::apply_cufft_forward (
   std::vector< typename CUDA::cufftTypeMap<i>::output_std_type >& out
 )
 {
-  std::cerr << i << std::endl;
+
 }
 
 

@@ -46,7 +46,7 @@ void dsp::InverseFilterbankEngineCPU::setup (dsp::InverseFilterbank* filterbank)
   verbose = filterbank->verbose;
   const TimeSeries* input = filterbank->get_input();
   TimeSeries* output = filterbank->get_output();
-
+  real_to_complex = (input->get_state() == Signal::Nyquist);
   n_per_sample = real_to_complex ? 2: 1;
 
   pfb_dc_chan = filterbank->get_pfb_dc_chan();
@@ -75,8 +75,6 @@ void dsp::InverseFilterbankEngineCPU::setup (dsp::InverseFilterbank* filterbank)
     }
     response = filterbank->get_response();
   }
-
-  real_to_complex = (input->get_state() == Signal::Nyquist);
 
   OptimalFFT* optimal = 0;
   if (response && response->has_optimal_fft()) {

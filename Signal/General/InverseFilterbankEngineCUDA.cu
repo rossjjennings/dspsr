@@ -270,6 +270,9 @@ CUDA::InverseFilterbankEngineCUDA::InverseFilterbankEngineCUDA (cudaStream_t _st
   cufftResult result;
   for (int i=0; i<nplans; i++) {
     result = cufftCreate (&plans[i]);
+    if (verbose) {
+      std::cerr << "CUDA::InverseFilterbankEngineCUDA::InverseFilterbankEngineCUDA: i=" << i << " result=" << result << std::endl;
+    }
     if (result != CUFFT_SUCCESS) {
       throw CUFFTError (
         result,
@@ -287,27 +290,118 @@ CUDA::InverseFilterbankEngineCUDA::~InverseFilterbankEngineCUDA ()
   cufftResult result;
   for (int i=0; i<nplans; i++) {
     result = cufftDestroy (plans[i]);
-    if (result != CUFFT_SUCCESS) {
-      throw CUFFTError (
-        result,
-        "CUDA::InverseFilterbankEngineCUDA::InverseFilterbankEngineCUDA",
-        "cufftDestroy");
+    if (verbose) {
+      std::cerr << "CUDA::InverseFilterbankEngineCUDA::~InverseFilterbankEngineCUDA: i=" << i << " result=" << result << std::endl;
     }
+    if (result == CUFFT_INVALID_PLAN) {
+      if (verbose) {
+        std::cerr << "CUDA::InverseFilterbankEngineCUDA::~InverseFilterbankEngineCUDA: plan[" << i << "] was invalid" << std::endl;
+      }
+      // throw CUFFTError (
+      //   result,
+      //   "CUDA::InverseFilterbankEngineCUDA::InverseFilterbankEngineCUDA",
+      //   "cufftDestroy");
+    }
+
   }
 }
 
+std::vector<cufftResult> CUDA::InverseFilterbankEngineCUDA::setup_forward_fft_plan (
+  int _input_fft_length,
+  int _input_nchan,
+  cufftType _type_forward
+)
+{
+  // setup forward batched plan
+  int rank = 1; // 1D transform
+  int n[] = {_input_fft_length}; /* 1d transforms of length 10 */
+  int howmany = _input_nchan;
+  int idist = _input_fft_length;
+  int odist = _input_fft_length;
+  int istride = 1;
+  int ostride = 1;
+  int *inembed = n, *onembed = n;
+  cufftResult result;
+  std::vector<cufftResult> results;
+
+  // cufftResult = cufftPlanMany(cufftHandle *plan, int rank, int *n, int *inembed,
+  //     int istride, int idist, int *onembed, int ostride,
+  //     int odist, cufftType type, int batch)
+
+  // result = cufftPlan1d (&forward, input_fft_length, type_forward, 1);
+  result = cufftPlanMany(
+    &forward, rank, n,
+    inembed, istride, idist,
+    onembed, ostride, odist,
+    _type_forward, howmany);
+  results.push_back(result);
+
+  if (result != CUFFT_SUCCESS)
+    throw CUFFTError (result, "CUDA::InverseFilterbankEngineCUDA::setup_forward_fft_plan",
+                      "cufftPlanMany(forward)");
+
+  result = cufftSetStream (forward, stream);
+  results.push_back(result);
+
+  if (result != CUFFT_SUCCESS)
+    throw CUFFTError (result, "CUDA::InverseFilterbankEngineCUDA::setup_forward_fft_plan",
+          "cufftSetStream(forward)");
+
+  return results;
+}
+
+std::vector<cufftResult> CUDA::InverseFilterbankEngineCUDA::setup_backward_fft_plan (
+  int _output_fft_length,
+  int _output_nchan
+)
+{
+  // setup forward batched plan
+  int rank = 1; // 1D transform
+  int n[] = {_output_fft_length}; /* 1d transforms of length 10 */
+  int howmany = _output_nchan;
+  int idist = _output_fft_length;
+  int odist = _output_fft_length;
+  int istride = 1;
+  int ostride = 1;
+  int *inembed = n, *onembed = n;
+  cufftResult result;
+  std::vector<cufftResult> results;
+
+
+  // result = cufftPlan1d (&backward, output_fft_length, CUFFT_C2C, 1);
+  result = cufftPlanMany(
+    &backward, rank, n,
+    inembed, istride, idist,
+    onembed, ostride, odist,
+    CUFFT_C2C, howmany);
+
+  results.push_back(result);
+
+  if (result != CUFFT_SUCCESS)
+    throw CUFFTError (result, "CUDA::InverseFilterbankEngineCUDA::setup_backward_fft_plan",
+                      "cufftPlan1d(backward)");
+
+  result = cufftSetStream (backward, stream);
+  if (result != CUFFT_SUCCESS)
+    throw CUFFTError (result, "CUDA::InverseFilterbankEngineCUDA::setup_backward_fft_plan",
+                      "cufftSetStream(backward)");
+  results.push_back(result);
+  return results;
+}
+
+
+
 void CUDA::InverseFilterbankEngineCUDA::setup (dsp::InverseFilterbank* filterbank)
 {
-  if (filterbank->get_input()->get_state() == Signal::Nyquist) {
+
+  const dsp::TimeSeries* input = filterbank->get_input();
+  dsp::TimeSeries* output = filterbank->get_output();
+
+  if (input->get_state() == Signal::Nyquist) {
     type_forward = CUFFT_R2C;
   } else {
     type_forward = CUFFT_C2C;
   }
-
-
-
-  const dsp::TimeSeries* input = filterbank->get_input();
-  dsp::TimeSeries* output = filterbank->get_output();
 
   pfb_dc_chan = filterbank->get_pfb_dc_chan();
   pfb_all_chan = filterbank->get_pfb_all_chan();
@@ -333,57 +427,13 @@ void CUDA::InverseFilterbankEngineCUDA::setup (dsp::InverseFilterbank* filterban
   input_os_keep = filterbank->get_oversampling_factor().normalize(input_fft_length);
   input_os_discard = input_fft_length - input_os_keep;
 
-  // setup forward batched plan
-  int rank = 1; // 1D transform
-  int n[] = {(int) input_fft_length}; /* 1d transforms of length 10 */
-  int howmany = input_nchan;
-  int idist = input_fft_length;
-  int odist = input_fft_length;
-  int istride = 1;
-  int ostride = 1;
-  int *inembed = n, *onembed = n;
-  cufftResult result;
+  setup_forward_fft_plan(
+    input_fft_length, input_nchan, type_forward
+  );
 
-  // cufftResult = cufftPlanMany(cufftHandle *plan, int rank, int *n, int *inembed,
-  //     int istride, int idist, int *onembed, int ostride,
-  //     int odist, cufftType type, int batch)
-
-  // result = cufftPlan1d (&forward, input_fft_length, type_forward, 1);
-  result = cufftPlanMany(
-    &forward, rank, n,
-    inembed, istride, idist,
-    onembed, ostride, odist,
-    type_forward, howmany);
-
-  if (result != CUFFT_SUCCESS)
-    throw CUFFTError (result, "CUDA::InverseFilterbankEngineCUDA::setup_fft_plans",
-                      "cufftPlan1d(forward)");
-
-  result = cufftSetStream (forward, stream);
-  if (result != CUFFT_SUCCESS)
-    throw CUFFTError (result, "CUDA::InverseFilterbankEngineCUDA::setup_fft_plans",
-          "cufftSetStream(forward)");
-
-  // setup backward plan
-  howmany = output_nchan;
-  n[0] = output_fft_length;
-  idist = odist = output_fft_length;
-
-  // result = cufftPlan1d (&backward, output_fft_length, CUFFT_C2C, 1);
-  result = cufftPlanMany(
-    &backward, rank, n,
-    inembed, istride, idist,
-    onembed, ostride, odist,
-    CUFFT_C2C, howmany);
-
-  if (result != CUFFT_SUCCESS)
-    throw CUFFTError (result, "CUDA::InverseFilterbankEngineCUDA::setup_fft_plans",
-                      "cufftPlan1d(backward)");
-
-  result = cufftSetStream (backward, stream);
-  if (result != CUFFT_SUCCESS)
-    throw CUFFTError (result, "CUDA::InverseFilterbankEngineCUDA::setup_fft_plans",
-                      "cufftSetStream(backward)");
+  setup_backward_fft_plan(
+    output_fft_length, output_nchan
+  );
 }
 
 
@@ -605,4 +655,5 @@ void CUDA::InverseFilterbankEngineCUDA::apply_cufft_backward (
   std::vector< std::complex<float> >& out
 )
 {
+
 }
