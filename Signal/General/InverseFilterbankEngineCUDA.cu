@@ -9,8 +9,6 @@
 #include <vector>
 #include <complex>
 
-#include <cuda_runtime.h>
-
 #include "CUFFTError.h"
 #include "dsp/InverseFilterbankEngineCUDA.h"
 
@@ -305,19 +303,58 @@ void CUDA::InverseFilterbankEngineCUDA::setup (dsp::InverseFilterbank* filterban
   } else {
     type_forward = CUFFT_C2C;
   }
-}
 
-double CUDA::InverseFilterbankEngineCUDA::setup_fft_plans (dsp::InverseFilterbank* filterbank)
-{
-  // taken from ConvolutionCUDA engine.
-  if (dsp::Operation::verbose) {
-    std::cerr << "CUDA::InverseFilterbankEngineCUDA::setup_fft_plans"
-      << " input_fft_length=" << input_fft_length
-      << " output_fft_length=" << output_fft_length << std::endl;
-  }
 
-  // setup forward plan
-  cufftResult result = cufftPlan1d (&forward, input_fft_length, type_forward, 1);
+
+  const dsp::TimeSeries* input = filterbank->get_input();
+  dsp::TimeSeries* output = filterbank->get_output();
+
+  pfb_dc_chan = filterbank->get_pfb_dc_chan();
+  pfb_all_chan = filterbank->get_pfb_all_chan();
+
+  input_npol = input->get_npol();
+  input_nchan = input->get_nchan();
+  output_nchan = output->get_nchan();
+
+  input_fft_length = filterbank->get_input_fft_length();
+  output_fft_length = filterbank->get_output_fft_length();
+
+  input_discard_pos = filterbank->get_input_discard_pos();
+  input_discard_neg = filterbank->get_input_discard_neg();
+  output_discard_pos = filterbank->get_output_discard_pos();
+  output_discard_neg = filterbank->get_output_discard_neg();
+
+  input_discard_total = n_per_sample*(input_discard_neg + input_discard_pos);
+  input_sample_step = input_fft_length - input_discard_total;
+
+  output_discard_total = n_per_sample*(output_discard_neg + output_discard_pos);
+  output_sample_step = output_fft_length - output_discard_total;
+
+  input_os_keep = filterbank->get_oversampling_factor().normalize(input_fft_length);
+  input_os_discard = input_fft_length - input_os_keep;
+
+  // setup forward batched plan
+  int rank = 1; // 1D transform
+  int n[] = {(int) input_fft_length}; /* 1d transforms of length 10 */
+  int howmany = input_nchan;
+  int idist = input_fft_length;
+  int odist = input_fft_length;
+  int istride = 1;
+  int ostride = 1;
+  int *inembed = n, *onembed = n;
+  cufftResult result;
+
+  // cufftResult = cufftPlanMany(cufftHandle *plan, int rank, int *n, int *inembed,
+  //     int istride, int idist, int *onembed, int ostride,
+  //     int odist, cufftType type, int batch)
+
+  // result = cufftPlan1d (&forward, input_fft_length, type_forward, 1);
+  result = cufftPlanMany(
+    &forward, rank, n,
+    inembed, istride, idist,
+    onembed, ostride, odist,
+    type_forward, howmany);
+
   if (result != CUFFT_SUCCESS)
     throw CUFFTError (result, "CUDA::InverseFilterbankEngineCUDA::setup_fft_plans",
                       "cufftPlan1d(forward)");
@@ -328,7 +365,17 @@ double CUDA::InverseFilterbankEngineCUDA::setup_fft_plans (dsp::InverseFilterban
           "cufftSetStream(forward)");
 
   // setup backward plan
-  result = cufftPlan1d (&backward, output_fft_length, CUFFT_C2C, 1);
+  howmany = output_nchan;
+  n[0] = output_fft_length;
+  idist = odist = output_fft_length;
+
+  // result = cufftPlan1d (&backward, output_fft_length, CUFFT_C2C, 1);
+  result = cufftPlanMany(
+    &backward, rank, n,
+    inembed, istride, idist,
+    onembed, ostride, odist,
+    CUFFT_C2C, howmany);
+
   if (result != CUFFT_SUCCESS)
     throw CUFFTError (result, "CUDA::InverseFilterbankEngineCUDA::setup_fft_plans",
                       "cufftPlan1d(backward)");
@@ -337,37 +384,72 @@ double CUDA::InverseFilterbankEngineCUDA::setup_fft_plans (dsp::InverseFilterban
   if (result != CUFFT_SUCCESS)
     throw CUFFTError (result, "CUDA::InverseFilterbankEngineCUDA::setup_fft_plans",
                       "cufftSetStream(backward)");
-
-  // size_t buffer_size = output_fft_length * sizeof (cufftComplex);
-  // cudaError_t error = cudaMalloc ((void **) &buf, buffer_size);
-  // if (error != cudaSuccess)
-  //   throw Error (FailedCall, "CUDA::InverseFilterbankEngineCUDA::setup_fft_plans",
-  //                "cudaMalloc(%x, %u): %s", &buf, buffer_size,
-  //                cudaGetErrorString (error));
-
-  // Compute FFT scale factors
-  scalefac = 1.0;
-  if (FTransform::get_norm() == FTransform::unnormalized) {
-    scalefac = pow(double(output_fft_length), 2);
-    scalefac *= pow(filterbank->get_oversampling_factor().doubleValue(), 2);
-  }
-  fft_plans_setup = true;
-  if (verbose) {
-    std::cerr << "dsp::InverseFilterbankEngineCPU::setup_fft_plans: scalefac=" << scalefac << std::endl;
-  }
-
-  return scalefac;
 }
+
 
 void CUDA::InverseFilterbankEngineCUDA::set_scratch (float* )
 { }
 
-void CUDA::InverseFilterbankEngineCUDA::perform (const dsp::TimeSeries* in, dsp::TimeSeries* out,
-              uint64_t npart, uint64_t in_step, uint64_t out_step)
-{ }
+void CUDA::InverseFilterbankEngineCUDA::perform (
+  const dsp::TimeSeries* in,
+  dsp::TimeSeries* out,
+  uint64_t npart,
+  uint64_t in_step,
+  uint64_t out_step
+)
+{
+  //
+  // typedef CUDA::cufftTypeMap<type_forward> type_map;
+  //
+  // // in_step and out_step are unused, as they get calculated in setup
+  // dim3 grid (1, nchan, npol*npart);
+  // dim3 threads (1024, 1, 1);
+  // grid.x = (ndat / threads.x) + 1;
+  //
+  // typename type_map::input_type* in_device;
+  // cufftComplex* out_device;
+  //
+  // k_overlap_discard<<<grid, threads, 0, stream>>>(
+  //   in_device, apod_device, in_scratch_device,
+  //   input_discard_total, npart, input_npol, input_nchan, input_fft_length
+  // );
+  //
+  // for (uint64_t ipart=0; ipart<npart; ipart++)
+  // {
+  //   type_map::cufftExec(
+  //     forward,
+  //     in_scratch_device + ipart * input_fft_length * input_nchan,
+  //     in_scratch_device + ipart * input_fft_length * input_nchan,
+  //     CUFFT_FORWARD);
+  // }
+  //
+  // k_response_stitch<<<grid, threads, 0, stream>>>(
+  //   in_device, resp_device, out_device, os_discard, npart,
+  //   npol, nchan, in_ndat, out_ndat, pfb_dc_chan, pfb_all_chan);
+  // );
+  //
+  // for (uint64_t ipart=0; ipart<npart; ipart++)
+  // {
+  //   cufftExecC2C(
+  //     backward,
+  //     in_scratch_device + ipart * output_fft_length * output_nchan,
+  //     in_scratch_device + ipart * output_fft_length * output_nchan,
+  //     CUFFT_INVERSE);
+  // }
+  //
+  // k_overlap_discard<<<grid, threads, 0, stream>>>(
+  //   in_scratch, nullptr, out_device,
+  //   output_discard_total, npart, input_npol, output_nchan, output_fft_length
+  // );
+
+}
 
 void CUDA::InverseFilterbankEngineCUDA::finish ()
-{ }
+{
+  if (verbose) {
+    std::cerr << "dsp::InverseFilterbankEngineCPU::finish" << std::endl;
+  }
+}
 
 
 //! This method is static
@@ -460,7 +542,6 @@ void CUDA::InverseFilterbankEngineCUDA::apply_k_apodization_overlap (
   cudaMemcpy(
     apod_device, (float2*) apodization.data(), apod_size*sz, cudaMemcpyHostToDevice);
 
-  // 10 is sort of arbitrary here.
   dim3 grid (1, nchan, npol*npart);
   dim3 threads (1024, 1, 1);
   grid.x = (ndat / threads.x) + 1;
@@ -516,4 +597,12 @@ void CUDA::InverseFilterbankEngineCUDA::apply_k_overlap_discard (
 
   cudaFree(in_device);
   cudaFree(out_device);
+}
+
+
+void CUDA::InverseFilterbankEngineCUDA::apply_cufft_backward (
+  std::vector< std::complex<float> >& in,
+  std::vector< std::complex<float> >& out
+)
+{
 }

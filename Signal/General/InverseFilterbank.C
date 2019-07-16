@@ -239,17 +239,6 @@ void dsp::InverseFilterbank::make_preparations ()
          << output_discard_neg << "/" << output_discard_pos
          << endl;
   }
-  // if (has_deripple()) {
-  //   // needs to be modified to incorporate multiple layers of upstream
-  //   // channelization -- DCS
-  //   if (verbose) {
-  //     std::cerr << "dsp::InverseFilterbank::make_preparations: setting up derippling response" << std::endl;
-  //   }
-  //   deripple->set_input_nchan(input_nchan);
-  //   deripple->set_ndat(freq_res);
-  //   deripple->set_nchan(output_nchan);
-  //   deripple->build();
-  // }
 
   if (has_buffering_policy()) {
     if (verbose) {
@@ -259,7 +248,20 @@ void dsp::InverseFilterbank::make_preparations ()
     get_buffering_policy()->set_minimum_samples(output_fft_length);
   }
 
-  scalefac = engine->setup_fft_plans(this);
+
+
+  scalefac = 1.0;
+  if (FTransform::get_norm() == FTransform::unnormalized) {
+    if (verbose) {
+      std::cerr << "dsp::InverseFilterbank::make_preparations: unnormalized FFT" << std::endl;
+    }
+    scalefac = pow(double(output_fft_length), 2);
+    scalefac *= pow(oversampling_factor.doubleValue(), 2);
+  } else {
+    if (verbose) {
+      std::cerr << "dsp::InverseFilterbank::make_preparations: normalized FFT" << std::endl;
+    }
+  }
 
   prepare_output ();
 

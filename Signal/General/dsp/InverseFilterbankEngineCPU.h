@@ -37,10 +37,6 @@ namespace dsp
     //! `perform` member function
     void setup (InverseFilterbank*);
 
-    //! Setup the Engine's FFT plans. Returns the new scaling factor that will
-    //! correctly weight the result of the backward FFT used in `perform`
-    double setup_fft_plans (InverseFilterbank*);
-
     //! Setup scratch space used in the `perform` member function.
     void set_scratch (float *);
 
@@ -49,28 +45,14 @@ namespace dsp
     void perform (const dsp::TimeSeries* in, dsp::TimeSeries* out,
                   uint64_t npart, uint64_t in_step, uint64_t out_step);
 
-
-    //! Get the scaling factor that will correctly scale the result of the
-    //! backward FFT used in `perform`
-    double get_scalefac() const {return scalefac;}
-
     //! Called when the the `InverseFilterbank` sees that the engine is done
     //! operating on data
     void finish ();
 
   protected:
 
-    //! plan for computing forward fourier transforms
-    FTransform::Plan* forward;
-
-    //! plan for computing inverse fourier transforms
-    FTransform::Plan* backward;
-
     //! Complex-valued data
     bool real_to_complex;
-
-    //! device scratch sapce
-    float* scratch;
 
     //! verbosity flag
     bool verbose;
@@ -81,11 +63,12 @@ namespace dsp
     //! FFT window applied before forward FFT
     Apodization* fft_window;
 
-  private:
-
     //! This is the number of floats per sample. This could be 1 or 2,
     //! depending on whether input is Analytic (complex) or Nyquist (real)
     unsigned n_per_sample;
+
+    //! the number of input polarizations
+    unsigned input_npol;
 
     //! The number of input channels. From the parent InverseFilterbank
     unsigned input_nchan;
@@ -150,6 +133,18 @@ namespace dsp
     //! From the parent InverseFilterbank
     bool pfb_all_chan;
 
+
+  private:
+
+
+    //! device scratch sapce
+    float* scratch;
+
+    //! plan for computing forward fourier transforms
+    FTransform::Plan* forward;
+
+    //! plan for computing inverse fourier transforms
+    FTransform::Plan* backward;
   };
 
 }

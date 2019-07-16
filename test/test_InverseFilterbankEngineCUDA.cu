@@ -50,6 +50,37 @@ TEST_CASE ("InverseFilterbankEngineCUDA") {}
 
 
 
+TEST_CASE (
+  "forward FFT kernel can operate on data", "[.]"
+)
+{
+  int fft_length = 1024;
+  int nchan = 8;
+  int ndat = fft_length * nchan;
+
+  std::vector<std::complex<float>> in_c (ndat);
+  std::vector<float> in_r (ndat);
+  std::vector<std::complex<float>> out (ndat);
+
+  CUDA::InverseFilterbankEngineCUDA::apply_cufft_forward<CUFFT_R2C>(in_r, out);
+  CUDA::InverseFilterbankEngineCUDA::apply_cufft_forward<CUFFT_C2C>(in_c, out);
+}
+
+TEST_CASE (
+  "backward FFT kernel can operate on data", "[.]"
+)
+{
+  int fft_length = 1024;
+  int nchan = 8;
+  int ndat = fft_length * nchan;
+
+  std::vector<std::complex<float>> in (ndat);
+  std::vector<std::complex<float>> out (ndat);
+
+  CUDA::InverseFilterbankEngineCUDA::apply_cufft_backward(in, out);
+}
+
+
 TEMPLATE_TEST_CASE (
   "output overlap discard kernel should produce expected output",
   "[overlap_discard][template]",

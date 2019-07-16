@@ -1,6 +1,7 @@
 #ifndef __util_cuda_hpp
 #define __util_cuda_hpp
 
+#include <cufft.h>
 #include <cuda_runtime.h>
 
 #include "util.hpp"

@@ -37,83 +37,10 @@ dsp::InverseFilterbankEngineCPU::~InverseFilterbankEngineCPU ()
 {
 }
 
-double dsp::InverseFilterbankEngineCPU::setup_fft_plans (
-  dsp::InverseFilterbank* filterbank )
-{
-
-  const TimeSeries* input = filterbank->get_input();
-  TimeSeries* output = filterbank->get_output();
-
-  if (filterbank->has_response()) {
-    if (verbose) {
-      std::cerr << "dsp::InverseFilterbankEngineCPU::setup_fft_plans: setting response" << std::endl;
-    }
-    response = filterbank->get_response();
-  }
-
-  if (filterbank->has_apodization()) {
-    if (verbose) {
-      std::cerr << "dsp::InverseFilterbankEngineCPU::setup_fft_plans: setting fft_window" << std::endl;
-    }
-    fft_window = filterbank->get_apodization();
-    if (verbose) {
-      std::cerr << "dsp::InverseFilterbankEngineCPU::setup_fft_plans: fft_window.get_type() "
-        << fft_window->get_type() << std::endl;
-      std::cerr << "dsp::InverseFilterbankEngineCPU::setup_fft_plans: fft_window.get_ndim() "
-        << fft_window->get_ndim() << std::endl;
-      std::cerr << "dsp::InverseFilterbankEngineCPU::setup_fft_plans: fft_window.get_ndat() "
-        << fft_window->get_ndat() << std::endl;
-    }
-  }
-
-  real_to_complex = (input->get_state() == Signal::Nyquist);
-
-
-  input_fft_length = filterbank->get_input_fft_length();
-  output_fft_length = filterbank->get_output_fft_length();
-
-  OptimalFFT* optimal = 0;
-  if (response && response->has_optimal_fft()) {
-    optimal = response->get_optimal_fft();
-    if (optimal) {
-      FTransform::set_library(optimal->get_library(input_fft_length));
-    }
-  }
-  forward = FTransform::Agent::current->get_plan(
-      input_fft_length,
-      real_to_complex ? FTransform::frc: FTransform::fcc);
-
-  if (optimal) {
-    FTransform::set_library(optimal->get_library(output_fft_length));
-  }
-  backward = FTransform::Agent::current->get_plan(output_fft_length, FTransform::bcc);
-  if (verbose) {
-    std::cerr << "dsp::InverseFilterbankEngineCPU::setup_fft_plans: done setting up FFT plans" << std::endl;
-  }
-
-  // Compute FFT scale factors
-  scalefac = 1.0;
-  if (FTransform::get_norm() == FTransform::unnormalized) {
-    scalefac = pow(double(output_fft_length), 2);
-    scalefac *= pow(filterbank->get_oversampling_factor().doubleValue(), 2);
-  }
-  fft_plans_setup = true;
-  if (verbose) {
-    std::cerr << "dsp::InverseFilterbankEngineCPU::setup_fft_plans: scalefac=" << scalefac << std::endl;
-  }
-
-  return scalefac;
-
-}
-
-void dsp::InverseFilterbankEngineCPU::setup (
-  dsp::InverseFilterbank* filterbank)
+void dsp::InverseFilterbankEngineCPU::setup (dsp::InverseFilterbank* filterbank)
 {
   if (verbose) {
     std::cerr << "dsp::InverseFilterbankEngineCPU::setup" << std::endl;
-  }
-  if (! fft_plans_setup) {
-    setup_fft_plans(filterbank);
   }
 
   verbose = filterbank->verbose;
@@ -141,6 +68,35 @@ void dsp::InverseFilterbankEngineCPU::setup (
 
   output_discard_total = n_per_sample*(output_discard_neg + output_discard_pos);
   output_sample_step = output_fft_length - output_discard_total;
+
+  if (filterbank->has_response()) {
+    if (verbose) {
+      std::cerr << "dsp::InverseFilterbankEngineCPU::setup_fft_plans: setting response" << std::endl;
+    }
+    response = filterbank->get_response();
+  }
+
+  real_to_complex = (input->get_state() == Signal::Nyquist);
+
+  OptimalFFT* optimal = 0;
+  if (response && response->has_optimal_fft()) {
+    optimal = response->get_optimal_fft();
+    if (optimal) {
+      FTransform::set_library(optimal->get_library(input_fft_length));
+    }
+  }
+  forward = FTransform::Agent::current->get_plan(
+      input_fft_length,
+      real_to_complex ? FTransform::frc: FTransform::fcc);
+
+  if (optimal) {
+    FTransform::set_library(optimal->get_library(output_fft_length));
+  }
+  backward = FTransform::Agent::current->get_plan(output_fft_length, FTransform::bcc);
+  if (verbose) {
+    std::cerr << "dsp::InverseFilterbankEngineCPU::setup_fft_plans: done setting up FFT plans" << std::endl;
+  }
+  fft_plans_setup = true;
 
   if (verbose) {
     std::cerr << "dsp::InverseFilterbankEngineCPU::setup"
@@ -258,7 +214,7 @@ void dsp::InverseFilterbankEngineCPU::perform (
         freq_dom_ptr = input_fft_scratch;
         time_dom_ptr = const_cast<float*>(in->get_datptr(input_ichan, ipol));
         time_dom_ptr += n_dims*ipart*(input_fft_length - input_discard_total);
-        
+
         memcpy(
           input_time_scratch,
           time_dom_ptr,
