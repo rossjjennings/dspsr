@@ -10,7 +10,7 @@ std::chrono::time_point<std::chrono::high_resolution_clock> util::now ()
   return std::chrono::high_resolution_clock::now();
 }
 
-void util::load_psr_data (dsp::IOManager manager, int block_size, dsp::TimeSeries* ts)
+void util::load_psr_data (dsp::IOManager manager, unsigned block_size, dsp::TimeSeries* ts)
 {
   dsp::Input* input = manager.get_input();
   input->set_block_size(block_size);

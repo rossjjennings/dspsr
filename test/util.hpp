@@ -14,6 +14,21 @@
 
 namespace util {
 
+  template<typename T>
+  struct std2dspsr;
+
+  template<>
+  struct std2dspsr<float> {
+    static const Signal::State state = Signal::Nyquist;
+    static const unsigned ndim = 1;
+  };
+
+  template<>
+  struct std2dspsr<std::complex<float>> {
+    static const Signal::State state = Signal::Analytic;
+    static const unsigned ndim = 2;
+  };
+
   template<typename unit>
   using delta = std::chrono::duration<double, unit>;
 
@@ -23,7 +38,7 @@ namespace util {
   bool isclose (T a, T b, float atol=1e-7, float rtol=1e-5);
 
   template<typename T>
-  bool allclose (T* a, T* b, int size, float atol=1e-7, float rtol=1e-5);
+  bool allclose (T* a, T* b, unsigned size, float atol=1e-7, float rtol=1e-5);
 
   template<typename T>
   bool allclose (std::vector<T> a, std::vector<T> b, float atol=1e-7, float rtol=1e-5);
@@ -35,19 +50,28 @@ namespace util {
   void write_binary_data (std::string file_path, std::vector<T>& data);
 
   template<typename T>
-  void write_binary_data (std::string file_path, T* buffer, int len);
+  void write_binary_data (std::string file_path, T* buffer, unsigned len);
 
   template<typename T>
-  void print_array (std::vector<T>& arr, std::vector<int>& dim);
+  void print_array (std::vector<T>& arr, std::vector<unsigned>& dim);
 
   template<typename T>
-  void print_array (T* arr, std::vector<int>& dim);
+  void print_array (T* arr, std::vector<unsigned>& dim);
 
-  void load_psr_data (dsp::IOManager manager, int block_size, dsp::TimeSeries* ts);
+  void load_psr_data (dsp::IOManager manager, unsigned block_size, dsp::TimeSeries* ts);
 
   void set_verbose (bool val);
 
   std::string get_test_data_dir ();
+
+  //! load data from a stl vector unsignedo a dspsr TimeSeries object.
+  //! dim should be of length 3.
+  //! Assumes TimeSeries is in FPT order.
+  template<typename T>
+  void loadTimeSeries (
+    const std::vector<T>& in,
+    dsp::TimeSeries* out,
+    const std::vector<unsigned>& dim);
 
   template<typename T>
   void response_stitch_cpu (
@@ -55,10 +79,10 @@ namespace util {
     std::vector<T> resp,
     std::vector<T>& out,
     Rational os_factor,
-    int npart,
-    int npol,
-    int nchan,
-    int ndat,
+    unsigned npart,
+    unsigned npol,
+    unsigned nchan,
+    unsigned ndat,
     bool pfb_dc_chan,
     bool pfb_all_chan
   );
@@ -68,22 +92,22 @@ namespace util {
     std::vector<T> in,
     std::vector<T> apodization,
     std::vector<T>& out,
-    int discard,
-    int npart,
-    int npol,
-    int nchan,
-    int ndat
+    unsigned discard,
+    unsigned npart,
+    unsigned npol,
+    unsigned nchan,
+    unsigned ndat
   );
 
   template<typename T>
   void overlap_discard_cpu (
     std::vector<T> in,
     std::vector<T>& out,
-    int discard,
-    int npart,
-    int npol,
-    int nchan,
-    int ndat
+    unsigned discard,
+    unsigned npart,
+    unsigned npol,
+    unsigned nchan,
+    unsigned ndat
   );
 
 }
@@ -105,7 +129,7 @@ void util::load_binary_data (std::string file_path, std::vector<T>& test_data)
     file.read(&file_bytes[0], size);
     file.close();
 
-    int T_size = (size / sizeof(T));
+    unsigned T_size = (size / sizeof(T));
     // std::cerr << "T_size=" << T_size << std::endl;
 
     const T* data = reinterpret_cast<const T*>(file_bytes.data());
@@ -120,7 +144,7 @@ void util::write_binary_data (std::string file_path, std::vector<T> buffer)
 }
 
 template<typename T>
-void util::write_binary_data (std::string file_path, T* buffer, int len)
+void util::write_binary_data (std::string file_path, T* buffer, unsigned len)
 {
   std::ofstream file(file_path, std::ios::out | std::ios::binary);
 
@@ -137,15 +161,15 @@ bool util::allclose (std::vector<T> a, std::vector<T> b, float atol, float rtol)
   if (a.size() != b.size()) {
      return false;
   }
-  return util::allclose(a.data(), b.data(), (int) a.size(), atol, rtol);
+  return util::allclose(a.data(), b.data(), (unsigned) a.size(), atol, rtol);
 }
 
 
 template<typename T>
-bool util::allclose (T* a, T* b, int size, float atol, float rtol)
+bool util::allclose (T* a, T* b, unsigned size, float atol, float rtol)
 {
   bool ret = true;
-  for (int i=0; i<size; i++) {
+  for (unsigned i=0; i<size; i++) {
     ret = util::isclose<T>(a[i], b[i], atol, rtol);
   }
   return ret;
@@ -158,27 +182,27 @@ bool util::isclose (T a, T b, float atol, float rtol)
 }
 
 template<typename T>
-void util::print_array (std::vector<T>& arr, std::vector<int>& dim)
+void util::print_array (std::vector<T>& arr, std::vector<unsigned>& dim)
 {
   util::print_array<T>(arr.data(), dim);
 }
 
 template<typename T>
-void util::print_array (T* arr, std::vector<int>& dim)
+void util::print_array (T* arr, std::vector<unsigned>& dim)
 {
   if (dim.size() > 2) {
-    int head_dim = dim[0];
-    std::vector<int> tail_dim(dim.begin() + 1, dim.end());
-    int stride = 1;
-    for (int d=1; d<dim.size(); d++) {
+    unsigned head_dim = dim[0];
+    std::vector<unsigned> tail_dim(dim.begin() + 1, dim.end());
+    unsigned stride = 1;
+    for (unsigned d=1; d<dim.size(); d++) {
       stride *= dim[d];
     }
-    for (int i=0; i<head_dim; i++) {
+    for (unsigned i=0; i<head_dim; i++) {
       util::print_array<T>(arr + stride*i, tail_dim);
     }
   } else {
-    for (int i=0; i<dim[0]; i++) {
-      for (int j=0; j<dim[1]; j++) {
+    for (unsigned i=0; i<dim[0]; i++) {
+      for (unsigned j=0; j<dim[1]; j++) {
         std::cerr << arr[i*dim[1] + j] << " ";
       }
       std::cerr << std::endl;
@@ -187,26 +211,75 @@ void util::print_array (T* arr, std::vector<int>& dim)
   }
 }
 
+
+template<typename T>
+void util::loadTimeSeries (
+  const std::vector<T>& in,
+  dsp::TimeSeries* out,
+  const std::vector<unsigned>& dim
+)
+{
+  typedef util::std2dspsr<T> dspsr_type;
+
+  unsigned ndim = dspsr_type::ndim;
+
+  out->set_state (dspsr_type::state);
+
+  out->set_nchan (dim[0]);
+  out->set_npol (dim[1]);
+  out->set_ndat (dim[2]);
+  out->set_ndim (ndim);
+  out->resize (dim[2]);
+
+  std::cerr << "util::loadTimeSeries: ("
+    << dim[0] << ","
+    << dim[1] << ","
+    << dim[2] << ","
+    << ndim << ")" << std::endl;
+  // std::cerr << "util::loadTimeSeries: in.size()=" << in.size() << std::endl;
+
+
+  const float* in_data = reinterpret_cast<const float*> (in.data());
+  float* out_data;
+  unsigned idx;
+
+  for (unsigned ichan = 0; ichan < dim[0]; ichan++) {
+    for (unsigned ipol = 0; ipol < dim[1]; ipol++) {
+      out_data = out->get_datptr(ichan, ipol);
+      for (unsigned idat = 0; idat < dim[2]; idat++) {
+        for (unsigned idim = 0; idim < ndim; idim++) {
+          idx = idim + ndim*idat;
+          out_data[idx] = in_data[idx];
+        }
+      }
+      in_data += ndim*dim[2];
+    }
+  }
+}
+
+
+
+
 template<typename T>
 void util::response_stitch_cpu (
   std::vector<T> in,
   std::vector<T> resp,
   std::vector<T>& out,
   Rational os_factor,
-  int npart,
-  int npol,
-  int nchan,
-  int ndat,
+  unsigned npart,
+  unsigned npol,
+  unsigned nchan,
+  unsigned ndat,
   bool pfb_dc_chan,
   bool pfb_all_chan
 )
 {
-  int in_ndat = ndat;
-  int in_ndat_keep = os_factor.normalize(in_ndat);
-  int in_ndat_keep_2 = in_ndat_keep / 2;
-  int out_ndat = nchan * in_ndat_keep;
-  int out_size = npart * out_ndat * npol;
-  int in_size = npart * npol * nchan * in_ndat;
+  unsigned in_ndat = ndat;
+  unsigned in_ndat_keep = os_factor.normalize(in_ndat);
+  unsigned in_ndat_keep_2 = in_ndat_keep / 2;
+  unsigned out_ndat = nchan * in_ndat_keep;
+  unsigned out_size = npart * out_ndat * npol;
+  unsigned in_size = npart * npol * nchan * in_ndat;
 
   if (out.size() != out_size) {
     out.resize(out_size);
@@ -215,26 +288,26 @@ void util::response_stitch_cpu (
   T* in_ptr;
   T* out_ptr;
 
-  int in_offset;
-  int out_offset;
+  unsigned in_offset;
+  unsigned out_offset;
 
-  int in_idx_bot;
-  int in_idx_top;
+  unsigned in_idx_bot;
+  unsigned in_idx_top;
 
-  int out_idx_bot;
-  int out_idx_top;
+  unsigned out_idx_bot;
+  unsigned out_idx_top;
 
 
-  for (int ipart=0; ipart < npart; ipart++) {
-    for (int ipol=0; ipol < npol; ipol++) {
-      for (int ichan=0; ichan < nchan; ichan++) {
+  for (unsigned ipart=0; ipart < npart; ipart++) {
+    for (unsigned ipol=0; ipol < npol; ipol++) {
+      for (unsigned ichan=0; ichan < nchan; ichan++) {
         in_offset = ipart*npol*in_ndat*nchan + ipol*in_ndat*nchan + ichan*in_ndat;
         out_offset = ipart*npol*out_ndat + ipol*out_ndat;
         // std::cerr << "in_offset=" << in_offset << ", out_offset=" << out_offset << std::endl;
         in_ptr = in.data() + in_offset;
         out_ptr = out.data() + out_offset;
 
-        for (int idat=0; idat<in_ndat_keep_2; idat++) {
+        for (unsigned idat=0; idat<in_ndat_keep_2; idat++) {
           in_idx_top = idat;
           in_idx_bot = in_idx_top + (in_ndat - in_ndat_keep_2);
 
@@ -280,30 +353,30 @@ void util::apodization_overlap_cpu (
   std::vector<T> in,
   std::vector<T> apodization,
   std::vector<T>& out,
-  int discard,
-  int npart,
-  int npol,
-  int nchan,
-  int ndat
+  unsigned discard,
+  unsigned npart,
+  unsigned npol,
+  unsigned nchan,
+  unsigned ndat
 )
 {
-  int out_ndat = ndat - 2*discard;
+  unsigned out_ndat = ndat - 2*discard;
 
-  int in_size = npart * npol * nchan * ndat;
-  int out_size = npart * npol * nchan * out_ndat;
-  int apod_size = nchan * out_ndat;
+  unsigned in_size = npart * npol * nchan * ndat;
+  unsigned out_size = npart * npol * nchan * out_ndat;
+  unsigned apod_size = nchan * out_ndat;
 
-  int in_offset;
-  int out_offset;
-  int apod_offset;
+  unsigned in_offset;
+  unsigned out_offset;
+  unsigned apod_offset;
 
-  for (int ipart=0; ipart<npart; ipart++) {
-    for (int ipol=0; ipol<npol; ipol++) {
-      for (int ichan=0; ichan<nchan; ichan++) {
+  for (unsigned ipart=0; ipart<npart; ipart++) {
+    for (unsigned ipol=0; ipol<npol; ipol++) {
+      for (unsigned ichan=0; ichan<nchan; ichan++) {
         in_offset = ipart*npol*nchan*ndat + ipol*nchan*ndat + ichan*ndat;
         out_offset = ipart*npol*nchan*out_ndat + ipol*nchan*out_ndat + ichan*out_ndat;
         apod_offset = ichan*out_ndat;
-        for (int idat=0; idat<out_ndat; idat++) {
+        for (unsigned idat=0; idat<out_ndat; idat++) {
 
           if (
             idat + out_offset > out_size ||
@@ -328,11 +401,11 @@ template<typename T>
 void util::overlap_discard_cpu (
   std::vector<T> in,
   std::vector<T>& out,
-  int discard,
-  int npart,
-  int npol,
-  int nchan,
-  int ndat
+  unsigned discard,
+  unsigned npart,
+  unsigned npol,
+  unsigned nchan,
+  unsigned ndat
 )
 {
   std::vector<T> empty;

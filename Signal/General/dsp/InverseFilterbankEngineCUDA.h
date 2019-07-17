@@ -20,6 +20,7 @@
 #include "dsp/InverseFilterbankEngineCPU.h"
 #include "dsp/LaunchConfig.h"
 
+void check_error (const char*);
 
 namespace CUDA
 {
@@ -80,26 +81,42 @@ namespace CUDA
     //! `perform` member function
     void setup (dsp::InverseFilterbank*);
 
+    //! The explicit setup method.
+    void setup (
+      const dsp::TimeSeries* input,
+      dsp::TimeSeries* output,
+      const Rational& os_factor,
+      unsigned _input_fft_length,
+      unsigned _output_fft_length,
+      unsigned _input_discard_pos,
+      unsigned _input_discard_neg,
+      unsigned _output_discard_pos,
+      unsigned _output_discard_neg,
+      bool _pfb_dc_chan,
+      bool _pfb_all_chan
+    );
+
+
     //! Setup scratch space used in the `perform` member function.
     void set_scratch (float *);
 
     //! Implements FFT based PFB inversion algorithm using the GPU.
     void perform (const dsp::TimeSeries* in, dsp::TimeSeries* out,
-                  uint64_t npart, uint64_t in_step, uint64_t out_step);
+                  uint64_t npart); //, uint64_t in_step, uint64_t out_step);
 
     //! Do any actions to clean up after `perform`.
     void finish ();
 
     //! setup backward fft plans. This is public so we can test it.
     std::vector<cufftResult> setup_backward_fft_plan (
-      int _output_fft_length,
-      int _output_nchan
+      unsigned _output_fft_length,
+      unsigned _output_nchan
     );
 
     //! setup forward fft plans. This is public so we can test it.
     std::vector<cufftResult> setup_forward_fft_plan (
-      int _input_fft_length,
-      int _input_nchan,
+      unsigned _input_fft_length,
+      unsigned _input_nchan,
       cufftType _type_forward
     );
 
@@ -131,11 +148,11 @@ namespace CUDA
       std::vector< std::complex<float> >& in,
       std::vector< std::complex<float> >& apodization,
       std::vector< std::complex<float> >& out,
-      int discard,
-      int npart,
-      int npol,
-      int nchan,
-      int ndat
+      unsigned discard,
+      unsigned npart,
+      unsigned npol,
+      unsigned nchan,
+      unsigned ndat
     );
 
     //! Apply the k_apodization_overlap kernel to some data.
@@ -157,10 +174,10 @@ namespace CUDA
       std::vector< std::complex<float> >& response,
       std::vector< std::complex<float> >& out,
       Rational os_factor,
-      int npart,
-      int npol,
-      int nchan,
-      int ndat,
+      unsigned npart,
+      unsigned npol,
+      unsigned nchan,
+      unsigned ndat,
       bool pfb_dc_chan,
       bool pfb_all_chan
     );
@@ -177,11 +194,11 @@ namespace CUDA
     static void apply_k_overlap_discard (
       std::vector< std::complex<float> >& in,
       std::vector< std::complex<float> >& out,
-      int discard,
-      int npart,
-      int npol,
-      int nchan,
-      int ndat
+      unsigned discard,
+      unsigned npart,
+      unsigned npol,
+      unsigned nchan,
+      unsigned ndat
     );
 
   private:
@@ -194,6 +211,12 @@ namespace CUDA
     //! backward fft plan
     cufftHandle backward;
 
+    //! flag indicating whether forward plan is set up
+    bool forward_fft_plan_setup;
+
+    //! flag indicating whether backward plan is set up
+    bool backward_fft_plan_setup;
+
     //! The type of the forward FFT. The backward plan is always complex to complex.
     cufftType type_forward;
 
@@ -203,6 +226,7 @@ namespace CUDA
     //! response or response product in CUDA memory
     float2* d_kernel;
   };
+
 }
 
 template<int i>
@@ -211,7 +235,37 @@ void CUDA::InverseFilterbankEngineCUDA::apply_cufft_forward (
   std::vector< typename CUDA::cufftTypeMap<i>::output_std_type >& out
 )
 {
+  if (! forward_fft_plan_setup) {
+    throw "CUDA::InverseFilterbankEngineCUDA::apply_cufft_forward: Forward FFT plan not set up";
+  }
 
+  typedef CUDA::cufftTypeMap<i> type_map;
+
+  typedef typename type_map::input_type input_type;
+  typedef typename type_map::output_type output_type;
+
+  size_t sz_in = sizeof(input_type);
+  size_t sz_out = sizeof(output_type);
+
+  input_type* in_cufft;
+  output_type* out_cufft;
+
+  cudaMalloc((void **) &in_cufft, in.size()*sz_in);
+  cudaMalloc((void **) &out_cufft, out.size()*sz_out);
+
+  cudaMemcpy(
+    in_cufft, (input_type*) in.data(), in.size()*sz_in, cudaMemcpyHostToDevice);
+
+  type_map::cufftExec(forward, in_cufft, out_cufft, CUFFT_FORWARD);
+  check_error( "CUDA::InverseFilterbankEngineCUDA::apply_cufft_forward" );
+
+  cudaDeviceSynchronize();
+
+  cudaMemcpy(
+    (output_type*) out.data(), out_cufft, out.size()*sz_out, cudaMemcpyDeviceToHost);
+
+  cudaFree(in_cufft);
+  cudaFree(out_cufft);
 }
 
 
