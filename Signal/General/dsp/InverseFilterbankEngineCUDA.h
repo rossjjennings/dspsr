@@ -201,6 +201,28 @@ namespace CUDA
       unsigned ndat
     );
 
+    //! Apply the k_overlap_save kernel to some data.
+    //! This function copies arrays from host to device, so it is not intended
+    //! to be performant.
+    //! \param in input array buffer
+    //! \param in_dim dimensions of in array
+    //! \param out output array buffer
+    //! \param out_dim dimensions of out array
+    //! \param discard number of samples to discard from either side of each
+    //!     channel
+    static void apply_k_overlap_save (
+      std::vector< std::complex<float> >& in,
+      std::vector< std::complex<float> >& out,
+      unsigned discard,
+      unsigned npart,
+      unsigned npol,
+      unsigned nchan,
+      unsigned ndat
+    );
+
+
+
+
   private:
 
     cudaStream_t stream;

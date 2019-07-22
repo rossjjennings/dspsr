@@ -6,6 +6,9 @@
 #include <vector>
 #include <complex>
 #include <chrono>
+#include <algorithm>
+#include <time.h>
+#include <cstdlib>
 
 #include "dsp/IOManager.h"
 #include "dsp/Input.h"
@@ -53,10 +56,20 @@ namespace util {
   void write_binary_data (std::string file_path, T* buffer, unsigned len);
 
   template<typename T>
-  void print_array (std::vector<T>& arr, std::vector<unsigned>& dim);
+  void print_array (const std::vector<T>& arr, std::vector<unsigned>& dim);
 
   template<typename T>
   void print_array (T* arr, std::vector<unsigned>& dim);
+
+  template<typename T>
+  std::function<T(void)> random ();
+
+  template<typename T>
+  T sum (std::vector<T>);
+
+  template<typename T>
+  T product (std::vector<T>);
+
 
   void load_psr_data (dsp::IOManager manager, unsigned block_size, dsp::TimeSeries* ts);
 
@@ -74,9 +87,9 @@ namespace util {
     const std::vector<unsigned>& dim);
 
   template<typename T>
-  void response_stitch_cpu (
-    std::vector<T> in,
-    std::vector<T> resp,
+  void response_stitch_cpu_FPT (
+    const std::vector<T>& in,
+    const std::vector<T>& resp,
     std::vector<T>& out,
     Rational os_factor,
     unsigned npart,
@@ -87,27 +100,60 @@ namespace util {
     bool pfb_all_chan
   );
 
+  /**
+   * Apply overlap discard to in, saving to out, after multplying by apod.
+   * in_ndat is equal to npart * (samples_per_part - 2*discard) + 2*discard
+   * out_ndat is equal to npart * samples_per_part
+   * @method apodization_overlap_cpu_FPT
+   * @param  in input data vector, dimensions are {nchan, npol, in_ndat}
+   * @param  apodization apodization vector, dimensions are {samples_per_part}
+   * @param  out output data vector, dimensions are {nchan, npol, out_ndat}
+   * @param  discard discard region size
+   * @param  npart number of chunks present in time domain
+   * @param  npol number of polarisations
+   * @param  nchan number of channels
+   * @param  samples_per_part number of samples present in each out part
+   * @param  in_ndat ndat of in
+   * @param  out_ndat ndat of out
+   */
   template<typename T>
-  void apodization_overlap_cpu (
-    std::vector<T> in,
-    std::vector<T> apodization,
+  void apodization_overlap_cpu_FPT (
+    const std::vector<T>& in,
+    const std::vector<T>& apodization,
     std::vector<T>& out,
     unsigned discard,
     unsigned npart,
     unsigned npol,
     unsigned nchan,
-    unsigned ndat
+    unsigned samples_per_part,
+    unsigned in_ndat,
+    unsigned out_ndat
   );
 
   template<typename T>
-  void overlap_discard_cpu (
-    std::vector<T> in,
+  void overlap_discard_cpu_FPT (
+    const std::vector<T>& in,
     std::vector<T>& out,
     unsigned discard,
     unsigned npart,
     unsigned npol,
     unsigned nchan,
-    unsigned ndat
+    unsigned samples_per_part,
+    unsigned in_ndat,
+    unsigned out_ndat
+  );
+
+  template<typename T>
+  void overlap_save_cpu_FPT (
+    const std::vector<T>& in,
+    std::vector<T>& out,
+    unsigned discard,
+    unsigned npart,
+    unsigned npol,
+    unsigned nchan,
+    unsigned samples_per_part,
+    unsigned in_ndat,
+    unsigned out_ndat
   );
 
 }
@@ -182,9 +228,9 @@ bool util::isclose (T a, T b, float atol, float rtol)
 }
 
 template<typename T>
-void util::print_array (std::vector<T>& arr, std::vector<unsigned>& dim)
+void util::print_array (const std::vector<T>& arr, std::vector<unsigned>& dim)
 {
-  util::print_array<T>(arr.data(), dim);
+  util::print_array<T>(const_cast<T*>(arr.data()), dim);
 }
 
 template<typename T>
@@ -211,6 +257,21 @@ void util::print_array (T* arr, std::vector<unsigned>& dim)
   }
 }
 
+template<typename T>
+T util::sum (std::vector<T> a)
+{
+  T res = 0;
+  std::for_each (a.begin(), a.end(), [&res](unsigned i){res+=i;});
+  return res;
+}
+
+template<typename T>
+T util::product (std::vector<T> a)
+{
+  T res = 1;
+  std::for_each (a.begin(), a.end(), [&res](unsigned i){res*=i;});
+  return res;
+}
 
 template<typename T>
 void util::loadTimeSeries (
@@ -261,9 +322,9 @@ void util::loadTimeSeries (
 
 
 template<typename T>
-void util::response_stitch_cpu (
-  std::vector<T> in,
-  std::vector<T> resp,
+void util::response_stitch_cpu_FPT (
+  const std::vector<T>& in,
+  const std::vector<T>& resp,
   std::vector<T>& out,
   Rational os_factor,
   unsigned npart,
@@ -285,7 +346,7 @@ void util::response_stitch_cpu (
     out.resize(out_size);
   }
 
-  T* in_ptr;
+  const T* in_ptr;
   T* out_ptr;
 
   unsigned in_offset;
@@ -298,11 +359,13 @@ void util::response_stitch_cpu (
   unsigned out_idx_top;
 
 
-  for (unsigned ipart=0; ipart < npart; ipart++) {
+  for (unsigned ichan=0; ichan < nchan; ichan++) {
     for (unsigned ipol=0; ipol < npol; ipol++) {
-      for (unsigned ichan=0; ichan < nchan; ichan++) {
-        in_offset = ipart*npol*in_ndat*nchan + ipol*in_ndat*nchan + ichan*in_ndat;
-        out_offset = ipart*npol*out_ndat + ipol*out_ndat;
+      for (unsigned ipart=0; ipart < npart; ipart++) {
+        in_offset = ichan*npol*npart*in_ndat + ipol*npart*in_ndat + ipart*in_ndat;
+        out_offset = ipol*npart*out_ndat + ipart*out_ndat;
+        // in_offset = ipart*npol*in_ndat*nchan + ipol*in_ndat*nchan + ichan*in_ndat;
+        // out_offset = ipart*npol*out_ndat + ipol*out_ndat;
         // std::cerr << "in_offset=" << in_offset << ", out_offset=" << out_offset << std::endl;
         in_ptr = in.data() + in_offset;
         out_ptr = out.data() + out_offset;
@@ -348,48 +411,53 @@ void util::response_stitch_cpu (
   }
 }
 
+
 template<typename T>
-void util::apodization_overlap_cpu (
-  std::vector<T> in,
-  std::vector<T> apodization,
+void util::apodization_overlap_cpu_FPT (
+  const std::vector<T>& in,
+  const std::vector<T>& apodization,
   std::vector<T>& out,
   unsigned discard,
   unsigned npart,
   unsigned npol,
   unsigned nchan,
-  unsigned ndat
+  unsigned samples_per_part,
+  unsigned in_ndat,
+  unsigned out_ndat
 )
 {
-  unsigned out_ndat = ndat - 2*discard;
+  unsigned total_discard = 2*discard;
+  unsigned step = samples_per_part - total_discard;
 
-  unsigned in_size = npart * npol * nchan * ndat;
-  unsigned out_size = npart * npol * nchan * out_ndat;
-  unsigned apod_size = nchan * out_ndat;
+  unsigned in_size = npol * nchan * in_ndat;
+  unsigned out_size = npol * nchan * out_ndat;
+  unsigned apod_size = samples_per_part;
 
   unsigned in_offset;
   unsigned out_offset;
-  unsigned apod_offset;
 
-  for (unsigned ipart=0; ipart<npart; ipart++) {
+  // order is FPT
+  for (unsigned ichan=0; ichan<nchan; ichan++) {
     for (unsigned ipol=0; ipol<npol; ipol++) {
-      for (unsigned ichan=0; ichan<nchan; ichan++) {
-        in_offset = ipart*npol*nchan*ndat + ipol*nchan*ndat + ichan*ndat;
-        out_offset = ipart*npol*nchan*out_ndat + ipol*nchan*out_ndat + ichan*out_ndat;
-        apod_offset = ichan*out_ndat;
-        for (unsigned idat=0; idat<out_ndat; idat++) {
-
+      for (unsigned ipart=0; ipart<npart; ipart++) {
+        in_offset = ichan*npol*in_ndat + ipol*in_ndat + ipart*step;
+        out_offset = ichan*npol*out_ndat + ipol*out_ndat + ipart*samples_per_part;
+        for (unsigned idat=0; idat<samples_per_part; idat++) {
           if (
             idat + out_offset > out_size ||
-            apod_offset + idat > apod_size ||
-            idat + discard + in_offset > in_size
+            idat > apod_size ||
+            idat + in_offset > in_size
           ) {
-            std::cerr << "util::apodization_overlap_cpu: watch out!" << std::endl;
+            std::cerr << "util::apodization_overlap_cpu_FPT: watch out!" << std::endl;
+            std::cerr << "util::apodization_overlap_cpu_FPT: idat + out_offset=" << idat + out_offset << ", out_size=" << out_size << std::endl;
+            std::cerr << "util::apodization_overlap_cpu_FPT: idat + in_offset=" << idat + in_offset << ", in_size=" << in_size << std::endl;
+            std::cerr << "util::apodization_overlap_cpu_FPT: idat=" << idat  << ", apod_size=" << apod_size << std::endl;
           }
 
           if (apodization.size() != 0) {
-            out[idat + out_offset] = apodization[apod_offset + idat]*in[idat + discard + in_offset];
+            out[out_offset + idat] = apodization[idat]*in[in_offset + idat];
           } else {
-            out[idat + out_offset] = in[idat + discard + in_offset];
+            out[out_offset + idat] = in[in_offset + idat];
           }
         }
       }
@@ -398,20 +466,73 @@ void util::apodization_overlap_cpu (
 }
 
 template<typename T>
-void util::overlap_discard_cpu (
-  std::vector<T> in,
+void util::overlap_discard_cpu_FPT (
+  const std::vector<T>& in,
   std::vector<T>& out,
   unsigned discard,
   unsigned npart,
   unsigned npol,
   unsigned nchan,
-  unsigned ndat
+  unsigned samples_per_part,
+  unsigned in_ndat,
+  unsigned out_ndat
 )
 {
   std::vector<T> empty;
-  util::apodization_overlap_cpu<T>(
-    in, empty, out, discard, npart, npol, nchan, ndat
+  util::apodization_overlap_cpu_FPT<T>(
+    in, empty, out, discard, npart, npol, nchan, samples_per_part, in_ndat, out_ndat
   );
+}
+
+template<typename T>
+void util::overlap_save_cpu_FPT (
+  const std::vector<T>& in,
+  std::vector<T>& out,
+  unsigned discard,
+  unsigned npart,
+  unsigned npol,
+  unsigned nchan,
+  unsigned samples_per_part,
+  unsigned in_ndat,
+  unsigned out_ndat
+)
+{
+  unsigned total_discard = 2*discard;
+  unsigned step = samples_per_part - total_discard;
+
+  unsigned in_size = npol * nchan * in_ndat;
+  unsigned out_size = npol * nchan * out_ndat;
+
+  unsigned in_offset;
+  unsigned out_offset;
+
+  // order is FPT
+  for (unsigned ichan=0; ichan<nchan; ichan++) {
+    for (unsigned ipol=0; ipol<npol; ipol++) {
+      for (unsigned ipart=0; ipart<npart; ipart++) {
+        in_offset = ichan*npol*in_ndat + ipol*in_ndat + ipart*samples_per_part;
+        out_offset = ichan*npol*out_ndat + ipol*out_ndat + ipart*step;
+        for (unsigned idat=0; idat<step; idat++) {
+          if (
+            idat + out_offset > out_size ||
+            idat + in_offset > in_size
+          ) {
+            std::cerr << "util::overlap_save_cpu_FPT: watch out!" << std::endl;
+            std::cerr << "util::overlap_save_cpu_FPT: idat + out_offset=" << idat + out_offset << ", out_size=" << out_size << std::endl;
+            std::cerr << "util::overlap_save_cpu_FPT: idat + in_offset=" << idat + in_offset << ", in_size=" << in_size << std::endl;
+          }
+          out[out_offset + idat] = in[in_offset + idat + discard];
+        }
+      }
+    }
+  }
+}
+
+template<typename T>
+std::function<T(void)> util::random ()
+{
+  srand (time(NULL));
+  return [] () { return (T) rand() / RAND_MAX; };
 }
 
 

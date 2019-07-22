@@ -1,7 +1,6 @@
 #include <complex>
 #include <vector>
 #include <iostream>
-#include <algorithm> // for all_of, for_each
 
 #include "catch.hpp"
 
@@ -10,7 +9,11 @@
 
 #include "dsp/InverseFilterbankEngineCUDA.h"
 #include "dsp/InverseFilterbank.h"
+#include "dsp/TransferCUDA.h"
+#include "dsp/MemoryCUDA.h"
 #include "Rational.h"
+
+void check_error (const char*);
 
 const float thresh = 1e-5;
 
@@ -21,7 +24,7 @@ struct TestDims;
 
 template<>
 struct TestDims<SmallSinglePol> {
-  static const unsigned npart = 3;
+  static const unsigned npart = 2;
   static const unsigned npol = 1;
   static const unsigned nchan = 4;
   static const unsigned output_nchan = 2;
@@ -51,7 +54,7 @@ struct TestDims<DoublePol> : TestDims<SinglePol> {
 };
 
 
-TEST_CASE ("InverseFilterbankEngineCUDA unit", "") {
+TEST_CASE ("InverseFilterbankEngineCUDA unit", "[.]") {
 
   void* stream = 0;
   cudaStream_t cuda_stream = reinterpret_cast<cudaStream_t>(stream);
@@ -80,13 +83,14 @@ TEST_CASE ("InverseFilterbankEngineCUDA unit", "") {
 
 TEMPLATE_TEST_CASE (
   "InverseFilterbankEngineCUDA component",
-  "[InverseFilterbankEngineCUDA][template]",
+  "[InverseFilterbankEngineCUDA][template][.]",
   TestDims<SinglePol>
 )
 {
-
+  util::set_verbose(true);
   void* stream = 0;
   cudaStream_t cuda_stream = reinterpret_cast<cudaStream_t>(stream);
+  CUDA::DeviceMemory* device_memory = new CUDA::DeviceMemory(cuda_stream);
 
   CUDA::InverseFilterbankEngineCUDA engine(cuda_stream);
   Rational os_factor (4, 3);
@@ -108,26 +112,46 @@ TEMPLATE_TEST_CASE (
   Reference::To<dsp::TimeSeries> input = new dsp::TimeSeries;
   Reference::To<dsp::TimeSeries> output = new dsp::TimeSeries;
 
+  Reference::To<dsp::TimeSeries> input_gpu = new dsp::TimeSeries;
+  Reference::To<dsp::TimeSeries> output_gpu = new dsp::TimeSeries;
+  input_gpu->set_memory(device_memory);
+  output_gpu->set_memory(device_memory);
+
+
   std::vector<unsigned> in_dim = {
     input_nchan, npol, input_fft_length*npart};
   std::vector<unsigned> out_dim = {
     output_nchan, npol, output_fft_length*npart};
-  unsigned in_size = 1;
-  std::for_each (in_dim.begin(), in_dim.end(), [&in_size](unsigned i){in_size*=i;});
-  unsigned out_size = 1;
-  std::for_each (out_dim.begin(), out_dim.end(), [&out_size](unsigned i){out_size*=i;});
+
+  unsigned in_size = util::product(in_dim);
+  unsigned out_size = util::product(out_dim);
+
   std::vector<std::complex<float>> in_vec(in_size);
   std::vector<std::complex<float>> out_vec(out_size);
+
   for (unsigned idx=0; idx<in_size; idx++) {
     in_vec[idx] = std::complex<float>(idx, idx);
   }
+
   util::loadTimeSeries<std::complex<float>>(in_vec, input, in_dim);
   util::loadTimeSeries<std::complex<float>>(out_vec, output, out_dim);
+
+  dsp::TransferCUDA transfer(cuda_stream);
+
+  transfer.set_input(input);
+  transfer.set_output(input_gpu);
+  transfer.prepare();
+  transfer.operate();
+
+  transfer.set_input(output);
+  transfer.set_output(output_gpu);
+  transfer.prepare();
+  transfer.operate();
 
   SECTION ("can call setup method")
   {
     engine.setup(
-      input, output, os_factor, input_fft_length, output_fft_length,
+      input_gpu, output, os_factor, input_fft_length, output_fft_length,
       input_overlap, input_overlap, output_overlap, output_overlap, true, true
     );
   }
@@ -135,18 +159,18 @@ TEMPLATE_TEST_CASE (
   SECTION ("can call perform method")
   {
     engine.setup(
-      input, output, os_factor, input_fft_length, output_fft_length,
+      input_gpu, output, os_factor, input_fft_length, output_fft_length,
       input_overlap, input_overlap, output_overlap, output_overlap, true, true
     );
     engine.perform(
-      input, output, npart
+      input_gpu, output_gpu, npart
     );
   }
 }
 
 
 
-TEST_CASE ("cufft kernels can operate on data", "")
+TEST_CASE ("cufft kernels can operate on data", "[.]")
 {
   void* stream = 0;
   cudaStream_t cuda_stream = reinterpret_cast<cudaStream_t>(stream);
@@ -195,10 +219,14 @@ TEMPLATE_TEST_CASE (
   unsigned ndat = TestType::ndat;
   unsigned overlap = TestType::overlap;
 
-  unsigned out_ndat = ndat - 2*overlap;
+  unsigned total_discard = 2*overlap;
+  unsigned step = ndat - total_discard;
 
-  unsigned in_size = npart * npol * nchan * ndat;
-  unsigned out_size = npart * npol * nchan * out_ndat;
+  unsigned in_total_ndat = npart * step + total_discard;
+  unsigned out_total_ndat = npart * ndat;
+
+  unsigned in_size = npol * nchan * in_total_ndat;
+  unsigned out_size = npol * nchan * out_total_ndat;
 
   // generate some data.
   std::vector<std::complex<float>> in(in_size, std::complex<float>(0.0, 0.0));
@@ -209,24 +237,24 @@ TEMPLATE_TEST_CASE (
   unsigned idx;
   float val;
 
-  for (unsigned ipart=0; ipart<npart; ipart++) {
+  for (unsigned ichan=0; ichan<nchan; ichan++) {
     for (unsigned ipol=0; ipol<npol; ipol++) {
-      val = ipol + npol*ipart;
-      for (unsigned ichan=0; ichan<nchan; ichan++) {
-        for (unsigned idat=0; idat<ndat; idat++) {
-          idx = ipart*npol*nchan*ndat + ipol*nchan*ndat + ichan*ndat + idat;
+      val = ichan*npol + ipol;
+      for (unsigned ipart=0; ipart<npart; ipart++) {
+        for (unsigned idat=0; idat<step; idat++) {
+          idx = ichan*npol*in_total_ndat + ipol*in_total_ndat + ipart*step + idat;
           in[idx] = std::complex<float>(val, val);
           val++;
         }
       }
     }
   }
-  std::vector<unsigned> in_dim = {npart, npol, nchan, ndat};
-  std::vector<unsigned> out_dim = {npart, npol, nchan, out_ndat};
+  std::vector<unsigned> in_dim = {nchan, npol, in_total_ndat};
+  std::vector<unsigned> out_dim = {nchan, npol, out_total_ndat};
 
   auto t = util::now();
-  util::overlap_discard_cpu(
-    in, out_cpu, overlap, npart, npol, nchan, ndat
+  util::overlap_discard_cpu_FPT(
+    in, out_cpu, overlap, npart, npol, nchan, ndat, in_total_ndat, out_total_ndat
   );
   util::delta<std::milli> delta_cpu = util::now() - t;
 
@@ -235,12 +263,86 @@ TEMPLATE_TEST_CASE (
     in, out_gpu, overlap, npart, npol, nchan, ndat
   );
 
-  // util::prunsigned_array<std::complex<float>>(in, in_dim);
-  // util::prunsigned_array<std::complex<float>>(out_cpu, out_dim);
-  // util::prunsigned_array<std::complex<float>>(out_gpu, out_dim);
+  // util::print_array<std::complex<float>>(in, in_dim);
+  // util::print_array<std::complex<float>>(out_cpu, out_dim);
+  // util::print_array<std::complex<float>>(out_gpu, out_dim);
 
   util::delta<std::milli> delta_gpu = util::now() - t;
   std::cerr << "overlap discard GPU: " << delta_gpu.count()
+    << " ms; CPU: " << delta_cpu.count()
+    << " ms; CPU/GPU: " << delta_cpu.count() / delta_gpu.count()
+    << std::endl;
+
+  bool allclose = util::allclose(out_cpu, out_gpu, thresh);
+  REQUIRE(allclose == true);
+}
+
+
+TEMPLATE_TEST_CASE (
+  "overlap save kernel should produce expected output",
+  "[overlap_save][template]",
+  TestDims<SmallSinglePol>, TestDims<SmallDoublePol>, TestDims<SinglePol>, TestDims<DoublePol>
+)
+{
+  unsigned npart = TestType::npart;
+  unsigned npol = TestType::npol;
+  unsigned nchan = TestType::nchan;
+  unsigned ndat = TestType::ndat;
+  unsigned overlap = TestType::overlap;
+
+  unsigned total_discard = 2*overlap;
+  unsigned step = ndat - total_discard;
+
+  unsigned in_total_ndat = npart * ndat;
+  unsigned out_total_ndat = npart * step;
+
+  unsigned in_size = npol * nchan * in_total_ndat;
+  unsigned out_size = npol * nchan * out_total_ndat;
+
+  // generate some data.
+  std::vector< std::complex<float> > in(in_size, std::complex<float>(0.0, 0.0));
+  std::vector< std::complex<float> > out_cpu(out_size, std::complex<float>(0.0, 0.0));
+  std::vector< std::complex<float> > out_gpu(out_size, std::complex<float>(0.0, 0.0));
+
+  // fill up input data such that each time sample in each channel has the same value.
+  unsigned idx;
+  float val;
+
+  for (unsigned ichan=0; ichan<nchan; ichan++) {
+    for (unsigned ipol=0; ipol<npol; ipol++) {
+      val = ichan*npol + ipol;
+      for (unsigned ipart=0; ipart<npart; ipart++) {
+        for (unsigned idat=0; idat<ndat; idat++) {
+          idx = ichan*npol*in_total_ndat + ipol*in_total_ndat + ipart*ndat + idat;
+          in[idx] = std::complex<float>(val, val);
+          val++;
+        }
+      }
+    }
+  }
+
+
+  std::vector<unsigned> in_dim = {nchan, npol, in_total_ndat};
+  std::vector<unsigned> out_dim = {nchan, npol, out_total_ndat};
+
+  // util::print_array(in, in_dim);
+
+  auto t = util::now();
+  util::overlap_save_cpu_FPT< std::complex<float> >(
+    in, out_cpu, overlap, npart, npol, nchan, ndat, in_total_ndat, out_total_ndat
+  );
+
+  // util::print_array(out_cpu, out_dim);
+
+  util::delta<std::milli> delta_cpu = util::now() - t;
+
+  t = util::now();
+  CUDA::InverseFilterbankEngineCUDA::apply_k_overlap_save(
+    in, out_gpu, overlap, npart, npol, nchan, ndat
+  );
+  util::delta<std::milli> delta_gpu = util::now() - t;
+
+  std::cerr << "overlap save GPU: " << delta_gpu.count()
     << " ms; CPU: " << delta_cpu.count()
     << " ms; CPU/GPU: " << delta_cpu.count() / delta_gpu.count()
     << std::endl;
@@ -263,11 +365,15 @@ TEMPLATE_TEST_CASE (
   unsigned ndat = TestType::ndat;
   unsigned overlap = TestType::overlap;
 
-  unsigned out_ndat = ndat - 2*overlap;
+  unsigned total_discard = 2*overlap;
+  unsigned step = ndat - total_discard;
 
-  unsigned in_size = npart * npol * nchan * ndat;
-  unsigned out_size = npart * npol * nchan * out_ndat;
-  unsigned apod_size = nchan * out_ndat;
+  unsigned in_total_ndat = npart * step + total_discard;
+  unsigned out_total_ndat = npart * ndat;
+
+  unsigned in_size = npol * nchan * in_total_ndat;
+  unsigned out_size = npol * nchan * out_total_ndat;
+  unsigned apod_size = ndat;
 
   // generate some data.
   std::vector< std::complex<float> > in(in_size, std::complex<float>(0.0, 0.0));
@@ -279,30 +385,34 @@ TEMPLATE_TEST_CASE (
   unsigned idx;
   float val;
 
-  for (unsigned ipart=0; ipart<npart; ipart++) {
+  for (unsigned ichan=0; ichan<nchan; ichan++) {
     for (unsigned ipol=0; ipol<npol; ipol++) {
-      val = ipol + npol*ipart;
-      for (unsigned ichan=0; ichan<nchan; ichan++) {
-        for (unsigned idat=0; idat<ndat; idat++) {
-          idx = ipart*npol*nchan*ndat + ipol*nchan*ndat + ichan*ndat + idat;
+      val = ichan*npol + ipol;
+      for (unsigned ipart=0; ipart<npart; ipart++) {
+        for (unsigned idat=0; idat<step; idat++) {
+          idx = ichan*npol*in_total_ndat + ipol*in_total_ndat + ipart*step + idat;
           in[idx] = std::complex<float>(val, val);
           val++;
         }
       }
     }
   }
-  std::vector<unsigned> in_dim = {npart, npol, nchan, ndat};
-  std::vector<unsigned> out_dim = {npart, npol, nchan, out_ndat};
+
+
+  std::vector<unsigned> in_dim = {nchan, npol, in_total_ndat};
+  std::vector<unsigned> out_dim = {nchan, npol, out_total_ndat};
 
   // apodization filter is just multiplying by 2.
   for (unsigned i=0; i<apod_size; i++) {
-    apod[i] = std::complex<float>(2.0, 0.0);
+    apod[i] = std::complex<float>(1.0, 0.0);
   }
 
   auto t = util::now();
-  util::apodization_overlap_cpu< std::complex<float> >(
-    in, apod, out_cpu, overlap, npart, npol, nchan, ndat
+  util::apodization_overlap_cpu_FPT< std::complex<float> >(
+    in, apod, out_cpu, overlap, npart, npol, nchan, ndat, in_total_ndat, out_total_ndat
   );
+
+
   util::delta<std::milli> delta_cpu = util::now() - t;
 
   t = util::now();
@@ -326,6 +436,11 @@ TEMPLATE_TEST_CASE (
   TestDims<SmallSinglePol>, TestDims<SmallDoublePol>, TestDims<SinglePol>, TestDims<DoublePol>
 )
 {
+  auto rand_gen = util::random<float>();
+  // for (int i=0; i<10; i++)
+  // {
+  //   std::cerr << rand_gen() << std::endl;
+  // }
   unsigned npart = TestType::npart;
   unsigned npol = TestType::npol;
   unsigned nchan = TestType::nchan;
@@ -345,27 +460,28 @@ TEMPLATE_TEST_CASE (
   // fill up input data such that each time sample in each channel has the same value.
   unsigned in_idx;
   float val;
-  for (unsigned ipart=0; ipart<npart; ipart++) {
+  for (unsigned ichan=0; ichan<nchan; ichan++) {
     for (unsigned ipol=0; ipol<npol; ipol++) {
-      val = 0;
-      for (unsigned ichan=0; ichan<nchan; ichan++) {
+      val = ichan;
+      for (unsigned ipart=0; ipart<npart; ipart++) {
         for (unsigned idat=0; idat<ndat; idat++) {
-          val += 1;
-          in_idx = ipart*npol*nchan*ndat + ipol*nchan*ndat + ichan*ndat + idat;
+          in_idx = ichan*npol*npart*ndat + ipol*npart*ndat + ipart*ndat + idat;
+          // in_idx = ipart*npol*nchan*ndat + ipol*nchan*ndat + ichan*ndat + idat;
           in[in_idx] = std::complex<float>(val, val);
+          val += 1;
         }
       }
     }
   }
 
-  std::vector<unsigned> dim_in = {npart, npol, nchan, ndat};
-  std::vector<unsigned> dim_out = {npart, npol, out_ndat};
+  std::vector<unsigned> in_dim = {nchan, npol, npart*ndat};
+  std::vector<unsigned> out_dim = {1, npol, npart*out_ndat};
 
-  // util::prunsigned_array<std::complex<float>>(in, dim_in);
+  // util::print_array(in, in_dim);
 
   // response is just multiplying by 2.
   for (unsigned i=0; i<out_ndat; i++) {
-    resp[i] = std::complex<float>(2.0, 0.0);
+    resp[i] = std::complex<float>(rand_gen(), 0.0);
   }
 
   std::vector<bool> pfb_dc_chan = {true, false};
@@ -373,6 +489,7 @@ TEMPLATE_TEST_CASE (
 
   // std::vector<bool> pfb_dc_chan = {true}; //, false};
   // std::vector<bool> pfb_all_chan = {true}; //, false};
+
   bool allclose = true;
   for (auto dc_it=pfb_dc_chan.begin(); dc_it != pfb_dc_chan.end(); dc_it++) {
     for (auto all_it=pfb_all_chan.begin(); all_it != pfb_all_chan.end(); all_it++){
@@ -380,15 +497,16 @@ TEMPLATE_TEST_CASE (
       out_gpu.assign(out_gpu.size(), std::complex<float>(0.0, 0.0));
 
       auto t = util::now();
-      util::response_stitch_cpu<std::complex<float>>(
+      util::response_stitch_cpu_FPT<std::complex<float>>(
         in, resp, out_cpu, os_factor, npart, npol, nchan, ndat, *dc_it, *all_it
       );
       util::delta<std::milli> delta_cpu = util::now() - t;
-
+      // util::print_array(out_cpu, out_dim);
       t = util::now();
       CUDA::InverseFilterbankEngineCUDA::apply_k_response_stitch(
         in, resp, out_gpu, os_factor, npart, npol, nchan, ndat, *dc_it, *all_it
       );
+
       util::delta<std::milli> delta_gpu = util::now() - t;
 
       if (*dc_it && *all_it) {
@@ -397,6 +515,8 @@ TEMPLATE_TEST_CASE (
           << " ms; CPU/GPU: " << delta_cpu.count() / delta_gpu.count()
           << std::endl;
       }
+      // util::print_array(out_gpu, out_dim);
+      // util::print_array(out_cpu, out_dim);
 
       allclose = util::allclose<std::complex<float>>(out_cpu, out_gpu, thresh);
 

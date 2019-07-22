@@ -133,7 +133,6 @@ namespace dsp
     //! From the parent InverseFilterbank
     bool pfb_all_chan;
 
-
   private:
 
 

@@ -57,16 +57,20 @@ void dsp::TransferCUDA::transformation ()
                              kind,
                              stream);
   else
-    error = cudaMemcpy (output->internal_get_buffer(), 
-                             input->internal_get_buffer(), 
+    error = cudaMemcpy (output->internal_get_buffer(),
+                             input->internal_get_buffer(),
                              input->internal_get_size(), kind);
-  if (error != cudaSuccess)
+  if (error != cudaSuccess) {
+    if (verbose) {
+      std::cerr << "dsp::TransferCUDA::transformation failed with error " << cudaGetErrorString(error) << std::endl;
+    }
     throw Error (InvalidState, "dsp::TransferCUDA::transformation",
                  cudaGetErrorString (error));
+  }
 
   if (verbose)
   {
-    cerr << "dsp::TransferCUDA::transformation output ndat=" 
+    cerr << "dsp::TransferCUDA::transformation output ndat="
        << output->get_ndat() << " ndim=" << output->get_ndim();
     if (output->get_order() == TimeSeries::OrderFPT)
     {
@@ -91,8 +95,10 @@ void dsp::TransferCUDA::transformation ()
 
 void dsp::TransferCUDA::prepare ()
 {
+  if (verbose) {
+    std::cerr << "dsp::TransferCUDA::prepare" << std::endl;
+  }
   output->set_match( const_cast<TimeSeries*>(input.get()) );
   output->internal_match( input );
   output->copy_configuration( input );
 }
-
