@@ -22,14 +22,16 @@ void check_error (const char*);
  *    (nchan, ndat)
  * \param apodization the apodization kernel
  * \param t_out the output data array pointer
- * \param discard the overlap discard region, in *complex samples*
+ * \param discard_pos the positive overlap discard region, in *complex samples*
+ * \param discard_neg the negative overlap discard region, in *complex samples*
  * \param ndat the number of time samples in t_in
  * \param nchan the number of channels in t_in
  */
 __global__ void k_overlap_save (
   float2* t_in,
   float2* t_out,
-  int discard,
+  int discard_pos,
+  int discard_neg,
   int ipart_begin,
   int ipart_end,
   int npol,
@@ -49,7 +51,7 @@ __global__ void k_overlap_save (
   int idy = blockIdx.y*blockDim.y + threadIdx.y;
   int idz = blockIdx.z*blockDim.z + threadIdx.z;
 
-  int step = samples_per_part - 2*discard;
+  int step = samples_per_part - (discard_pos + discard_neg);
   int npart = ipart_end - ipart_begin;
   // make sure we're not trying to access data that are out of bounds
   if (idx > step || idy > nchan || idz > npol*npart) {
@@ -66,7 +68,7 @@ __global__ void k_overlap_save (
         out_offset = ichan*npol*out_ndat + ipol*out_ndat + (ipart + ipart_begin)*step;
 
         for (int idat=idx; idat<step; idat += total_size_x) {
-          t_out[out_offset + idat] = t_in[in_offset + idat + discard];
+          t_out[out_offset + idat] = t_in[in_offset + idat + discard_pos];
         }
       }
     }
@@ -92,7 +94,8 @@ __global__ void k_overlap_discard (
   float2* t_in,
   float2* resp,
   float2* t_out,
-  int discard,
+  int discard_pos,
+  int discard_neg,
   int ipart_begin,
   int ipart_end,
   int npol,
@@ -112,7 +115,7 @@ __global__ void k_overlap_discard (
   int idy = blockIdx.y*blockDim.y + threadIdx.y;
   int idz = blockIdx.z*blockDim.z + threadIdx.z;
 
-  int step = samples_per_part - 2*discard;
+  int step = samples_per_part - (discard_pos + discard_neg);
   int npart = ipart_end - ipart_begin;
   // make sure we're not trying to access data that are out of bounds
   if (idx > samples_per_part || idy > nchan || idz > npol*npart) {
@@ -331,6 +334,9 @@ CUDA::InverseFilterbankEngineCUDA::InverseFilterbankEngineCUDA (cudaStream_t _st
   response = nullptr;
   fft_window = nullptr;
 
+  d_response = nullptr;
+  d_fft_window = nullptr;
+
   pfb_dc_chan = 0;
   pfb_all_chan = 0;
   verbose = dsp::Observation::verbose;
@@ -533,6 +539,34 @@ void CUDA::InverseFilterbankEngineCUDA::setup (
   setup_backward_fft_plan(
     output_fft_length, output_nchan
   );
+
+  // need device memory for response
+  if (response) {
+
+  }
+  // need device memory for apodization
+  if (fft_window) {
+
+  }
+
+  // if (stream)
+  //   cudaMemcpyAsync(d_kernel, kernel, mem_size, cudaMemcpyHostToDevice, stream);
+  // else
+  //   cudaMemcpy (d_kernel, kernel, mem_size, cudaMemcpyHostToDevice);
+
+  // now setup scratch space.
+  float2* d_scratch;
+
+  unsigned d_input_overlap_discard_size = input_npol*input_nchan*input_fft_length;
+  unsigned d_stitching_size = input_npol*output_nchan*output_fft_length;
+
+  unsigned scratch_needed = d_input_overlap_discard_size + d_stitching_size;
+
+  cudaMalloc((void**)&d_scratch, sizeof(float2)*scratch_needed);
+
+  d_input_overlap_discard = d_scratch;
+  d_stitching = d_scratch + d_input_overlap_discard_size;
+
 }
 
 
@@ -584,58 +618,77 @@ void CUDA::InverseFilterbankEngineCUDA::perform (
   }
   // in_step is input_sample_step
   // out_step is output_sample_step
+  typedef CUDA::cufftTypeMap<type_forward> type_map;
+  typedef typename type_map::input_type input_type;
+  typedef typename type_map::output_type output_type;
+
+  unsigned input_stride = (in->get_datptr (1, 0) - in->get_datptr (0, 0)) / ndim;
+  unsigned output_stride = (out->get_datptr (1, 0) - out->get_datptr (0, 0) ) / ndim;
+
+  float* in_ptr = in.get_datptr(0, 0);
+  float* out_ptr = out.get_datptr(0, 0);
+
+  dim3 grid (1, input_nchan, npol*npart);
+  dim3 threads (1024, 1, 1);
 
 
-  // typedef CUDA::cufftTypeMap<type_forward> type_map;
-  //
-  // // in_step and out_step are unused, as they get calculated in setup
-  // dim3 grid (1, nchan, npol*npart);
-  // dim3 threads (1024, 1, 1);
-  // grid.x = (ndat / threads.x) + 1;
-  //
-  // typename type_map::input_type* in_device;
-  // cufftComplex* out_device;
-  //
-  // k_overlap_discard<<<grid, threads, 0, stream>>>(
-  //   in_device, apod_device, in_scratch_device,
-  //   input_discard_total, npart, input_npol, input_nchan, input_fft_length
-  // );
-  //
-  // for (uint64_t ipart=0; ipart<npart; ipart++)
-  // {
-  //   type_map::cufftExec(
-  //     forward,
-  //     in_scratch_device + ipart * input_fft_length * input_nchan,
-  //     in_scratch_device + ipart * input_fft_length * input_nchan,
-  //     CUFFT_FORWARD);
-  // }
-  //
-  // k_response_stitch<<<grid, threads, 0, stream>>>(
-  //   in_device, resp_device, out_device, os_discard, npart,
-  //   npol, nchan, in_ndat, out_ndat, pfb_dc_chan, pfb_all_chan);
-  // );
-  //
-  // for (uint64_t ipart=0; ipart<npart; ipart++)
-  // {
-  //   cufftExecC2C(
-  //     backward,
-  //     in_scratch_device + ipart * output_fft_length * output_nchan,
-  //     in_scratch_device + ipart * output_fft_length * output_nchan,
-  //     CUFFT_INVERSE);
-  // }
-  //
-  // k_overlap_discard<<<grid, threads, 0, stream>>>(
-  //   in_scratch, nullptr, out_device,
-  //   output_discard_total, npart, input_npol, output_nchan, output_fft_length
-  // );
+  for (unsigned ipart=0; ipart<npart; ipart++)
+  {
+    k_overlap_discard<<<grid, threads, 0, stream>>> (
+      (input_type*) in_ptr, d_fft_window,
+      (input_type*) d_input_overlap_discard,
+      input_discard_pos, input_discard_neg,
+      ipart, ipart + 1, input_npol, input_nchan,
+      input_fft_length, input_stride, 0
+    );
 
+    type_map::cufftExec(
+      forward,
+      (input_type*) d_input_overlap_discard,
+      (output_type*) d_input_overlap_discard,
+      CUFFT_FORWARD
+    );
+
+    k_response_stitch<<<grid, threads, 0, stream>>>(
+      (float2*) d_input_overlap_discard, response, float2* d_stitching,
+      input_os_discard/2, ipart, ipart + 1, input_npol, input_nchan,
+      npart * input_fft_length, npart * output_nchan * output_fft_length,
+      input_fft_length, output_nchan * output_fft_length,
+      pfb_dc_chan, pfb_all_chan
+    );
+
+    cufftExecC2C (
+      backward,
+      (cufftComplex*) d_input_overlap_discard,
+      (cufftComplex*) d_input_overlap_discard,
+      CUFFT_INVERSE
+    );
+
+    k_overlap_save<<<grid, threads, 0, stream>>>(
+      (float2* ) d_input_overlap_discard,
+      (float2*) out_ptr,
+      output_discard_pos,
+      output_discard_neg,
+      ipart, ipart+1, input_npol, output_nchan,
+      output_fft_length,
+      npart * output_nchan * output_fft_length,
+      output_stride
+    );
+  }
 }
 
 void CUDA::InverseFilterbankEngineCUDA::finish ()
 {
   if (verbose) {
-    std::cerr << "dsp::InverseFilterbankEngineCPU::finish" << std::endl;
+    std::cerr << "CUDA::InverseFilterbankEngineCUDA::finish" << std::endl;
   }
+
+  error = cudaFree (d_scratch);
+  if (error != cudaSuccess)
+     throw Error (FailedCall, "CUDA::InverseFilterbankEngineCUDA::finish",
+                 "cudaFree(%xu): %s", &d_scratch,
+                 cudaGetErrorString (error));
+
 }
 
 
@@ -739,7 +792,7 @@ void CUDA::InverseFilterbankEngineCUDA::apply_k_apodization_overlap (
 
 
   k_overlap_discard<<<grid, threads>>>(
-    in_device, apod_device, out_device, discard, 0, npart, npol, nchan, ndat, in_ndat, out_ndat);
+    in_device, apod_device, out_device, discard, discard, 0, npart, npol, nchan, ndat, in_ndat, out_ndat);
   check_error( "CUDA::InverseFilterbankEngineCUDA::apply_k_apodization_overlap" );
 
   cudaMemcpy((float2*) out.data(), out_device, out_size*sz, cudaMemcpyDeviceToHost);
@@ -790,7 +843,7 @@ void CUDA::InverseFilterbankEngineCUDA::apply_k_overlap_discard (
   // std::cerr << threads.x << " " << threads.y << " " << threads.z << std::endl;
 
   k_overlap_discard<<<grid, threads>>>(
-    in_device, nullptr, out_device, discard, 0, npart, npol, nchan, ndat, in_ndat, out_ndat);
+    in_device, nullptr, out_device, discard, discard, 0, npart, npol, nchan, ndat, in_ndat, out_ndat);
 
   check_error( "CUDA::InverseFilterbankEngineCUDA::apply_k_overlap_discard" );
 

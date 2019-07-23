@@ -71,9 +71,24 @@ void dsp::InverseFilterbankEngineCPU::setup (dsp::InverseFilterbank* filterbank)
 
   if (filterbank->has_response()) {
     if (verbose) {
-      std::cerr << "dsp::InverseFilterbankEngineCPU::setup_fft_plans: setting response" << std::endl;
+      std::cerr << "dsp::InverseFilterbankEngineCPU::setup: setting response" << std::endl;
     }
     response = filterbank->get_response();
+  }
+
+  if (filterbank->has_apodization()) {
+    if (verbose) {
+      std::cerr << "dsp::InverseFilterbankEngineCPU::setup: setting fft_window" << std::endl;
+    }
+    fft_window = filterbank->get_apodization();
+    if (verbose) {
+      std::cerr << "dsp::InverseFilterbankEngineCPU::setup: fft_window.get_type() "
+      << fft_window->get_type() << std::endl;
+      std::cerr << "dsp::InverseFilterbankEngineCPU::setup: fft_window.get_ndim() "
+      << fft_window->get_ndim() << std::endl;
+      std::cerr << "dsp::InverseFilterbankEngineCPU::setup: fft_window.get_ndat() "
+      << fft_window->get_ndat() << std::endl;
+    }
   }
 
   OptimalFFT* optimal = 0;
