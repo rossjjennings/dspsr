@@ -10,7 +10,7 @@ test_main_SOURCES = test_main.C \
                     util.cpp
 
 if HAVE_CUFFT
-  test_main_SOURCES += test_InverseFilterbankEngineCUDA.cu
+  test_main_SOURCES += test_InverseFilterbankEngineCUDA_kernels.cu
 endif
 
 include $(top_srcdir)/config/Makefile.local

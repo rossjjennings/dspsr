@@ -542,8 +542,8 @@ void CUDA::InverseFilterbankEngineCUDA::setup (
 
   // need device memory for response
   if (response) {
-
-  }
+  
+	}
   // need device memory for apodization
   if (fft_window) {
 
@@ -618,39 +618,59 @@ void CUDA::InverseFilterbankEngineCUDA::perform (
   }
   // in_step is input_sample_step
   // out_step is output_sample_step
-  typedef CUDA::cufftTypeMap<type_forward> type_map;
-  typedef typename type_map::input_type input_type;
-  typedef typename type_map::output_type output_type;
+	
 
-  unsigned input_stride = (in->get_datptr (1, 0) - in->get_datptr (0, 0)) / ndim;
-  unsigned output_stride = (out->get_datptr (1, 0) - out->get_datptr (0, 0) ) / ndim;
+	// get_datptr (unsigned ichan, unsigned ipol) 
+	// we can't use TimeSeries::get_ndat because there might be some buffer space that ndat 
+	// doesn't account for 
+  unsigned input_stride = (in->get_datptr (1, 0) - in->get_datptr (0, 0)) / n_per_sample;
+  unsigned output_stride = (out->get_datptr (1, 0) - out->get_datptr (0, 0) ) / 2;
 
-  float* in_ptr = in.get_datptr(0, 0);
-  float* out_ptr = out.get_datptr(0, 0);
+  const float* in_ptr = in->get_datptr(0, 0);
+  float* out_ptr = out->get_datptr(0, 0);
 
-  dim3 grid (1, input_nchan, npol*npart);
+  dim3 grid (1, input_nchan, input_npol*npart);
   dim3 threads (1024, 1, 1);
 
 
   for (unsigned ipart=0; ipart<npart; ipart++)
   {
-    k_overlap_discard<<<grid, threads, 0, stream>>> (
-      (input_type*) in_ptr, d_fft_window,
-      (input_type*) d_input_overlap_discard,
-      input_discard_pos, input_discard_neg,
-      ipart, ipart + 1, input_npol, input_nchan,
-      input_fft_length, input_stride, 0
-    );
-
-    type_map::cufftExec(
-      forward,
-      (input_type*) d_input_overlap_discard,
-      (output_type*) d_input_overlap_discard,
-      CUFFT_FORWARD
-    );
+	
+		if (type_forward == CUFFT_R2C) 
+		{
+			throw "Currently incompatible with R2C"; 
+      // k_overlap_discard<<<grid, threads, 0, stream>>> (
+      //   (cufftReal*) in_ptr, d_fft_window,
+      //   (cufftReal*) d_input_overlap_discard,
+      //   input_discard_pos, input_discard_neg,
+      //   ipart, ipart + 1, input_npol, input_nchan,
+      //   input_fft_length, input_stride, 0
+      // );
+      // cufftExecR2C(
+      //   forward,
+      //   (cufftReal*) d_input_overlap_discard,
+      //   (cufftComplex*) d_input_overlap_discard
+      // );
+		}
+		else
+		{
+      k_overlap_discard<<<grid, threads, 0, stream>>> (
+        (cufftComplex*) in_ptr, d_fft_window,
+        (cufftComplex*) d_input_overlap_discard,
+        input_discard_pos, input_discard_neg,
+        ipart, ipart + 1, input_npol, input_nchan,
+        input_fft_length, input_stride, 0
+      );
+     	cufftExecC2C(
+     	  forward,
+     	 	(cufftComplex*) d_input_overlap_discard,
+     	  (cufftComplex*) d_input_overlap_discard,
+     	  CUFFT_FORWARD
+     	);
+		}
 
     k_response_stitch<<<grid, threads, 0, stream>>>(
-      (float2*) d_input_overlap_discard, response, float2* d_stitching,
+      (float2*) d_input_overlap_discard, d_response, (float2*) d_stitching,
       input_os_discard/2, ipart, ipart + 1, input_npol, input_nchan,
       npart * input_fft_length, npart * output_nchan * output_fft_length,
       input_fft_length, output_nchan * output_fft_length,
@@ -683,7 +703,7 @@ void CUDA::InverseFilterbankEngineCUDA::finish ()
     std::cerr << "CUDA::InverseFilterbankEngineCUDA::finish" << std::endl;
   }
 
-  error = cudaFree (d_scratch);
+  cudaError_t error = cudaFree (d_scratch);
   if (error != cudaSuccess)
      throw Error (FailedCall, "CUDA::InverseFilterbankEngineCUDA::finish",
                  "cudaFree(%xu): %s", &d_scratch,
@@ -893,7 +913,8 @@ void CUDA::InverseFilterbankEngineCUDA::apply_k_overlap_save (
   // std::cerr << threads.x << " " << threads.y << " " << threads.z << std::endl;
 
   k_overlap_save<<<grid, threads>>>(
-    in_device, out_device, discard, 0, npart, npol, nchan, ndat, in_ndat, out_ndat);
+    in_device, out_device, discard, discard, 
+    0, npart, npol, nchan, ndat, in_ndat, out_ndat);
 
   check_error( "CUDA::InverseFilterbankEngineCUDA::apply_k_overlap_discard" );
 

@@ -77,10 +77,6 @@ namespace CUDA
     //! Default Destructor. This frees up cuFFT plan memory.
     ~InverseFilterbankEngineCUDA ();
 
-    //! Use the parent `InverseFilterbank` object to set properties used in the
-    //! `perform` member function
-    void setup (dsp::InverseFilterbank*);
-
     //! The explicit setup method.
     void setup (
       const dsp::TimeSeries* input,
@@ -96,6 +92,9 @@ namespace CUDA
       bool _pfb_all_chan
     );
 
+    //! Use the parent `InverseFilterbank` object to set properties used in the
+    //! `perform` member function
+    void setup (dsp::InverseFilterbank*);
 
     //! Setup scratch space used in the `perform` member function.
     void set_scratch (float *);
@@ -256,7 +255,6 @@ namespace CUDA
 
     //! scratch space for stitching together results of forward FFTs
     float2* d_stitching;
-
 
   };
 
