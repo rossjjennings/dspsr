@@ -334,6 +334,10 @@ CUDA::InverseFilterbankEngineCUDA::InverseFilterbankEngineCUDA (cudaStream_t _st
   response = nullptr;
   fft_window = nullptr;
 
+	d_scratch = nullptr;
+	d_input_overlap_discard = nullptr;
+	d_stitching = nullptr;
+
   d_response = nullptr;
   d_fft_window = nullptr;
 
@@ -360,6 +364,9 @@ CUDA::InverseFilterbankEngineCUDA::InverseFilterbankEngineCUDA (cudaStream_t _st
 
 CUDA::InverseFilterbankEngineCUDA::~InverseFilterbankEngineCUDA ()
 {
+	if (verbose) {	
+		std::cerr << "CUDA::InverseFilterbankEngineCUDA::~InverseFilterbankEngineCUDA" << std::endl;
+	}
   cufftHandle plans[] = {forward, backward};
   int nplans = sizeof(plans) / sizeof(plans[0]);
 
@@ -378,8 +385,25 @@ CUDA::InverseFilterbankEngineCUDA::~InverseFilterbankEngineCUDA ()
       //   "CUDA::InverseFilterbankEngineCUDA::InverseFilterbankEngineCUDA",
       //   "cufftDestroy");
     }
-
   }
+
+	float2* cuda_scratches[] = {d_scratch, d_response, d_fft_window};
+	int n_scratches = sizeof(cuda_scratches) / sizeof(cuda_scratches[0]);
+	
+	for (int i=0; i<n_scratches; i++)
+	{
+		if (cuda_scratches[i] != nullptr) {
+      cudaError_t error = cudaFree (cuda_scratches[i]);
+		  if (error != cudaSuccess) {
+      	if (verbose) {
+		  		std::cerr << "CUDA::InverseFilterbankEngineCUDA::~InverseFilterbankEngineCUDA: failed to deallocate memory: " << cudaGetErrorString (error) << std::endl;
+		  	}
+		    throw Error (FailedCall, "CUDA::InverseFilterbankEngineCUDA::~InverseFilterbankEngineCUDA",
+                     "cudaFree(%xu): %s", &cuda_scratches[i],
+                     cudaGetErrorString (error));
+		  }
+		}
+	}
 }
 
 std::vector<cufftResult> CUDA::InverseFilterbankEngineCUDA::setup_forward_fft_plan (
@@ -388,6 +412,10 @@ std::vector<cufftResult> CUDA::InverseFilterbankEngineCUDA::setup_forward_fft_pl
   cufftType _type_forward
 )
 {
+	if (verbose) 
+	{
+		std::cerr << "CUDA::InverseFilterbankEngineCUDA::setup_forward_fft_plan" << std::endl; 
+	}
   // setup forward batched plan
   int rank = 1; // 1D transform
   int n[] = {_input_fft_length}; /* 1d transforms of length 10 */
@@ -412,16 +440,24 @@ std::vector<cufftResult> CUDA::InverseFilterbankEngineCUDA::setup_forward_fft_pl
     _type_forward, howmany);
   results.push_back(result);
 
-  if (result != CUFFT_SUCCESS)
+  if (result != CUFFT_SUCCESS) {
+     if (verbose) {
+			 std::cerr << "CUDA::InverseFilterbankEngineCUDA::setup_forward_fft_plan: couldn't set up forward FFT plan: " << result << std::endl;
+		 }
+
     throw CUFFTError (result, "CUDA::InverseFilterbankEngineCUDA::setup_forward_fft_plan",
                       "cufftPlanMany(forward)");
-
+	}
   result = cufftSetStream (forward, stream);
   results.push_back(result);
 
-  if (result != CUFFT_SUCCESS)
+  if (result != CUFFT_SUCCESS) {
+     if (verbose) {
+			 std::cerr << "CUDA::InverseFilterbankEngineCUDA::setup_forward_fft_plan: couldn't set stream: " << result << std::endl;
+		 }
     throw CUFFTError (result, "CUDA::InverseFilterbankEngineCUDA::setup_forward_fft_plan",
           "cufftSetStream(forward)");
+  }
   forward_fft_plan_setup = true;
   return results;
 }
@@ -431,6 +467,10 @@ std::vector<cufftResult> CUDA::InverseFilterbankEngineCUDA::setup_backward_fft_p
   unsigned _output_nchan
 )
 {
+	if (verbose) 
+	{
+		std::cerr << "CUDA::InverseFilterbankEngineCUDA::setup_backward_fft_plan" << std::endl; 
+	}
   // setup forward batched plan
   int rank = 1; // 1D transform
   int n[] = { _output_fft_length}; /* 1d transforms of length 10 */
@@ -453,15 +493,22 @@ std::vector<cufftResult> CUDA::InverseFilterbankEngineCUDA::setup_backward_fft_p
 
   results.push_back(result);
 
-  if (result != CUFFT_SUCCESS)
-    throw CUFFTError (result, "CUDA::InverseFilterbankEngineCUDA::setup_backward_fft_plan",
-                      "cufftPlan1d(backward)");
-
+  if (result != CUFFT_SUCCESS) {
+     if (verbose) {
+			 std::cerr << "CUDA::InverseFilterbankEngineCUDA::setup_backward_fft_plan: couldn't set up backward fft plan: " << result << std::endl;
+		 }
+		 throw CUFFTError (result, "CUDA::InverseFilterbankEngineCUDA::setup_backward_fft_plan",
+                      "cufftPlanMany(backward)");
+	}
   result = cufftSetStream (backward, stream);
   results.push_back(result);
-  if (result != CUFFT_SUCCESS)
+  if (result != CUFFT_SUCCESS) {
+     if (verbose) {
+			 std::cerr << "CUDA::InverseFilterbankEngineCUDA::setup_backward_fft_plan: couldn't set stream: " << result << std::endl;
+		 }
     throw CUFFTError (result, "CUDA::InverseFilterbankEngineCUDA::setup_backward_fft_plan",
                       "cufftSetStream(backward)");
+ 	}
   backward_fft_plan_setup = true;
 
   return results;
@@ -635,9 +682,16 @@ void CUDA::InverseFilterbankEngineCUDA::perform (
 
   for (unsigned ipart=0; ipart<npart; ipart++)
   {
-	
+		if (verbose) 
+		{
+			std::cerr << "CUDA::InverseFilterbankEngineCUDA::perform: part " << ipart << "/" << npart << std::endl;
+		}	
 		if (type_forward == CUFFT_R2C) 
 		{
+		  if (verbose) 
+		  {
+		  	std::cerr << "CUDA::InverseFilterbankEngineCUDA::perform: R2C applying overlap discard kernel" << std::endl;
+		  }	
 			throw "Currently incompatible with R2C"; 
       // k_overlap_discard<<<grid, threads, 0, stream>>> (
       //   (cufftReal*) in_ptr, d_fft_window,
@@ -651,9 +705,14 @@ void CUDA::InverseFilterbankEngineCUDA::perform (
       //   (cufftReal*) d_input_overlap_discard,
       //   (cufftComplex*) d_input_overlap_discard
       // );
+			// cudaDeviceSynchronize();
 		}
 		else
 		{
+		  if (verbose) 
+		  {
+		  	std::cerr << "CUDA::InverseFilterbankEngineCUDA::perform: C2C applying overlap discard kernel and forward FFT" << std::endl;
+		  }	
       k_overlap_discard<<<grid, threads, 0, stream>>> (
         (cufftComplex*) in_ptr, d_fft_window,
         (cufftComplex*) d_input_overlap_discard,
@@ -667,8 +726,13 @@ void CUDA::InverseFilterbankEngineCUDA::perform (
      	  (cufftComplex*) d_input_overlap_discard,
      	  CUFFT_FORWARD
      	);
+			cudaDeviceSynchronize();
 		}
 
+		if (verbose) 
+		{
+			std::cerr << "CUDA::InverseFilterbankEngineCUDA::perform: applying response stitch kernel" << std::endl;
+		}	
     k_response_stitch<<<grid, threads, 0, stream>>>(
       (float2*) d_input_overlap_discard, d_response, (float2*) d_stitching,
       input_os_discard/2, ipart, ipart + 1, input_npol, input_nchan,
@@ -677,13 +741,21 @@ void CUDA::InverseFilterbankEngineCUDA::perform (
       pfb_dc_chan, pfb_all_chan
     );
 
+		if (verbose) 
+		{
+			std::cerr << "CUDA::InverseFilterbankEngineCUDA::perform: applying inverse FFT" << std::endl;
+		}	
     cufftExecC2C (
       backward,
       (cufftComplex*) d_input_overlap_discard,
       (cufftComplex*) d_input_overlap_discard,
       CUFFT_INVERSE
     );
-
+		cudaDeviceSynchronize();
+		if (verbose) 
+		{
+			std::cerr << "CUDA::InverseFilterbankEngineCUDA::perform: applying overlap save kernel" << std::endl;
+		}	
     k_overlap_save<<<grid, threads, 0, stream>>>(
       (float2* ) d_input_overlap_discard,
       (float2*) out_ptr,
@@ -702,13 +774,6 @@ void CUDA::InverseFilterbankEngineCUDA::finish ()
   if (verbose) {
     std::cerr << "CUDA::InverseFilterbankEngineCUDA::finish" << std::endl;
   }
-
-  cudaError_t error = cudaFree (d_scratch);
-  if (error != cudaSuccess)
-     throw Error (FailedCall, "CUDA::InverseFilterbankEngineCUDA::finish",
-                 "cudaFree(%xu): %s", &d_scratch,
-                 cudaGetErrorString (error));
-
 }
 
 
@@ -953,5 +1018,4 @@ void CUDA::InverseFilterbankEngineCUDA::apply_cufft_backward (
 
   cudaFree(in_cufft);
   cudaFree(out_cufft);
-
 }
