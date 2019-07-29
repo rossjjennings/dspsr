@@ -18,7 +18,7 @@ void check_error (const char*);
 
 const float thresh = 1e-5;
 
-TEST_CASE ("InverseFilterbankEngineCUDA unit", "") {
+TEST_CASE ("InverseFilterbankEngineCUDA", "") {
 	util::set_verbose(true);
   void* stream = 0;
   cudaStream_t cuda_stream = reinterpret_cast<cudaStream_t>(stream);
@@ -83,13 +83,13 @@ TEST_CASE ("cufft kernels can operate on data", "")
 }
 
 TEST_CASE (
-  "InverseFilterbankEngineCUDA component",
+  "InverseFilterbankEngineCUDA can operate on data",
 	""
 )
 {
-	int idx = 2; 
+	int idx = 2;
 
-	test_config::TestShape test_shape = test_config::test_shapes[idx];	
+	test_config::TestShape test_shape = test_config::test_shapes[idx];
 
   util::set_verbose(true);
   void* stream = 0;
@@ -97,9 +97,12 @@ TEST_CASE (
   CUDA::DeviceMemory* device_memory = new CUDA::DeviceMemory(cuda_stream);
 
   CUDA::InverseFilterbankEngineCUDA engine(cuda_stream);
-  Rational os_factor (4, 3);
+	Reference::To<dsp::InverseFilterbank> filterbank = new dsp::InverseFilterbank;
 
-  unsigned npart = test_shape.npart;
+
+	Rational os_factor (4, 3);
+
+	unsigned npart = test_shape.npart;
   unsigned npol = test_shape.npol;
   unsigned input_nchan = test_shape.nchan;
   unsigned output_nchan = test_shape.output_nchan;
@@ -152,25 +155,30 @@ TEST_CASE (
   transfer.prepare();
   transfer.operate();
 
+	// now load up InverseFilterbank object
+	filterbank->set_input(input_gpu);
+	filterbank->set_output(output_gpu);
+
+	filterbank->set_oversampling_factor(os_factor);
+  filterbank->set_input_fft_length(input_fft_length);
+  filterbank->set_output_fft_length(output_fft_length);
+  filterbank->set_input_discard_pos(input_overlap);
+  filterbank->set_input_discard_neg(input_overlap);
+  filterbank->set_output_discard_pos(output_overlap);
+  filterbank->set_output_discard_neg(output_overlap);
+  filterbank->set_pfb_dc_chan(true);
+  filterbank->set_pfb_all_chan(true);
+
   SECTION ("can call setup method")
   {
-    engine.setup(
-      input_gpu, output, os_factor, input_fft_length, output_fft_length,
-      input_overlap, input_overlap, output_overlap, output_overlap, true, true
-    );
+    engine.setup(filterbank);
   }
 
   SECTION ("can call perform method")
   {
-    engine.setup(
-      input_gpu, output, os_factor, input_fft_length, output_fft_length,
-      input_overlap, input_overlap, output_overlap, output_overlap, true, true
-    );
+    engine.setup(filterbank);
     engine.perform(
       input_gpu, output_gpu, npart
     );
   }
 }
-
-
-

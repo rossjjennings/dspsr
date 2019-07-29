@@ -364,7 +364,7 @@ CUDA::InverseFilterbankEngineCUDA::InverseFilterbankEngineCUDA (cudaStream_t _st
 
 CUDA::InverseFilterbankEngineCUDA::~InverseFilterbankEngineCUDA ()
 {
-	if (verbose) {	
+	if (verbose) {
 		std::cerr << "CUDA::InverseFilterbankEngineCUDA::~InverseFilterbankEngineCUDA" << std::endl;
 	}
   cufftHandle plans[] = {forward, backward};
@@ -389,7 +389,7 @@ CUDA::InverseFilterbankEngineCUDA::~InverseFilterbankEngineCUDA ()
 
 	float2* cuda_scratches[] = {d_scratch, d_response, d_fft_window};
 	int n_scratches = sizeof(cuda_scratches) / sizeof(cuda_scratches[0]);
-	
+
 	for (int i=0; i<n_scratches; i++)
 	{
 		if (cuda_scratches[i] != nullptr) {
@@ -412,9 +412,9 @@ std::vector<cufftResult> CUDA::InverseFilterbankEngineCUDA::setup_forward_fft_pl
   cufftType _type_forward
 )
 {
-	if (verbose) 
+	if (verbose)
 	{
-		std::cerr << "CUDA::InverseFilterbankEngineCUDA::setup_forward_fft_plan" << std::endl; 
+		std::cerr << "CUDA::InverseFilterbankEngineCUDA::setup_forward_fft_plan" << std::endl;
 	}
   // setup forward batched plan
   int rank = 1; // 1D transform
@@ -467,9 +467,9 @@ std::vector<cufftResult> CUDA::InverseFilterbankEngineCUDA::setup_backward_fft_p
   unsigned _output_nchan
 )
 {
-	if (verbose) 
+	if (verbose)
 	{
-		std::cerr << "CUDA::InverseFilterbankEngineCUDA::setup_backward_fft_plan" << std::endl; 
+		std::cerr << "CUDA::InverseFilterbankEngineCUDA::setup_backward_fft_plan" << std::endl;
 	}
   // setup forward batched plan
   int rank = 1; // 1D transform
@@ -515,23 +515,27 @@ std::vector<cufftResult> CUDA::InverseFilterbankEngineCUDA::setup_backward_fft_p
 }
 
 
-void CUDA::InverseFilterbankEngineCUDA::setup (
-  const dsp::TimeSeries* input,
-  dsp::TimeSeries* output,
-  const Rational& os_factor,
-  unsigned _input_fft_length,
-  unsigned _output_fft_length,
-  unsigned _input_discard_pos,
-  unsigned _input_discard_neg,
-  unsigned _output_discard_pos,
-  unsigned _output_discard_neg,
-  bool _pfb_dc_chan,
-  bool _pfb_all_chan
-)
+void CUDA::InverseFilterbankEngineCUDA::setup (dsp::InverseFilterbank* filterbank)
 {
-
   if (verbose) {
     std::cerr << "CUDA::InverseFilterbankEngineCUDA::setup("
+      << filterbank << ")"
+      << std::endl;
+  }
+  const dsp::TimeSeries* input = filterbank->get_input();
+  dsp::TimeSeries* output = filterbank->get_output();
+  const Rational& os_factor = filterbank->get_oversampling_factor();
+  unsigned _input_fft_length = filterbank->get_input_fft_length();
+  unsigned _output_fft_length = filterbank->get_output_fft_length();
+  unsigned _input_discard_pos = filterbank->get_input_discard_pos();
+  unsigned _input_discard_neg = filterbank->get_input_discard_neg();
+  unsigned _output_discard_pos = filterbank->get_output_discard_pos();
+  unsigned _output_discard_neg = filterbank->get_output_discard_neg();
+  bool _pfb_dc_chan = filterbank->get_pfb_dc_chan();
+  bool _pfb_all_chan = filterbank->get_pfb_all_chan();
+
+  if (verbose) {
+    std::cerr << "CUDA::InverseFilterbankEngineCUDA::setup: "
       << input << ", "
       << output << ", "
       << os_factor << ", "
@@ -542,11 +546,8 @@ void CUDA::InverseFilterbankEngineCUDA::setup (
       << _output_discard_pos << ", "
       << _output_discard_neg << ", "
       << _pfb_dc_chan << ", "
-      << _pfb_all_chan << ")"
-      << std::endl;
+      << _pfb_all_chan << std::endl;
   }
-
-
   type_forward = CUFFT_C2C;
   n_per_sample = 1;
 
@@ -589,8 +590,8 @@ void CUDA::InverseFilterbankEngineCUDA::setup (
 
   // need device memory for response
   if (response) {
-  
-	}
+
+  }
   // need device memory for apodization
   if (fft_window) {
 
@@ -617,33 +618,6 @@ void CUDA::InverseFilterbankEngineCUDA::setup (
 }
 
 
-
-void CUDA::InverseFilterbankEngineCUDA::setup (dsp::InverseFilterbank* filterbank)
-{
-  if (verbose) {
-    std::cerr << "CUDA::InverseFilterbankEngineCUDA::setup("
-      << filterbank << ")"
-      << std::endl;
-  }
-  const dsp::TimeSeries* input = filterbank->get_input();
-  dsp::TimeSeries* output = filterbank->get_output();
-
-  setup (
-    input,
-    output,
-    filterbank->get_oversampling_factor(),
-    filterbank->get_input_fft_length(),
-    filterbank->get_output_fft_length(),
-    filterbank->get_input_discard_pos(),
-    filterbank->get_input_discard_neg(),
-    filterbank->get_output_discard_pos(),
-    filterbank->get_output_discard_neg(),
-    filterbank->get_pfb_dc_chan(),
-    filterbank->get_pfb_all_chan()
-  );
-}
-
-
 void CUDA::InverseFilterbankEngineCUDA::set_scratch (float* )
 { }
 
@@ -651,9 +625,9 @@ void CUDA::InverseFilterbankEngineCUDA::set_scratch (float* )
 void CUDA::InverseFilterbankEngineCUDA::perform (
   const dsp::TimeSeries* in,
   dsp::TimeSeries* out,
-  uint64_t npart
-  // uint64_t in_step,
-  // uint64_t out_step
+  uint64_t npart,
+  uint64_t in_step,
+  uint64_t out_step
 )
 {
   if (verbose) {
@@ -665,11 +639,11 @@ void CUDA::InverseFilterbankEngineCUDA::perform (
   }
   // in_step is input_sample_step
   // out_step is output_sample_step
-	
 
-	// get_datptr (unsigned ichan, unsigned ipol) 
-	// we can't use TimeSeries::get_ndat because there might be some buffer space that ndat 
-	// doesn't account for 
+
+	// get_datptr (unsigned ichan, unsigned ipol)
+	// we can't use TimeSeries::get_ndat because there might be some buffer space that ndat
+	// doesn't account for
   unsigned input_stride = (in->get_datptr (1, 0) - in->get_datptr (0, 0)) / n_per_sample;
   unsigned output_stride = (out->get_datptr (1, 0) - out->get_datptr (0, 0) ) / 2;
 
@@ -682,17 +656,17 @@ void CUDA::InverseFilterbankEngineCUDA::perform (
 
   for (unsigned ipart=0; ipart<npart; ipart++)
   {
-		if (verbose) 
+		if (verbose)
 		{
 			std::cerr << "CUDA::InverseFilterbankEngineCUDA::perform: part " << ipart << "/" << npart << std::endl;
-		}	
-		if (type_forward == CUFFT_R2C) 
+		}
+		if (type_forward == CUFFT_R2C)
 		{
-		  if (verbose) 
+		  if (verbose)
 		  {
 		  	std::cerr << "CUDA::InverseFilterbankEngineCUDA::perform: R2C applying overlap discard kernel" << std::endl;
-		  }	
-			throw "Currently incompatible with R2C"; 
+		  }
+			throw "Currently incompatible with R2C";
       // k_overlap_discard<<<grid, threads, 0, stream>>> (
       //   (cufftReal*) in_ptr, d_fft_window,
       //   (cufftReal*) d_input_overlap_discard,
@@ -709,10 +683,10 @@ void CUDA::InverseFilterbankEngineCUDA::perform (
 		}
 		else
 		{
-		  if (verbose) 
+		  if (verbose)
 		  {
 		  	std::cerr << "CUDA::InverseFilterbankEngineCUDA::perform: C2C applying overlap discard kernel and forward FFT" << std::endl;
-		  }	
+		  }
       k_overlap_discard<<<grid, threads, 0, stream>>> (
         (cufftComplex*) in_ptr, d_fft_window,
         (cufftComplex*) d_input_overlap_discard,
@@ -729,10 +703,10 @@ void CUDA::InverseFilterbankEngineCUDA::perform (
 			cudaDeviceSynchronize();
 		}
 
-		if (verbose) 
+		if (verbose)
 		{
 			std::cerr << "CUDA::InverseFilterbankEngineCUDA::perform: applying response stitch kernel" << std::endl;
-		}	
+		}
     k_response_stitch<<<grid, threads, 0, stream>>>(
       (float2*) d_input_overlap_discard, d_response, (float2*) d_stitching,
       input_os_discard/2, ipart, ipart + 1, input_npol, input_nchan,
@@ -741,10 +715,10 @@ void CUDA::InverseFilterbankEngineCUDA::perform (
       pfb_dc_chan, pfb_all_chan
     );
 
-		if (verbose) 
+		if (verbose)
 		{
 			std::cerr << "CUDA::InverseFilterbankEngineCUDA::perform: applying inverse FFT" << std::endl;
-		}	
+		}
     cufftExecC2C (
       backward,
       (cufftComplex*) d_input_overlap_discard,
@@ -752,10 +726,10 @@ void CUDA::InverseFilterbankEngineCUDA::perform (
       CUFFT_INVERSE
     );
 		cudaDeviceSynchronize();
-		if (verbose) 
+		if (verbose)
 		{
 			std::cerr << "CUDA::InverseFilterbankEngineCUDA::perform: applying overlap save kernel" << std::endl;
-		}	
+		}
     k_overlap_save<<<grid, threads, 0, stream>>>(
       (float2* ) d_input_overlap_discard,
       (float2*) out_ptr,
@@ -978,7 +952,7 @@ void CUDA::InverseFilterbankEngineCUDA::apply_k_overlap_save (
   // std::cerr << threads.x << " " << threads.y << " " << threads.z << std::endl;
 
   k_overlap_save<<<grid, threads>>>(
-    in_device, out_device, discard, discard, 
+    in_device, out_device, discard, discard,
     0, npart, npol, nchan, ndat, in_ndat, out_ndat);
 
   check_error( "CUDA::InverseFilterbankEngineCUDA::apply_k_overlap_discard" );

@@ -77,20 +77,6 @@ namespace CUDA
     //! Default Destructor. This frees up cuFFT plan memory.
     ~InverseFilterbankEngineCUDA ();
 
-    //! The explicit setup method.
-    void setup (
-      const dsp::TimeSeries* input,
-      dsp::TimeSeries* output,
-      const Rational& os_factor,
-      unsigned _input_fft_length,
-      unsigned _output_fft_length,
-      unsigned _input_discard_pos,
-      unsigned _input_discard_neg,
-      unsigned _output_discard_pos,
-      unsigned _output_discard_neg,
-      bool _pfb_dc_chan,
-      bool _pfb_all_chan
-    );
 
     //! Use the parent `InverseFilterbank` object to set properties used in the
     //! `perform` member function
@@ -101,7 +87,7 @@ namespace CUDA
 
     //! Implements FFT based PFB inversion algorithm using the GPU.
     void perform (const dsp::TimeSeries* in, dsp::TimeSeries* out,
-                  uint64_t npart); //, uint64_t in_step, uint64_t out_step);
+                  uint64_t npart, uint64_t in_step=0, uint64_t out_step=0);
 
     //! Do any actions to clean up after `perform`.
     void finish ();
