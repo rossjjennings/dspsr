@@ -41,6 +41,22 @@ TEST_CASE ("InverseFilterbank") {
     dsp::InverseFilterbankEngineCPU* filterbank_engine = new dsp::InverseFilterbankEngineCPU;
     filterbank.set_engine(filterbank_engine);
   }
+
+  SECTION ("setting input also sets oversampling factor")
+  {
+    Rational os_factor_old (8, 7);
+    Rational os_factor_new (4, 3);
+
+    filterbank.set_oversampling_factor(os_factor_old);
+    REQUIRE (filterbank.get_oversampling_factor() == os_factor_old);
+
+    Reference::To<dsp::TimeSeries> input = new dsp::TimeSeries;
+    input->set_oversampling_factor(os_factor_new);
+    filterbank.set_input (input);
+    REQUIRE (filterbank.get_oversampling_factor() == os_factor_new);
+
+  }
+
 }
 
 TEST_CASE ("InverseFilterbank runs on channelized data", "")

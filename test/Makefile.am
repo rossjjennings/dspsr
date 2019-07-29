@@ -7,12 +7,13 @@ test_main_SOURCES = test_main.C \
                     test_InverseFilterbankConfig.C \
                     test_InverseFilterbank.C \
                     test_InverseFilterbankPipeline.C \
-										#InverseFilterbank_test_config.cpp \
+                    test_InverseFilterbankEngineCPU.C \
                     util.cpp
 
 if HAVE_CUFFT
   test_main_SOURCES += test_InverseFilterbankEngineCUDA_kernels.cu \
-											 test_InverseFilterbankEngineCUDA.cu
+											 test_InverseFilterbankEngineCUDA.cu \
+                       test_InverseFilterbankEngine_integration.cu
 endif
 
 include $(top_srcdir)/config/Makefile.local

@@ -39,6 +39,13 @@ dsp::InverseFilterbank::InverseFilterbank (const char* name, Behaviour behaviour
 
 }
 
+void dsp::InverseFilterbank::set_input (const dsp::TimeSeries* input)
+{
+  dsp::Convolution::set_input(input);
+  oversampling_factor = input->get_oversampling_factor();
+}
+
+
 void dsp::InverseFilterbank::prepare ()
 {
   if (verbose) {

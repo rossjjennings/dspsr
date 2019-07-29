@@ -71,6 +71,8 @@ namespace dsp {
     //! Null constructor
     InverseFilterbank (const char* name = "InverseFilterbank", Behaviour type = outofplace);
 
+    void set_input (const TimeSeries* input);
+
     //! Prepare all relevant attributes
     void prepare ();
 
@@ -120,7 +122,7 @@ namespace dsp {
     void set_oversampling_factor (const Rational& _osf) { oversampling_factor = _osf; }
 
     //! Get oversampling_factor
-    const Rational& get_oversampling_factor () {return input->get_oversampling_factor();}
+    const Rational& get_oversampling_factor () { return oversampling_factor; }
 
     //! Get the `pfb_dc_chan` flag
     bool get_pfb_dc_chan () const { return pfb_dc_chan; }

@@ -156,6 +156,7 @@ TEST_CASE (
   transfer.operate();
 
 	// now load up InverseFilterbank object
+	// input_gpu->set_oversampling_factor(os_factor);
 	filterbank->set_input(input_gpu);
 	filterbank->set_output(output_gpu);
 
@@ -180,5 +181,6 @@ TEST_CASE (
     engine.perform(
       input_gpu, output_gpu, npart
     );
+		engine.finish();
   }
 }

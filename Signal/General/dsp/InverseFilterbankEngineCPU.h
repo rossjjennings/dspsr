@@ -43,7 +43,7 @@ namespace dsp
     //! Operate on input and output data TimeSeries, performing the PFB
     //! inversion algorithm.
     void perform (const dsp::TimeSeries* in, dsp::TimeSeries* out,
-                  uint64_t npart, uint64_t in_step, uint64_t out_step);
+                  uint64_t npart, uint64_t in_step=0, uint64_t out_step=0);
 
     //! Called when the the `InverseFilterbank` sees that the engine is done
     //! operating on data
