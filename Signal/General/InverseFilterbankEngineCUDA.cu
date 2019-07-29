@@ -387,23 +387,23 @@ CUDA::InverseFilterbankEngineCUDA::~InverseFilterbankEngineCUDA ()
     }
   }
 
-	float2* cuda_scratches[] = {d_scratch, d_response, d_fft_window};
-	int n_scratches = sizeof(cuda_scratches) / sizeof(cuda_scratches[0]);
-
-	for (int i=0; i<n_scratches; i++)
-	{
-		if (cuda_scratches[i] != nullptr) {
-      cudaError_t error = cudaFree (cuda_scratches[i]);
-		  if (error != cudaSuccess) {
-      	if (verbose) {
-		  		std::cerr << "CUDA::InverseFilterbankEngineCUDA::~InverseFilterbankEngineCUDA: failed to deallocate memory: " << cudaGetErrorString (error) << std::endl;
-		  	}
-		    throw Error (FailedCall, "CUDA::InverseFilterbankEngineCUDA::~InverseFilterbankEngineCUDA",
-                     "cudaFree(%xu): %s", &cuda_scratches[i],
-                     cudaGetErrorString (error));
-		  }
-		}
-	}
+	// float2* cuda_scratches[] = {d_scratch, d_response, d_fft_window};
+	// int n_scratches = sizeof(cuda_scratches) / sizeof(cuda_scratches[0]);
+  //
+	// for (int i=0; i<n_scratches; i++)
+	// {
+	// 	if (cuda_scratches[i] != nullptr) {
+  //     cudaError_t error = cudaFree (cuda_scratches[i]);
+	// 	  if (error != cudaSuccess) {
+  //     	if (verbose) {
+	// 	  		std::cerr << "CUDA::InverseFilterbankEngineCUDA::~InverseFilterbankEngineCUDA: failed to deallocate memory: " << cudaGetErrorString (error) << std::endl;
+	// 	  	}
+	// 	    throw Error (FailedCall, "CUDA::InverseFilterbankEngineCUDA::~InverseFilterbankEngineCUDA",
+  //                    "cudaFree(%xu): %s", &cuda_scratches[i],
+  //                    cudaGetErrorString (error));
+	// 	  }
+	// 	}
+	// }
 }
 
 std::vector<cufftResult> CUDA::InverseFilterbankEngineCUDA::setup_forward_fft_plan (
@@ -580,6 +580,16 @@ void CUDA::InverseFilterbankEngineCUDA::setup (dsp::InverseFilterbank* filterban
   input_os_keep = os_factor.normalize(input_fft_length);
   input_os_discard = input_fft_length - input_os_keep;
 
+  if (filterbank->has_response())
+  {
+    response = filterbank->get_response();
+  }
+
+  if (filterbank->has_apodization())
+  {
+    fft_window = filterbank->get_apodization();
+  }
+
   setup_forward_fft_plan(
     input_fft_length, input_nchan, type_forward
   );
@@ -588,38 +598,59 @@ void CUDA::InverseFilterbankEngineCUDA::setup (dsp::InverseFilterbank* filterban
     output_fft_length, output_nchan
   );
 
+  cudaError_t error;
   // need device memory for response
   if (response) {
-
+    unsigned response_size = response->get_nchan() * response->get_ndat() * sizeof(cufftComplex);
+    const float* response_kernel = response->get_datptr(0, 0);
+    cudaMalloc((void**) &d_response, response_size);
+    // d_response = (float2*) memory->do_allocate(response_size);
+    if (stream) {
+      error = cudaMemcpyAsync(
+        d_response, response_kernel, response_size, cudaMemcpyHostToDevice, stream);
+    } else {
+      error = cudaMemcpy(
+        d_response, response_kernel, response_size, cudaMemcpyHostToDevice);
+    }
+    if (error != cudaSuccess)
+    {
+      throw Error (InvalidState, "CUDA::InverseFilterbankEngineCUDA::setup",
+       "could not copy dedispersion kernel to device");
+    }
   }
   // need device memory for apodization
   if (fft_window) {
-
+    unsigned fft_window_size = fft_window->get_nchan() * fft_window->get_ndat() * sizeof(cufftComplex);
+    const float* fft_window_kernel = fft_window->get_datptr(0, 0);
+    cudaMalloc((void**) &d_fft_window, fft_window_size);
+    // d_fft_window = (float2*) memory->do_allocate(fft_window_size);
+    if (stream) {
+      error = cudaMemcpyAsync(
+        d_fft_window, fft_window_kernel, fft_window_size, cudaMemcpyHostToDevice, stream);
+    } else {
+      error = cudaMemcpy(
+        d_fft_window, fft_window_kernel, fft_window_size, cudaMemcpyHostToDevice);
+    }
+    if (error != cudaSuccess)
+    {
+      throw Error (InvalidState, "CUDA::InverseFilterbankEngineCUDA::setup",
+       "could not copy FFT window response to device");
+    }
   }
 
-  // if (stream)
-  //   cudaMemcpyAsync(d_kernel, kernel, mem_size, cudaMemcpyHostToDevice, stream);
-  // else
-  //   cudaMemcpy (d_kernel, kernel, mem_size, cudaMemcpyHostToDevice);
-
-  // now setup scratch space.
-  float2* d_scratch;
-
-  unsigned d_input_overlap_discard_size = input_npol*input_nchan*input_fft_length;
-  unsigned d_stitching_size = input_npol*output_nchan*output_fft_length;
-
-  unsigned scratch_needed = d_input_overlap_discard_size + d_stitching_size;
-
-  cudaMalloc((void**)&d_scratch, sizeof(float2)*scratch_needed);
-
-  d_input_overlap_discard = d_scratch;
-  d_stitching = d_scratch + d_input_overlap_discard_size;
 
 }
 
 
-void CUDA::InverseFilterbankEngineCUDA::set_scratch (float* )
-{ }
+void CUDA::InverseFilterbankEngineCUDA::set_scratch (
+  float* _scratch
+)
+{
+  unsigned offset = input_npol*input_nchan*input_fft_length;
+  d_scratch = (float2*) _scratch;
+  d_input_overlap_discard = d_scratch;
+  d_stitching = d_scratch + offset;
+}
 
 
 void CUDA::InverseFilterbankEngineCUDA::perform (
@@ -645,7 +676,7 @@ void CUDA::InverseFilterbankEngineCUDA::perform (
 	// we can't use TimeSeries::get_ndat because there might be some buffer space that ndat
 	// doesn't account for
   unsigned input_stride = (in->get_datptr (1, 0) - in->get_datptr (0, 0)) / n_per_sample;
-  unsigned output_stride = (out->get_datptr (1, 0) - out->get_datptr (0, 0) ) / 2;
+  unsigned output_stride = (out->get_datptr (1, 0) - out->get_datptr (0, 0)) / 2;
 
   const float* in_ptr = in->get_datptr(0, 0);
   float* out_ptr = out->get_datptr(0, 0);
@@ -688,7 +719,8 @@ void CUDA::InverseFilterbankEngineCUDA::perform (
 		  	std::cerr << "CUDA::InverseFilterbankEngineCUDA::perform: C2C applying overlap discard kernel and forward FFT" << std::endl;
 		  }
       k_overlap_discard<<<grid, threads, 0, stream>>> (
-        (cufftComplex*) in_ptr, d_fft_window,
+        (cufftComplex*) in_ptr,
+        d_fft_window,
         (cufftComplex*) d_input_overlap_discard,
         input_discard_pos, input_discard_neg,
         ipart, ipart + 1, input_npol, input_nchan,
@@ -700,7 +732,7 @@ void CUDA::InverseFilterbankEngineCUDA::perform (
      	  (cufftComplex*) d_input_overlap_discard,
      	  CUFFT_FORWARD
      	);
-			cudaDeviceSynchronize();
+			// cudaDeviceSynchronize();
 		}
 
 		if (verbose)
@@ -725,7 +757,7 @@ void CUDA::InverseFilterbankEngineCUDA::perform (
       (cufftComplex*) d_input_overlap_discard,
       CUFFT_INVERSE
     );
-		cudaDeviceSynchronize();
+		// cudaDeviceSynchronize();
 		if (verbose)
 		{
 			std::cerr << "CUDA::InverseFilterbankEngineCUDA::perform: applying overlap save kernel" << std::endl;

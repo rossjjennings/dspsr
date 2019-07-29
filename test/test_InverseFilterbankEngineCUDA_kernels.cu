@@ -25,7 +25,7 @@ TEST_CASE (
 )
 {
 	auto idx = GENERATE(range(0, (int) test_config::test_shapes.size() - 1));
-	
+
 	test_config::TestShape test_shape = test_config::test_shapes[idx];
 
   unsigned npart = test_shape.npart;
@@ -68,7 +68,7 @@ TEST_CASE (
   std::vector<unsigned> out_dim = {nchan, npol, out_total_ndat};
 
   auto t = util::now();
-  util::overlap_discard_cpu_FPT(
+  util::InverseFilterbank::overlap_discard_cpu_FPT(
     in, out_cpu, overlap, npart, npol, nchan, ndat, in_total_ndat, out_total_ndat
   );
   util::delta<std::milli> delta_cpu = util::now() - t;
@@ -99,9 +99,9 @@ TEST_CASE (
 )
 {
 	auto idx = GENERATE(range(0, (int) test_config::test_shapes.size() - 1));
-	
+
 	test_config::TestShape test_shape = test_config::test_shapes[idx];
-  
+
   unsigned npart = test_shape.npart;
   unsigned npol = test_shape.npol;
   unsigned nchan = test_shape.nchan;
@@ -146,7 +146,7 @@ TEST_CASE (
   // util::print_array(in, in_dim);
 
   auto t = util::now();
-  util::overlap_save_cpu_FPT< std::complex<float> >(
+  util::InverseFilterbank::overlap_save_cpu_FPT< std::complex<float> >(
     in, out_cpu, overlap, npart, npol, nchan, ndat, in_total_ndat, out_total_ndat
   );
 
@@ -177,9 +177,9 @@ TEST_CASE (
 )
 {
 	auto idx = GENERATE(range(0, (int) test_config::test_shapes.size() - 1));
-	
+
 	test_config::TestShape test_shape = test_config::test_shapes[idx];
-  
+
   unsigned npart = test_shape.npart;
   unsigned npol = test_shape.npol;
   unsigned nchan = test_shape.nchan;
@@ -229,7 +229,7 @@ TEST_CASE (
   }
 
   auto t = util::now();
-  util::apodization_overlap_cpu_FPT< std::complex<float> >(
+  util::InverseFilterbank::apodization_overlap_cpu_FPT< std::complex<float> >(
     in, apod, out_cpu, overlap, npart, npol, nchan, ndat, in_total_ndat, out_total_ndat
   );
 
@@ -257,9 +257,9 @@ TEST_CASE (
 )
 {
 	auto idx = GENERATE(range(0, (int) test_config::test_shapes.size() - 1));
-	
+
 	test_config::TestShape test_shape = test_config::test_shapes[idx];
-  
+
   auto rand_gen = util::random<float>();
   // for (int i=0; i<10; i++)
   // {
@@ -321,7 +321,7 @@ TEST_CASE (
       out_gpu.assign(out_gpu.size(), std::complex<float>(0.0, 0.0));
 
       auto t = util::now();
-      util::response_stitch_cpu_FPT<std::complex<float>>(
+      util::InverseFilterbank::response_stitch_cpu_FPT<std::complex<float>>(
         in, resp, out_cpu, os_factor, npart, npol, nchan, ndat, *dc_it, *all_it
       );
       util::delta<std::milli> delta_cpu = util::now() - t;

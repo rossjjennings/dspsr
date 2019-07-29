@@ -54,9 +54,7 @@ TEST_CASE ("InverseFilterbank") {
     input->set_oversampling_factor(os_factor_new);
     filterbank.set_input (input);
     REQUIRE (filterbank.get_oversampling_factor() == os_factor_new);
-
   }
-
 }
 
 TEST_CASE ("InverseFilterbank runs on channelized data", "")

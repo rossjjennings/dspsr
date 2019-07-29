@@ -10,6 +10,9 @@
 #include <time.h>
 #include <cstdlib>
 
+#include "dsp/MemoryCUDA.h"
+#include "dsp/TransferCUDA.h"
+#include "dsp/Scratch.h"
 #include "dsp/IOManager.h"
 #include "dsp/Input.h"
 #include "dsp/TimeSeries.h"
@@ -86,75 +89,123 @@ namespace util {
     dsp::TimeSeries* out,
     const std::vector<unsigned>& dim);
 
-  template<typename T>
-  void response_stitch_cpu_FPT (
-    const std::vector<T>& in,
-    const std::vector<T>& resp,
-    std::vector<T>& out,
-    Rational os_factor,
-    unsigned npart,
-    unsigned npol,
-    unsigned nchan,
-    unsigned ndat,
-    bool pfb_dc_chan,
-    bool pfb_all_chan
-  );
+  template<class FilterbankType>
+  class IntegrationTestConfiguration {
 
-  /**
-   * Apply overlap discard to in, saving to out, after multplying by apod.
-   * in_ndat is equal to npart * (samples_per_part - 2*discard) + 2*discard
-   * out_ndat is equal to npart * samples_per_part
-   * @method apodization_overlap_cpu_FPT
-   * @param  in input data vector, dimensions are {nchan, npol, in_ndat}
-   * @param  apodization apodization vector, dimensions are {samples_per_part}
-   * @param  out output data vector, dimensions are {nchan, npol, out_ndat}
-   * @param  discard discard region size
-   * @param  npart number of chunks present in time domain
-   * @param  npol number of polarisations
-   * @param  nchan number of channels
-   * @param  samples_per_part number of samples present in each out part
-   * @param  in_ndat ndat of in
-   * @param  out_ndat ndat of out
-   */
-  template<typename T>
-  void apodization_overlap_cpu_FPT (
-    const std::vector<T>& in,
-    const std::vector<T>& apodization,
-    std::vector<T>& out,
-    unsigned discard,
-    unsigned npart,
-    unsigned npol,
-    unsigned nchan,
-    unsigned samples_per_part,
-    unsigned in_ndat,
-    unsigned out_ndat
-  );
+  public:
 
-  template<typename T>
-  void overlap_discard_cpu_FPT (
-    const std::vector<T>& in,
-    std::vector<T>& out,
-    unsigned discard,
-    unsigned npart,
-    unsigned npol,
-    unsigned nchan,
-    unsigned samples_per_part,
-    unsigned in_ndat,
-    unsigned out_ndat
-  );
+    IntegrationTestConfiguration ();
 
-  template<typename T>
-  void overlap_save_cpu_FPT (
-    const std::vector<T>& in,
-    std::vector<T>& out,
-    unsigned discard,
-    unsigned npart,
-    unsigned npol,
-    unsigned nchan,
-    unsigned samples_per_part,
-    unsigned in_ndat,
-    unsigned out_ndat
-  );
+    void setup (
+      const Rational& os_factor,
+      unsigned npart,
+      unsigned npol,
+      unsigned input_nchan,
+      unsigned output_nchan,
+      unsigned input_ndat,
+      unsigned input_overlap
+    );
+
+    template<class MemoryType>
+    std::vector<float*> allocate_scratch(
+      MemoryType* _memory=nullptr
+    );
+
+    /*
+     * Transfer data in existing TimeSeries objects to the GPU
+     */
+    void transfer2GPU (
+      cudaStream_t stream,
+      CUDA::DeviceMemory* memory
+    );
+
+    Reference::To<dsp::TimeSeries> input;
+    Reference::To<dsp::TimeSeries> output;
+    Reference::To<dsp::Scratch> scratch;
+    Reference::To<FilterbankType> filterbank;
+
+  private:
+
+    unsigned total_scratch_needed;
+    unsigned stitching_scratch_space;
+    unsigned overlap_discard_scratch_space;
+
+  };
+
+
+  namespace InverseFilterbank {
+
+    template<typename T>
+    void response_stitch_cpu_FPT (
+      const std::vector<T>& in,
+      const std::vector<T>& resp,
+      std::vector<T>& out,
+      Rational os_factor,
+      unsigned npart,
+      unsigned npol,
+      unsigned nchan,
+      unsigned ndat,
+      bool pfb_dc_chan,
+      bool pfb_all_chan
+    );
+
+    /**
+     * Apply overlap discard to in, saving to out, after multplying by apod.
+     * in_ndat is equal to npart * (samples_per_part - 2*discard) + 2*discard
+     * out_ndat is equal to npart * samples_per_part
+     * @method apodization_overlap_cpu_FPT
+     * @param  in input data vector, dimensions are {nchan, npol, in_ndat}
+     * @param  apodization apodization vector, dimensions are {samples_per_part}
+     * @param  out output data vector, dimensions are {nchan, npol, out_ndat}
+     * @param  discard discard region size
+     * @param  npart number of chunks present in time domain
+     * @param  npol number of polarisations
+     * @param  nchan number of channels
+     * @param  samples_per_part number of samples present in each out part
+     * @param  in_ndat ndat of in
+     * @param  out_ndat ndat of out
+     */
+    template<typename T>
+    void apodization_overlap_cpu_FPT (
+      const std::vector<T>& in,
+      const std::vector<T>& apodization,
+      std::vector<T>& out,
+      unsigned discard,
+      unsigned npart,
+      unsigned npol,
+      unsigned nchan,
+      unsigned samples_per_part,
+      unsigned in_ndat,
+      unsigned out_ndat
+    );
+
+    template<typename T>
+    void overlap_discard_cpu_FPT (
+      const std::vector<T>& in,
+      std::vector<T>& out,
+      unsigned discard,
+      unsigned npart,
+      unsigned npol,
+      unsigned nchan,
+      unsigned samples_per_part,
+      unsigned in_ndat,
+      unsigned out_ndat
+    );
+
+    template<typename T>
+    void overlap_save_cpu_FPT (
+      const std::vector<T>& in,
+      std::vector<T>& out,
+      unsigned discard,
+      unsigned npart,
+      unsigned npol,
+      unsigned nchan,
+      unsigned samples_per_part,
+      unsigned in_ndat,
+      unsigned out_ndat
+    );
+  }
+
 
 }
 
@@ -274,6 +325,14 @@ T util::product (std::vector<T> a)
 }
 
 template<typename T>
+std::function<T(void)> util::random ()
+{
+  srand (time(NULL));
+  return [] () { return (T) rand() / RAND_MAX; };
+}
+
+
+template<typename T>
 void util::loadTimeSeries (
   const std::vector<T>& in,
   dsp::TimeSeries* out,
@@ -319,10 +378,118 @@ void util::loadTimeSeries (
 }
 
 
+template<typename FilterbankType>
+util::IntegrationTestConfiguration<FilterbankType>::IntegrationTestConfiguration ()
+{
+  filterbank = new FilterbankType;
+  input = new dsp::TimeSeries;
+  output = new dsp::TimeSeries;
+  scratch = new dsp::Scratch;
+}
+
+template<typename FilterbankType>
+void util::IntegrationTestConfiguration<FilterbankType>::setup (
+  const Rational& os_factor,
+  unsigned npart,
+  unsigned npol,
+  unsigned input_nchan,
+  unsigned output_nchan,
+  unsigned input_ndat,
+  unsigned input_overlap
+)
+{
+  auto os_in2out = [input_nchan, output_nchan, os_factor] (unsigned n) -> unsigned {
+    return os_factor.normalize(n) * input_nchan / output_nchan;
+  };
+  unsigned input_fft_length = input_ndat;
+  unsigned output_fft_length = os_in2out(input_fft_length);
+  unsigned output_overlap = os_in2out(input_overlap);
+
+  std::vector<unsigned> in_dim = {
+    input_nchan, npol, input_fft_length*npart};
+  std::vector<unsigned> out_dim = {
+    output_nchan, npol, output_fft_length*npart};
+
+  unsigned in_size = util::product(in_dim);
+  unsigned out_size = util::product(out_dim);
+
+  std::vector<std::complex<float>> in_vec(in_size);
+  std::vector<std::complex<float>> out_vec(out_size);
+
+  auto random_gen = util::random<float>();
+
+  for (unsigned idx=0; idx<in_size; idx++) {
+    in_vec[idx] = std::complex<float>(random_gen(), random_gen());
+  }
+
+  util::loadTimeSeries<std::complex<float>>(in_vec, input, in_dim);
+  util::loadTimeSeries<std::complex<float>>(out_vec, output, out_dim);
+
+  filterbank->set_input(input);
+	filterbank->set_output(output);
+
+  filterbank->set_oversampling_factor(os_factor);
+  filterbank->set_input_fft_length(input_fft_length);
+  filterbank->set_output_fft_length(output_fft_length);
+  filterbank->set_input_discard_pos(input_overlap);
+  filterbank->set_input_discard_neg(input_overlap);
+  filterbank->set_output_discard_pos(output_overlap);
+  filterbank->set_output_discard_neg(output_overlap);
+
+  overlap_discard_scratch_space = 2*npol*input_nchan*input_fft_length;
+  stitching_scratch_space = 2*npol*output_nchan*output_fft_length;
+
+  total_scratch_needed = overlap_discard_scratch_space + stitching_scratch_space;
+}
+
+
+template<typename FilterbankType>
+template<typename MemoryType>
+std::vector<float*> util::IntegrationTestConfiguration<FilterbankType>::allocate_scratch (
+  MemoryType* _memory
+)
+{
+  if (_memory) {
+    scratch->set_memory (_memory);
+  }
+
+  float* space = scratch->space<float> (total_scratch_needed);
+  std::vector<float*> space_vector = {space, space + overlap_discard_scratch_space};
+  return space_vector;
+}
+
+template<typename FilterbankType>
+void util::IntegrationTestConfiguration<FilterbankType>::transfer2GPU (
+  cudaStream_t stream,
+  CUDA::DeviceMemory* memory
+)
+{
+  Reference::To<dsp::TimeSeries> input_gpu = new dsp::TimeSeries;
+  Reference::To<dsp::TimeSeries> output_gpu = new dsp::TimeSeries;
+  input_gpu->set_memory(memory);
+  output_gpu->set_memory(memory);
+
+  dsp::TransferCUDA transfer(stream);
+
+  transfer.set_input(input);
+  transfer.set_output(input_gpu);
+  transfer.prepare();
+  transfer.operate();
+
+  transfer.set_input(output);
+  transfer.set_output(output_gpu);
+  transfer.prepare();
+  transfer.operate();
+
+  input = input_gpu;
+  output = output_gpu;
+
+}
+
 
 
 template<typename T>
-void util::response_stitch_cpu_FPT (
+void util::InverseFilterbank::response_stitch_cpu_FPT (
   const std::vector<T>& in,
   const std::vector<T>& resp,
   std::vector<T>& out,
@@ -413,7 +580,7 @@ void util::response_stitch_cpu_FPT (
 
 
 template<typename T>
-void util::apodization_overlap_cpu_FPT (
+void util::InverseFilterbank::apodization_overlap_cpu_FPT (
   const std::vector<T>& in,
   const std::vector<T>& apodization,
   std::vector<T>& out,
@@ -466,7 +633,7 @@ void util::apodization_overlap_cpu_FPT (
 }
 
 template<typename T>
-void util::overlap_discard_cpu_FPT (
+void util::InverseFilterbank::overlap_discard_cpu_FPT (
   const std::vector<T>& in,
   std::vector<T>& out,
   unsigned discard,
@@ -479,13 +646,13 @@ void util::overlap_discard_cpu_FPT (
 )
 {
   std::vector<T> empty;
-  util::apodization_overlap_cpu_FPT<T>(
+  util::InverseFilterbank::apodization_overlap_cpu_FPT<T>(
     in, empty, out, discard, npart, npol, nchan, samples_per_part, in_ndat, out_ndat
   );
 }
 
 template<typename T>
-void util::overlap_save_cpu_FPT (
+void util::InverseFilterbank::overlap_save_cpu_FPT (
   const std::vector<T>& in,
   std::vector<T>& out,
   unsigned discard,
@@ -526,13 +693,6 @@ void util::overlap_save_cpu_FPT (
       }
     }
   }
-}
-
-template<typename T>
-std::function<T(void)> util::random ()
-{
-  srand (time(NULL));
-  return [] () { return (T) rand() / RAND_MAX; };
 }
 
 

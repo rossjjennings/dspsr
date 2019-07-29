@@ -308,9 +308,9 @@ void dsp::Convolution::prepare_output ()
   output->set_state( Signal::Analytic );
   output->set_ndim( 2 );
 
-  if ( state == Signal::Nyquist )
+  if ( state == Signal::Nyquist ) {
     output->set_rate( 0.5*get_input()->get_rate() );
-
+  }
   // set the input sample
   uint64_t output_ndat = output->get_ndat();
   int64_t input_sample = input->get_input_sample();
