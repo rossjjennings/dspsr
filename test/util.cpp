@@ -25,6 +25,7 @@ void util::set_verbose (bool val)
   dsp::Operation::verbose = val;
   dsp::Observation::verbose = val;
   dsp::Shape::verbose = val;
+  util::verbose = val;
 }
 
 

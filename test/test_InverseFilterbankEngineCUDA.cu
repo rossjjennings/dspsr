@@ -16,10 +16,7 @@
 
 void check_error (const char*);
 
-const float thresh = 1e-5;
-
 TEST_CASE ("InverseFilterbankEngineCUDA", "") {
-	util::set_verbose(true);
   void* stream = 0;
   cudaStream_t cuda_stream = reinterpret_cast<cudaStream_t>(stream);
 
@@ -60,7 +57,6 @@ TEST_CASE ("cufft kernels can operate on data", "")
     "forward FFT kernel can operate on data"
   )
   {
-
     std::vector<std::complex<float>> in_c (ndat);
     std::vector<float> in_r (ndat);
     std::vector<std::complex<float>> out (ndat);
@@ -88,7 +84,6 @@ TEST_CASE (
 )
 {
 
-  util::set_verbose(true);
   void* stream = 0;
   cudaStream_t cuda_stream = reinterpret_cast<cudaStream_t>(stream);
   CUDA::DeviceMemory* device_memory = new CUDA::DeviceMemory(cuda_stream);

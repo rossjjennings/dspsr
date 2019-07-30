@@ -16,12 +16,9 @@
 
 void check_error (const char*);
 
-const float thresh = 1e-5;
-
-
 TEST_CASE (
   "output overlap discard kernel should produce expected output",
-  "[overlap_discard][template]"
+  "[overlap_discard]"
 )
 {
 	auto idx = GENERATE(range(0, (int) test_config::test_shapes.size() - 1));
@@ -83,19 +80,22 @@ TEST_CASE (
   // util::print_array<std::complex<float>>(out_gpu, out_dim);
 
   util::delta<std::milli> delta_gpu = util::now() - t;
-  std::cerr << "overlap discard GPU: " << delta_gpu.count()
-    << " ms; CPU: " << delta_cpu.count()
-    << " ms; CPU/GPU: " << delta_cpu.count() / delta_gpu.count()
-    << std::endl;
+  if (util::verbose) {
+    std::cerr << "overlap discard GPU: " << delta_gpu.count()
+      << " ms; CPU: " << delta_cpu.count()
+      << " ms; CPU/GPU: " << delta_cpu.count() / delta_gpu.count()
+      << std::endl;
+  }
 
-  bool allclose = util::allclose(out_cpu, out_gpu, thresh);
+  bool allclose = util::allclose(out_cpu, out_gpu, test_config::thresh);
   REQUIRE(allclose == true);
 }
 
 
+
 TEST_CASE (
   "overlap save kernel should produce expected output",
-  "[overlap_save][template]"
+  "[overlap_save]"
 )
 {
 	auto idx = GENERATE(range(0, (int) test_config::test_shapes.size() - 1));
@@ -160,12 +160,14 @@ TEST_CASE (
   );
   util::delta<std::milli> delta_gpu = util::now() - t;
 
-  std::cerr << "overlap save GPU: " << delta_gpu.count()
-    << " ms; CPU: " << delta_cpu.count()
-    << " ms; CPU/GPU: " << delta_cpu.count() / delta_gpu.count()
-    << std::endl;
+  if (util::verbose) {
+    std::cerr << "overlap save GPU: " << delta_gpu.count()
+      << " ms; CPU: " << delta_cpu.count()
+      << " ms; CPU/GPU: " << delta_cpu.count() / delta_gpu.count()
+      << std::endl;
+  }
 
-  bool allclose = util::allclose(out_cpu, out_gpu, thresh);
+  bool allclose = util::allclose(out_cpu, out_gpu, test_config::thresh);
   REQUIRE(allclose == true);
 }
 
@@ -173,7 +175,7 @@ TEST_CASE (
 
 TEST_CASE (
   "apodization overlap kernel should produce expected output",
-  "[apodization_overlap][template]"
+  "[apodization_overlap]"
 )
 {
 	auto idx = GENERATE(range(0, (int) test_config::test_shapes.size() - 1));
@@ -242,18 +244,20 @@ TEST_CASE (
   );
   util::delta<std::milli> delta_gpu = util::now() - t;
 
-  std::cerr << "apodization overlap GPU: " << delta_gpu.count()
-    << " ms; CPU: " << delta_cpu.count()
-    << " ms; CPU/GPU: " << delta_cpu.count() / delta_gpu.count()
-    << std::endl;
+  if (util::verbose) {
+    std::cerr << "apodization overlap GPU: " << delta_gpu.count()
+      << " ms; CPU: " << delta_cpu.count()
+      << " ms; CPU/GPU: " << delta_cpu.count() / delta_gpu.count()
+      << std::endl;
+  }
 
-  bool allclose = util::allclose(out_cpu, out_gpu, thresh);
+  bool allclose = util::allclose(out_cpu, out_gpu, test_config::thresh);
   REQUIRE(allclose == true);
 }
 
 TEST_CASE (
   "reponse stitch kernel should produce expected output",
-  "[response_stitch][template]"
+  "[response_stitch]"
 )
 {
 	auto idx = GENERATE(range(0, (int) test_config::test_shapes.size() - 1));
@@ -261,10 +265,7 @@ TEST_CASE (
 	test_config::TestShape test_shape = test_config::test_shapes[idx];
 
   auto rand_gen = util::random<float>();
-  // for (int i=0; i<10; i++)
-  // {
-  //   std::cerr << rand_gen() << std::endl;
-  // }
+
   unsigned npart = test_shape.npart;
   unsigned npol = test_shape.npol;
   unsigned nchan = test_shape.nchan;
@@ -333,8 +334,8 @@ TEST_CASE (
 
       util::delta<std::milli> delta_gpu = util::now() - t;
 
-      if (*dc_it && *all_it) {
-        std::cerr << "response stitch GPU: " << delta_gpu.count()
+      if (*dc_it && *all_it && util::verbose) {
+        std::cerr << "response stitch gpu: " << delta_gpu.count()
           << " ms; CPU: " << delta_cpu.count()
           << " ms; CPU/GPU: " << delta_cpu.count() / delta_gpu.count()
           << std::endl;
@@ -342,7 +343,7 @@ TEST_CASE (
       // util::print_array(out_gpu, out_dim);
       // util::print_array(out_cpu, out_dim);
 
-      allclose = util::allclose<std::complex<float>>(out_cpu, out_gpu, thresh);
+      allclose = util::allclose<std::complex<float>>(out_cpu, out_gpu, test_config::thresh);
 
       REQUIRE(allclose == true);
     }

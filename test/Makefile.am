@@ -1,19 +1,26 @@
 bin_PROGRAMS = test_main
 
+# test_main_SOURCES = test_main.C \
+#                     test_Apodization.C \
+#                     test_FIRFilter.C \
+#                     test_InverseFilterbankResponse.C \
+#                     test_InverseFilterbankConfig.C \
+#                     test_InverseFilterbank.C \
+#                     test_InverseFilterbankPipeline.C \
+#                     test_InverseFilterbankEngineCPU.C \
+#                     util.cpp
+
 test_main_SOURCES = test_main.C \
-                    test_Apodization.C \
-                    test_FIRFilter.C \
-                    test_InverseFilterbankResponse.C \
-                    test_InverseFilterbankConfig.C \
-                    test_InverseFilterbank.C \
-                    test_InverseFilterbankPipeline.C \
-                    test_InverseFilterbankEngineCPU.C \
                     util.cpp
 
+
 if HAVE_CUFFT
-  test_main_SOURCES += test_InverseFilterbankEngineCUDA_kernels.cu \
-											 test_InverseFilterbankEngineCUDA.cu \
-                       test_InverseFilterbankEngine_integration.cu
+  # test_main_SOURCES += test_InverseFilterbankEngineCUDA_kernels.cu \
+	# 										 test_InverseFilterbankEngineCUDA.cu
+
+  test_main_SOURCES += test_InverseFilterbankEngineCUDA.cu
+#                       test_InverseFilterbankEngine_integration.cu
+
 endif
 
 include $(top_srcdir)/config/Makefile.local

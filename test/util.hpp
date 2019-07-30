@@ -18,7 +18,11 @@
 #include "dsp/TimeSeries.h"
 #include "Rational.h"
 
+void check_error (const char*);
+
 namespace util {
+
+  static bool verbose = false;
 
   template<typename T>
   struct std2dspsr;
@@ -206,7 +210,6 @@ namespace util {
     );
   }
 
-
 }
 
 template<typename T>
@@ -351,11 +354,13 @@ void util::loadTimeSeries (
   out->set_ndim (ndim);
   out->resize (dim[2]);
 
-  std::cerr << "util::loadTimeSeries: ("
-    << dim[0] << ","
-    << dim[1] << ","
-    << dim[2] << ","
-    << ndim << ")" << std::endl;
+  if (util::verbose) {
+    std::cerr << "util::loadTimeSeries: ("
+      << dim[0] << ","
+      << dim[1] << ","
+      << dim[2] << ","
+      << ndim << ")" << std::endl;
+  }
   // std::cerr << "util::loadTimeSeries: in.size()=" << in.size() << std::endl;
 
 

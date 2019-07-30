@@ -23,8 +23,10 @@ dsp::TransferCUDA::TransferCUDA(cudaStream_t _stream)
 //! Do stuff
 void dsp::TransferCUDA::transformation ()
 {
+  if (verbose) {
+    cerr << "dsp::TransferCUDA::transformation" << endl;
+  }
   prepare ();
-
   if (kind == cudaMemcpyHostToDevice)
   {
     if (verbose)

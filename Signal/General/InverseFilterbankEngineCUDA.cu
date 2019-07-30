@@ -17,7 +17,7 @@ void check_error (const char*);
 /*!
  * Kernel for removing any overlap discard regions, optionally multiplying
  * by a response kernel in the process. Assumes input data is FPT order.
- * \method k_overlap_discard
+ * \method k_overlap_save
  * \param t_in the input data array pointer. The shape of the array should be
  *    (nchan, ndat)
  * \param apodization the apodization kernel
@@ -32,8 +32,9 @@ __global__ void k_overlap_save (
   float2* t_out,
   int discard_pos,
   int discard_neg,
-  int ipart_begin,
-  int ipart_end,
+  int ipart_begin_in,
+  int ipart_begin_out,
+  int npart,
   int npol,
   int nchan,
   int samples_per_part,
@@ -52,7 +53,6 @@ __global__ void k_overlap_save (
   int idz = blockIdx.z*blockDim.z + threadIdx.z;
 
   int step = samples_per_part - (discard_pos + discard_neg);
-  int npart = ipart_end - ipart_begin;
   // make sure we're not trying to access data that are out of bounds
   if (idx > step || idy > nchan || idz > npol*npart) {
     return;
@@ -64,8 +64,8 @@ __global__ void k_overlap_save (
   for (int ichan=idy; ichan<nchan; ichan+=total_size_y) {
     for (int ipol=idz%npol; ipol<npol; ipol+=npol_incr) {
       for (int ipart=idz/npol; ipart<npart; ipart+=npart_incr) {
-        in_offset = ichan*npol*in_ndat + ipol*in_ndat + (ipart + ipart_begin)*samples_per_part;
-        out_offset = ichan*npol*out_ndat + ipol*out_ndat + (ipart + ipart_begin)*step;
+        in_offset = ichan*npol*in_ndat + ipol*in_ndat + (ipart + ipart_begin_in)*samples_per_part;
+        out_offset = ichan*npol*out_ndat + ipol*out_ndat + (ipart + ipart_begin_out)*step;
 
         for (int idat=idx; idat<step; idat += total_size_x) {
           t_out[out_offset + idat] = t_in[in_offset + idat + discard_pos];
@@ -74,10 +74,6 @@ __global__ void k_overlap_save (
     }
   }
 }
-
-
-
-
 /*!
  * Kernel for removing any overlap discard regions, optionally multiplying
  * by a response kernel in the process. Assumes input data is FPT order.
@@ -96,8 +92,9 @@ __global__ void k_overlap_discard (
   float2* t_out,
   int discard_pos,
   int discard_neg,
-  int ipart_begin,
-  int ipart_end,
+  int ipart_begin_in,
+  int ipart_begin_out,
+  int npart,
   int npol,
   int nchan,
   int samples_per_part,
@@ -116,7 +113,6 @@ __global__ void k_overlap_discard (
   int idz = blockIdx.z*blockDim.z + threadIdx.z;
 
   int step = samples_per_part - (discard_pos + discard_neg);
-  int npart = ipart_end - ipart_begin;
   // make sure we're not trying to access data that are out of bounds
   if (idx > samples_per_part || idy > nchan || idz > npol*npart) {
     return;
@@ -128,8 +124,8 @@ __global__ void k_overlap_discard (
   for (int ichan=idy; ichan < nchan; ichan += total_size_y) {
     for (int ipol=idz%npol; ipol<npol; ipol+=npol_incr) {
       for (int ipart=idz/npol; ipart<npart; ipart+=npart_incr) {
-        in_offset = ichan*npol*in_ndat + ipol*in_ndat + (ipart + ipart_begin)*step;
-        out_offset = ichan*npol*out_ndat + ipol*out_ndat + (ipart + ipart_begin)*samples_per_part;
+        in_offset = ichan*npol*in_ndat + ipol*in_ndat + (ipart + ipart_begin_in)*step;
+        out_offset = ichan*npol*out_ndat + ipol*out_ndat + (ipart + ipart_begin_out)*samples_per_part;
         for (int idat=idx; idat<samples_per_part; idat += total_size_x) {
           if (resp == nullptr) {
             t_out[out_offset + idat] = t_in[in_offset + idat];
@@ -193,8 +189,9 @@ __global__ void k_response_stitch (
   float2* response,
   float2* f_out,
   int os_discard,
-  int ipart_begin,
-  int ipart_end,
+  int ipart_begin_in,
+  int ipart_begin_out,
+  int npart,
   int npol,
   int in_nchan,
   int in_ndat,
@@ -216,8 +213,6 @@ __global__ void k_response_stitch (
   int idy = blockIdx.y*blockDim.y + threadIdx.y;
   int idz = blockIdx.z*blockDim.z + threadIdx.z;
 
-  int npart = ipart_end - ipart_begin;
-
   int in_ndat_keep = in_samples_per_part - 2*os_discard;
   int in_ndat_keep_2 = in_ndat_keep / 2;
 
@@ -225,7 +220,6 @@ __global__ void k_response_stitch (
   if (idx > in_ndat_keep_2 || idy > in_nchan || idz > (npol*npart)) {
     return;
   }
-
 
   int in_offset;
   int out_offset;
@@ -236,12 +230,16 @@ __global__ void k_response_stitch (
   int out_idx_bot;
   int out_idx_top;
 
+  // diagnostic
+  // int in_total_size = in_nchan * npol * in_ndat;
+  // int out_total_size = npol * out_ndat;
+  // int resp_total_size = out_samples_per_part;
 
   for (int ichan=idy; ichan < in_nchan; ichan += total_size_y) {
     for (int ipol=idz%npol; ipol < npol; ipol += npol_incr) {
       for (int ipart=idz/npol; ipart < npart; ipart += npart_incr) {
-        in_offset = ichan*npol*in_ndat + ipol*in_ndat + (ipart + ipart_begin)*in_samples_per_part;
-        out_offset = ipol*out_ndat + (ipart + ipart_begin)*out_samples_per_part;
+        in_offset = ichan*npol*in_ndat + ipol*in_ndat + (ipart + ipart_begin_in)*in_samples_per_part;
+        out_offset = ipol*out_ndat + (ipart + ipart_begin_out)*out_samples_per_part;
 
         // in_offset = ipart*npol*in_ndat*in_nchan + ipol*in_ndat*in_nchan + ichan*in_ndat;
         // out_offset = ipart*npol*out_ndat + ipol*out_ndat;
@@ -264,20 +262,29 @@ __global__ void k_response_stitch (
             }
           }
 
-          // std::cerr << in_offset + in_idx_bot << ", " << in_offset + in_idx_top << std::endl;
-          // std::cerr << out_offset + out_idx_bot << ", " << out_offset + out_idx_top << std::endl;
-          //
-          // if (in_offset + in_idx_bot > in_size ||
-          //     out_offset + out_idx_top > out_size ||
-          //     in_offset + in_idx_top > in_size ||
-          //     out_offset + out_idx_bot > out_size) {
-          //   std::cerr << "watch out!" << std::endl;
+          // diagnostic
+          // if (out_idx_bot > resp_total_size || out_idx_top > resp_total_size)
+          // {
+          //   printf("k_response_stitch: overreaching response\n");
           // }
-          // std::cerr << "in=[" << in_idx_bot << "," << in_idx_top << "] out=["
-          //   << out_idx_bot << "," << out_idx_top << "]" << std::endl;
+          //
+          // if (out_offset + out_idx_bot > out_total_size || out_offset + out_idx_top > out_total_size)
+          // {
+          //   printf("k_response_stitch: overreaching output\n");
+          // }
+          //
+          // if (in_offset + in_idx_bot > in_total_size || in_offset + in_idx_top > in_total_size)
+          // {
+          //   printf("k_response_stitch: overreaching input\n");
+          // }
 
-          f_out[out_offset + out_idx_bot] = cuCmulf(response[out_idx_bot], f_in[in_offset + in_idx_bot]);
-          f_out[out_offset + out_idx_top] = cuCmulf(response[out_idx_top], f_in[in_offset + in_idx_top]);
+          if (response != nullptr) {
+            f_out[out_offset + out_idx_bot] = cuCmulf(response[out_idx_bot], f_in[in_offset + in_idx_bot]);
+            f_out[out_offset + out_idx_top] = cuCmulf(response[out_idx_top], f_in[in_offset + in_idx_top]);
+          } else {
+            f_out[out_offset + out_idx_bot] = f_in[in_offset + in_idx_bot];
+            f_out[out_offset + out_idx_top] = f_in[in_offset + in_idx_top];
+          }
 
           if (! pfb_all_chan && pfb_dc_chan && ichan == 0) {
             f_out[out_offset + out_idx_bot].x = 0.0;
@@ -553,7 +560,7 @@ void CUDA::InverseFilterbankEngineCUDA::setup (dsp::InverseFilterbank* filterban
 
   if (input->get_state() == Signal::Nyquist) {
     type_forward = CUFFT_R2C;
-    n_per_sample = 2;
+    n_per_sample = 1;
   }
 
   pfb_dc_chan = _pfb_dc_chan;
@@ -647,6 +654,9 @@ void CUDA::InverseFilterbankEngineCUDA::set_scratch (
 )
 {
   unsigned offset = input_npol*input_nchan*input_fft_length;
+  if (verbose) {
+    std::cerr << "CUDA::InverseFilterbankEngineCUDA::set_scratch: stitching pointer offset=" << offset << std::endl;
+  }
   d_scratch = (float2*) _scratch;
   d_input_overlap_discard = d_scratch;
   d_stitching = d_scratch + offset;
@@ -675,14 +685,33 @@ void CUDA::InverseFilterbankEngineCUDA::perform (
 	// get_datptr (unsigned ichan, unsigned ipol)
 	// we can't use TimeSeries::get_ndat because there might be some buffer space that ndat
 	// doesn't account for
-  unsigned input_stride = (in->get_datptr (1, 0) - in->get_datptr (0, 0)) / n_per_sample;
-  unsigned output_stride = (out->get_datptr (1, 0) - out->get_datptr (0, 0)) / 2;
+  unsigned input_stride = (in->get_datptr (1, 0) - in->get_datptr (0, 0)) / in->get_ndim();
+  unsigned output_stride = (out->get_datptr (1, 0) - out->get_datptr (0, 0)) / out->get_ndim();
+
+  if (verbose) {
+    std::cerr << "CUDA::InverseFilterbankEngineCUDA::perform: in shape=("
+      << in->get_nchan() << ", " << in->get_npol() << ", " << in->get_ndat() << ")" << std::endl;
+    std::cerr << "CUDA::InverseFilterbankEngineCUDA::perform: out shape=("
+      << out->get_nchan() << ", " << out->get_npol() << ", " << out->get_ndat() << ")" << std::endl;
+    std::cerr << "CUDA::InverseFilterbankEngineCUDA::perform: input_stride=" << input_stride << std::endl;
+    std::cerr << "CUDA::InverseFilterbankEngineCUDA::perform: output_stride=" << output_stride << std::endl;
+    std::cerr << "CUDA::InverseFilterbankEngineCUDA::perform: in.internal_get_size()=" << in->internal_get_size() << std::endl;
+    std::cerr << "CUDA::InverseFilterbankEngineCUDA::perform: out.internal_get_size()=" << out->internal_get_size() << std::endl;
+  }
+
 
   const float* in_ptr = in->get_datptr(0, 0);
   float* out_ptr = out->get_datptr(0, 0);
 
   dim3 grid (1, input_nchan, input_npol*npart);
   dim3 threads (1024, 1, 1);
+
+
+  int k_response_stitch_in_samples_per_part = input_fft_length;
+  int k_response_stitch_out_samples_per_part = output_nchan * output_fft_length;
+
+  int k_response_stitch_in_ndat = input_fft_length;
+  int k_response_stitch_out_ndat = output_nchan * output_fft_length;
 
 
   for (unsigned ipart=0; ipart<npart; ipart++)
@@ -722,9 +751,15 @@ void CUDA::InverseFilterbankEngineCUDA::perform (
         (cufftComplex*) in_ptr,
         d_fft_window,
         (cufftComplex*) d_input_overlap_discard,
-        input_discard_pos, input_discard_neg,
-        ipart, ipart + 1, input_npol, input_nchan,
-        input_fft_length, input_stride, 0
+        input_discard_pos,
+        input_discard_neg,
+        ipart,
+        0, 1,
+        input_npol,
+        input_nchan,
+        input_fft_length,
+        input_stride,
+        input_fft_length
       );
      	cufftExecC2C(
      	  forward,
@@ -740,10 +775,16 @@ void CUDA::InverseFilterbankEngineCUDA::perform (
 			std::cerr << "CUDA::InverseFilterbankEngineCUDA::perform: applying response stitch kernel" << std::endl;
 		}
     k_response_stitch<<<grid, threads, 0, stream>>>(
-      (float2*) d_input_overlap_discard, d_response, (float2*) d_stitching,
-      input_os_discard/2, ipart, ipart + 1, input_npol, input_nchan,
-      npart * input_fft_length, npart * output_nchan * output_fft_length,
-      input_fft_length, output_nchan * output_fft_length,
+      (float2*) d_input_overlap_discard,
+      d_response,
+      (float2*) d_stitching,
+      input_os_discard/2,
+      0, 0, 1,
+      input_npol, input_nchan,
+      k_response_stitch_in_ndat,
+      k_response_stitch_out_ndat,
+      k_response_stitch_in_samples_per_part,
+      k_response_stitch_out_samples_per_part,
       pfb_dc_chan, pfb_all_chan
     );
 
@@ -753,8 +794,8 @@ void CUDA::InverseFilterbankEngineCUDA::perform (
 		}
     cufftExecC2C (
       backward,
-      (cufftComplex*) d_input_overlap_discard,
-      (cufftComplex*) d_input_overlap_discard,
+      (cufftComplex*) d_stitching,
+      (cufftComplex*) d_stitching,
       CUFFT_INVERSE
     );
 		// cudaDeviceSynchronize();
@@ -763,13 +804,14 @@ void CUDA::InverseFilterbankEngineCUDA::perform (
 			std::cerr << "CUDA::InverseFilterbankEngineCUDA::perform: applying overlap save kernel" << std::endl;
 		}
     k_overlap_save<<<grid, threads, 0, stream>>>(
-      (float2* ) d_input_overlap_discard,
+      (float2*) d_stitching,
       (float2*) out_ptr,
       output_discard_pos,
       output_discard_neg,
-      ipart, ipart+1, input_npol, output_nchan,
+      0, ipart, 1,
+      input_npol, output_nchan,
       output_fft_length,
-      npart * output_nchan * output_fft_length,
+      output_fft_length,
       output_stride
     );
   }
@@ -827,7 +869,7 @@ void CUDA::InverseFilterbankEngineCUDA::apply_k_response_stitch (
   dim3 threads (in_ndat, 1, 1);
 
   k_response_stitch<<<grid, threads>>>(
-    in_device, resp_device, out_device, os_discard, 0, npart,
+    in_device, resp_device, out_device, os_discard, 0, 0, npart,
     npol, nchan, npart*in_ndat, npart*out_ndat, ndat, out_ndat,
     pfb_dc_chan, pfb_all_chan);
 
@@ -883,7 +925,7 @@ void CUDA::InverseFilterbankEngineCUDA::apply_k_apodization_overlap (
 
 
   k_overlap_discard<<<grid, threads>>>(
-    in_device, apod_device, out_device, discard, discard, 0, npart, npol, nchan, ndat, in_ndat, out_ndat);
+    in_device, apod_device, out_device, discard, discard, 0, 0, npart, npol, nchan, ndat, in_ndat, out_ndat);
   check_error( "CUDA::InverseFilterbankEngineCUDA::apply_k_apodization_overlap" );
 
   cudaMemcpy((float2*) out.data(), out_device, out_size*sz, cudaMemcpyDeviceToHost);
@@ -934,7 +976,7 @@ void CUDA::InverseFilterbankEngineCUDA::apply_k_overlap_discard (
   // std::cerr << threads.x << " " << threads.y << " " << threads.z << std::endl;
 
   k_overlap_discard<<<grid, threads>>>(
-    in_device, nullptr, out_device, discard, discard, 0, npart, npol, nchan, ndat, in_ndat, out_ndat);
+    in_device, nullptr, out_device, discard, discard, 0, 0, npart, npol, nchan, ndat, in_ndat, out_ndat);
 
   check_error( "CUDA::InverseFilterbankEngineCUDA::apply_k_overlap_discard" );
 
@@ -985,9 +1027,9 @@ void CUDA::InverseFilterbankEngineCUDA::apply_k_overlap_save (
 
   k_overlap_save<<<grid, threads>>>(
     in_device, out_device, discard, discard,
-    0, npart, npol, nchan, ndat, in_ndat, out_ndat);
+    0, 0, npart, npol, nchan, ndat, in_ndat, out_ndat);
 
-  check_error( "CUDA::InverseFilterbankEngineCUDA::apply_k_overlap_discard" );
+  check_error( "CUDA::InverseFilterbankEngineCUDA::apply_k_overlap_save" );
 
   cudaMemcpy((float2*) out.data(), out_device, out_size*sz, cudaMemcpyDeviceToHost);
 

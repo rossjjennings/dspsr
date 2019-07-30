@@ -14,13 +14,11 @@ TEST_CASE ("InverseFilterbankEngineCPU", "[InverseFilterbankEngineCPU]")
   dsp::InverseFilterbankEngineCPU engine;
 }
 
-
 TEST_CASE (
   "InverseFilterbankEngineCPU can operate on data",
 	"[InverseFilterbankEngineCPU]"
 )
 {
-  util::set_verbose(true);
   dsp::InverseFilterbankEngineCPU engine;
   util::IntegrationTestConfiguration<dsp::InverseFilterbank> config;
 
