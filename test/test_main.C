@@ -9,7 +9,7 @@
 
 int main( int argc, char* argv[] )
 {
-  util::set_verbose(true);
+  util::set_verbose(false);
   Catch::Session session; // There must be exactly one instance
 
   int returnCode = session.applyCommandLine( argc, argv );

@@ -53,6 +53,8 @@ namespace util {
   template<typename T>
   bool allclose (std::vector<T> a, std::vector<T> b, float atol=1e-7, float rtol=1e-5);
 
+  bool allclose (dsp::TimeSeries* a, dsp::TimeSeries* b, float atol=1e-7, float rtol=1e-5);
+
   template<typename T>
   void load_binary_data (std::string file_path, std::vector<T>& test_data);
 
@@ -93,21 +95,37 @@ namespace util {
     dsp::TimeSeries* out,
     const std::vector<unsigned>& dim);
 
+  std::function<void(dsp::TimeSeries*, dsp::TimeSeries*, cudaMemcpyKind)> transferTimeSeries (
+    cudaStream_t stream, CUDA::DeviceMemory* memory);
+
   template<class FilterbankType>
   class IntegrationTestConfiguration {
 
   public:
 
-    IntegrationTestConfiguration ();
+    IntegrationTestConfiguration (
+      const Rational& _os_factor,
+      unsigned _npart,
+      unsigned _npol,
+      unsigned _input_nchan,
+      unsigned _output_nchan,
+      unsigned _input_ndat,
+      unsigned _input_overlap
+    ) : os_factor(_os_factor),
+        npart(_npart),
+        npol(_npol),
+        input_nchan(_input_nchan),
+        output_nchan(_output_nchan),
+        input_ndat(_input_ndat),
+        input_overlap(_input_overlap)
+    {
+      scratch = new dsp::Scratch;
+      filterbank = new FilterbankType;
+    }
 
     void setup (
-      const Rational& os_factor,
-      unsigned npart,
-      unsigned npol,
-      unsigned input_nchan,
-      unsigned output_nchan,
-      unsigned input_ndat,
-      unsigned input_overlap
+      dsp::TimeSeries* in,
+      dsp::TimeSeries* out
     );
 
     template<class MemoryType>
@@ -115,16 +133,6 @@ namespace util {
       MemoryType* _memory=nullptr
     );
 
-    /*
-     * Transfer data in existing TimeSeries objects to the GPU
-     */
-    void transfer2GPU (
-      cudaStream_t stream,
-      CUDA::DeviceMemory* memory
-    );
-
-    Reference::To<dsp::TimeSeries> input;
-    Reference::To<dsp::TimeSeries> output;
     Reference::To<dsp::Scratch> scratch;
     Reference::To<FilterbankType> filterbank;
 
@@ -133,6 +141,14 @@ namespace util {
     unsigned total_scratch_needed;
     unsigned stitching_scratch_space;
     unsigned overlap_discard_scratch_space;
+
+    const Rational& os_factor;
+    unsigned npart;
+    unsigned npol;
+    unsigned input_nchan;
+    unsigned output_nchan;
+    unsigned input_ndat;
+    unsigned input_overlap;
 
   };
 
@@ -383,28 +399,16 @@ void util::loadTimeSeries (
 }
 
 
-template<typename FilterbankType>
-util::IntegrationTestConfiguration<FilterbankType>::IntegrationTestConfiguration ()
-{
-  filterbank = new FilterbankType;
-  input = new dsp::TimeSeries;
-  output = new dsp::TimeSeries;
-  scratch = new dsp::Scratch;
-}
 
 template<typename FilterbankType>
 void util::IntegrationTestConfiguration<FilterbankType>::setup (
-  const Rational& os_factor,
-  unsigned npart,
-  unsigned npol,
-  unsigned input_nchan,
-  unsigned output_nchan,
-  unsigned input_ndat,
-  unsigned input_overlap
+  dsp::TimeSeries* in,
+  dsp::TimeSeries* out
 )
 {
-  auto os_in2out = [input_nchan, output_nchan, os_factor] (unsigned n) -> unsigned {
-    return os_factor.normalize(n) * input_nchan / output_nchan;
+
+  auto os_in2out = [this] (unsigned n) -> unsigned {
+    return this->os_factor.normalize(n) * this->input_nchan / this->output_nchan;
   };
   unsigned input_fft_length = input_ndat;
   unsigned output_fft_length = os_in2out(input_fft_length);
@@ -427,11 +431,11 @@ void util::IntegrationTestConfiguration<FilterbankType>::setup (
     in_vec[idx] = std::complex<float>(random_gen(), random_gen());
   }
 
-  util::loadTimeSeries<std::complex<float>>(in_vec, input, in_dim);
-  util::loadTimeSeries<std::complex<float>>(out_vec, output, out_dim);
+  util::loadTimeSeries<std::complex<float>>(in_vec, in, in_dim);
+  util::loadTimeSeries<std::complex<float>>(out_vec, out, out_dim);
 
-  filterbank->set_input(input);
-	filterbank->set_output(output);
+  filterbank->set_input(in);
+	filterbank->set_output(out);
 
   filterbank->set_oversampling_factor(os_factor);
   filterbank->set_input_fft_length(input_fft_length);
@@ -454,8 +458,15 @@ std::vector<float*> util::IntegrationTestConfiguration<FilterbankType>::allocate
   MemoryType* _memory
 )
 {
-  if (_memory) {
-    scratch->set_memory (_memory);
+  // if (util::verbose) {
+  // std::cerr << "util::IntegrationTestConfiguration::allocate_scratch(" << _memory << ")" << std::endl;
+  // }
+
+  if (_memory != nullptr) {
+    // std::cerr << "util::IntegrationTestConfiguration::allocate_scratch: creating new scratch" << std::endl;
+    Reference::To<dsp::Scratch> new_scratch = new dsp::Scratch;
+    new_scratch->set_memory(_memory);
+    scratch = new_scratch;
   }
 
   float* space = scratch->space<float> (total_scratch_needed);
@@ -463,33 +474,28 @@ std::vector<float*> util::IntegrationTestConfiguration<FilterbankType>::allocate
   return space_vector;
 }
 
-template<typename FilterbankType>
-void util::IntegrationTestConfiguration<FilterbankType>::transfer2GPU (
-  cudaStream_t stream,
-  CUDA::DeviceMemory* memory
-)
-{
-  Reference::To<dsp::TimeSeries> input_gpu = new dsp::TimeSeries;
-  Reference::To<dsp::TimeSeries> output_gpu = new dsp::TimeSeries;
-  input_gpu->set_memory(memory);
-  output_gpu->set_memory(memory);
+// template<typename FilterbankType>
+// void util::IntegrationTestConfiguration<FilterbankType>::transfer2GPU (
+//   cudaStream_t stream,
+//   CUDA::DeviceMemory* memory
+// )
+// {
+//   input_gpu->set_memory(memory);
+//   output_gpu->set_memory(memory);
+//
+//   dsp::TransferCUDA transfer(stream);
+//
+//   transfer.set_input(input);
+//   transfer.set_output(input_gpu);
+//   transfer.prepare();
+//   transfer.operate();
+//
+//   transfer.set_input(output);
+//   transfer.set_output(output_gpu);
+//   transfer.prepare();
+//   transfer.operate();
+// }
 
-  dsp::TransferCUDA transfer(stream);
-
-  transfer.set_input(input);
-  transfer.set_output(input_gpu);
-  transfer.prepare();
-  transfer.operate();
-
-  transfer.set_input(output);
-  transfer.set_output(output_gpu);
-  transfer.prepare();
-  transfer.operate();
-
-  input = input_gpu;
-  output = output_gpu;
-
-}
 
 
 

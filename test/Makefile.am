@@ -11,15 +11,14 @@ bin_PROGRAMS = test_main
 #                     util.cpp
 
 test_main_SOURCES = test_main.C \
+                    test_InverseFilterbankEngineCPU.C \
                     util.cpp
 
 
 if HAVE_CUFFT
-  # test_main_SOURCES += test_InverseFilterbankEngineCUDA_kernels.cu \
-	# 										 test_InverseFilterbankEngineCUDA.cu
-
-  test_main_SOURCES += test_InverseFilterbankEngineCUDA.cu
-#                       test_InverseFilterbankEngine_integration.cu
+  test_main_SOURCES += test_InverseFilterbankEngineCUDA_kernels.cu \
+                       test_InverseFilterbankEngineCUDA.cu \
+                       test_InverseFilterbankEngine_integration.cu
 
 endif
 
@@ -31,5 +30,5 @@ LDADD = $(top_builddir)/Signal/Pulsar/libdspsr.la \
         $(top_builddir)/Signal/General/libdspdsp.la \
         $(top_builddir)/Signal/Statistics/libdspstats.la \
         $(top_builddir)/Kernel/libdspbase.la \
-				@PSRCHIVE_LIBS@ \
-				@CUFFT_LIBS@ @CUDA_LIBS@
+        @PSRCHIVE_LIBS@ \
+        @CUFFT_LIBS@ @CUDA_LIBS@

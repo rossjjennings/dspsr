@@ -19,54 +19,59 @@ TEST_CASE (
   "[InverseFilterbankEngineCPU]"
 )
 {
-    void* stream = 0;
-    cudaStream_t cuda_stream = reinterpret_cast<cudaStream_t>(stream);
-    CUDA::DeviceMemory* device_memory = new CUDA::DeviceMemory(cuda_stream);
-    CUDA::InverseFilterbankEngineCUDA engine_cuda(cuda_stream);
-    dsp::InverseFilterbankEngineCPU engine_cpu;
+  int idx = 2;
+  test_config::TestShape test_shape = test_config::test_shapes[idx];
+  void* stream = 0;
+  cudaStream_t cuda_stream = reinterpret_cast<cudaStream_t>(stream);
+  CUDA::DeviceMemory* device_memory = new CUDA::DeviceMemory(cuda_stream);
+  CUDA::InverseFilterbankEngineCUDA engine_cuda(cuda_stream);
+  dsp::InverseFilterbankEngineCPU engine_cpu;
 
-    util::IntegrationTestConfiguration<dsp::InverseFilterbank> config;
-    config.filterbank->set_device(device_memory);
+  Reference::To<dsp::TimeSeries> in = new dsp::TimeSeries;
+  Reference::To<dsp::TimeSeries> out = new dsp::TimeSeries;
+  Reference::To<dsp::TimeSeries> in_gpu = new dsp::TimeSeries;
+  Reference::To<dsp::TimeSeries> out_gpu = new dsp::TimeSeries;
+  Reference::To<dsp::TimeSeries> out_cuda = new dsp::TimeSeries;
 
-    int idx = 2;
-    test_config::TestShape test_shape = test_config::test_shapes[idx];
+  Rational os_factor (4, 3);
+  unsigned npart = test_shape.npart;
 
-    Rational os_factor (4, 3);
-    unsigned npart = test_shape.npart;
+  util::IntegrationTestConfiguration<dsp::InverseFilterbank> config(
+    os_factor, npart, test_shape.npol,
+    test_shape.nchan, test_shape.output_nchan,
+    test_shape.ndat, test_shape.overlap
+  );
+  config.filterbank->set_pfb_dc_chan(true);
+  config.filterbank->set_pfb_all_chan(true);
 
-    config.setup (
-      os_factor, npart, test_shape.npol,
-      test_shape.nchan, test_shape.output_nchan,
-      test_shape.ndat, test_shape.overlap
-    );
-    config.filterbank->set_pfb_dc_chan(true);
-    config.filterbank->set_pfb_all_chan(true);
+  config.setup (in, out);
 
-    std::cerr << "setting up CPU engine" << std::endl;
-    engine_cpu.setup(config.filterbank);
-    std::vector<float *> scratch_cpu = config.allocate_scratch<dsp::Memory> ();
-    engine_cpu.set_scratch(scratch_cpu[0]);
-    engine_cpu.perform(
-      config.input, config.output, npart
-    );
-    engine_cpu.finish();
-    std::cerr << "CPU engine finished" << std::endl;
+  engine_cpu.setup(config.filterbank);
+  std::vector<float *> scratch_cpu = config.allocate_scratch<dsp::Memory> ();
+  engine_cpu.set_scratch(scratch_cpu[0]);
+  engine_cpu.perform(
+    in, out, npart
+  );
+  engine_cpu.finish();
 
-    config.transfer2GPU(
-      cuda_stream, device_memory
-    );
-    check_error("IntegrationTestConfiguration::transfer2GPU");
+  auto transfer = util::transferTimeSeries(cuda_stream, device_memory);
 
-    std::cerr << "setting up CUDA engine" << std::endl;
-    engine_cuda.setup(config.filterbank);
-    std::vector<float *> scratch_cuda = config.allocate_scratch<CUDA::DeviceMemory>(device_memory);
-    engine_cuda.set_scratch(scratch_cuda[0]);
-    engine_cuda.perform(
-      config.input, config.output, npart
-    );
-    check_error("InverseFilterbankEngineCUDA::perform");
-    engine_cuda.finish();
-    std::cerr << "CUDA engine finished" << std::endl;
+  transfer(in, in_gpu, cudaMemcpyHostToDevice);
+  transfer(out, out_gpu, cudaMemcpyHostToDevice);
 
-    cudaFree(scratch_cuda[0]);
+  config.filterbank->set_device(device_memory);
+  engine_cuda.setup(config.filterbank);
+  std::vector<float *> scratch_cuda = config.allocate_scratch<CUDA::DeviceMemory>(device_memory);
+  engine_cuda.set_scratch(scratch_cuda[0]);
+  engine_cuda.perform(
+    in_gpu, out_gpu, npart
+  );
+  engine_cuda.finish();
+
+  // now lets compare the two time series
+  transfer(out_gpu, out_cuda, cudaMemcpyDeviceToHost);
+  std::cerr << "out_gpu->get_ndat()=" << out_gpu->get_ndat()  << std::endl;
+  std::cerr << "out_cuda->get_ndat()=" << out_cuda->get_ndat() << std::endl;
+
+  REQUIRE(util::allclose(out_cuda, out, test_config::thresh));
 }

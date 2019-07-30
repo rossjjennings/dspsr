@@ -20,7 +20,8 @@ TEST_CASE (
 )
 {
   dsp::InverseFilterbankEngineCPU engine;
-  util::IntegrationTestConfiguration<dsp::InverseFilterbank> config;
+  Reference::To<dsp::TimeSeries> in = new dsp::TimeSeries;
+  Reference::To<dsp::TimeSeries> out = new dsp::TimeSeries;
 
   Rational os_factor (4, 3);
 
@@ -28,7 +29,7 @@ TEST_CASE (
 	test_config::TestShape test_shape = test_config::test_shapes[idx];
   unsigned npart = test_shape.npart;
 
-  config.setup (
+  util::IntegrationTestConfiguration<dsp::InverseFilterbank> config (
     os_factor, npart, test_shape.npol,
     test_shape.nchan, test_shape.output_nchan,
     test_shape.ndat, test_shape.overlap
@@ -36,6 +37,7 @@ TEST_CASE (
 
   config.filterbank->set_pfb_dc_chan(true);
   config.filterbank->set_pfb_all_chan(true);
+  config.setup (in, out);
 
   SECTION ("can call setup method")
   {
@@ -48,7 +50,7 @@ TEST_CASE (
     std::vector<float*> scratch = config.allocate_scratch<dsp::Memory>();
     engine.set_scratch(scratch[0]);
     engine.perform(
-      config.input, config.output, npart
+      in, out, npart
     );
     engine.finish();
   }

@@ -11,7 +11,6 @@
 #include "Rational.h"
 
 #include "util.hpp"
-#include "util.cuda.hpp"
 #include "InverseFilterbank_test_config.h"
 
 void check_error (const char*);
