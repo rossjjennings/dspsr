@@ -19,8 +19,10 @@ TEST_CASE (
   "[InverseFilterbankEngineCPU]"
 )
 {
-  int idx = 2;
-  test_config::TestShape test_shape = test_config::test_shapes[idx];
+  std::vector<util::TestShape> test_shapes = util::InverseFilterbank::load_test_vector_shapes();
+  // int idx = 4;
+  auto idx = GENERATE(2);
+  util::TestShape test_shape = test_shapes[idx];
   void* stream = 0;
   cudaStream_t cuda_stream = reinterpret_cast<cudaStream_t>(stream);
   CUDA::DeviceMemory* device_memory = new CUDA::DeviceMemory(cuda_stream);
@@ -37,9 +39,9 @@ TEST_CASE (
   unsigned npart = test_shape.npart;
 
   util::IntegrationTestConfiguration<dsp::InverseFilterbank> config(
-    os_factor, npart, test_shape.npol,
-    test_shape.nchan, test_shape.output_nchan,
-    test_shape.ndat, test_shape.overlap
+    os_factor, npart, test_shape.input_npol,
+    test_shape.input_nchan, test_shape.output_nchan,
+    test_shape.input_ndat, test_shape.overlap_pos
   );
   config.filterbank->set_pfb_dc_chan(true);
   config.filterbank->set_pfb_all_chan(true);
@@ -53,6 +55,7 @@ TEST_CASE (
     in, out, npart
   );
   engine_cpu.finish();
+  // std::cerr << "CPU engine finished" << std::endl;
 
   auto transfer = util::transferTimeSeries(cuda_stream, device_memory);
 
@@ -67,11 +70,10 @@ TEST_CASE (
     in_gpu, out_gpu, npart
   );
   engine_cuda.finish();
-
   // now lets compare the two time series
   transfer(out_gpu, out_cuda, cudaMemcpyDeviceToHost);
-  std::cerr << "out_gpu->get_ndat()=" << out_gpu->get_ndat()  << std::endl;
-  std::cerr << "out_cuda->get_ndat()=" << out_cuda->get_ndat() << std::endl;
-
   REQUIRE(util::allclose(out_cuda, out, test_config::thresh));
+
+
+
 }

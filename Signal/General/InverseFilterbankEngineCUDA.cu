@@ -685,8 +685,8 @@ void CUDA::InverseFilterbankEngineCUDA::perform (
 	// get_datptr (unsigned ichan, unsigned ipol)
 	// we can't use TimeSeries::get_ndat because there might be some buffer space that ndat
 	// doesn't account for
-  unsigned input_stride = (in->get_datptr (1, 0) - in->get_datptr (0, 0)) / in->get_ndim();
-  unsigned output_stride = (out->get_datptr (1, 0) - out->get_datptr (0, 0)) / out->get_ndim();
+  unsigned input_stride = in->get_stride() / in->get_ndim();
+  unsigned output_stride = out->get_stride() / out->get_ndim();
 
   if (verbose) {
     std::cerr << "CUDA::InverseFilterbankEngineCUDA::perform: in shape=("
@@ -703,8 +703,11 @@ void CUDA::InverseFilterbankEngineCUDA::perform (
   const float* in_ptr = in->get_datptr(0, 0);
   float* out_ptr = out->get_datptr(0, 0);
 
-  dim3 grid (1, input_nchan, input_npol*npart);
-  dim3 threads (1024, 1, 1);
+  int nthreads = (input_fft_length <= 1024) ? input_fft_length: 1024;
+
+  dim3 grid (1, input_nchan, input_npol);
+
+  dim3 threads (nthreads, 1, 1);
 
 
   int k_response_stitch_in_samples_per_part = input_fft_length;

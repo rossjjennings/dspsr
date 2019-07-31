@@ -79,7 +79,7 @@ TEST_CASE (
   // util::print_array<std::complex<float>>(out_gpu, out_dim);
 
   util::delta<std::milli> delta_gpu = util::now() - t;
-  if (util::verbose) {
+  if (util::config::verbose) {
     std::cerr << "overlap discard GPU: " << delta_gpu.count()
       << " ms; CPU: " << delta_cpu.count()
       << " ms; CPU/GPU: " << delta_cpu.count() / delta_gpu.count()
@@ -159,7 +159,7 @@ TEST_CASE (
   );
   util::delta<std::milli> delta_gpu = util::now() - t;
 
-  if (util::verbose) {
+  if (util::config::verbose) {
     std::cerr << "overlap save GPU: " << delta_gpu.count()
       << " ms; CPU: " << delta_cpu.count()
       << " ms; CPU/GPU: " << delta_cpu.count() / delta_gpu.count()
@@ -243,7 +243,7 @@ TEST_CASE (
   );
   util::delta<std::milli> delta_gpu = util::now() - t;
 
-  if (util::verbose) {
+  if (util::config::verbose) {
     std::cerr << "apodization overlap GPU: " << delta_gpu.count()
       << " ms; CPU: " << delta_cpu.count()
       << " ms; CPU/GPU: " << delta_cpu.count() / delta_gpu.count()
@@ -333,7 +333,7 @@ TEST_CASE (
 
       util::delta<std::milli> delta_gpu = util::now() - t;
 
-      if (*dc_it && *all_it && util::verbose) {
+      if (*dc_it && *all_it && util::config::verbose) {
         std::cerr << "response stitch gpu: " << delta_gpu.count()
           << " ms; CPU: " << delta_cpu.count()
           << " ms; CPU/GPU: " << delta_cpu.count() / delta_gpu.count()

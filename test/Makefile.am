@@ -1,4 +1,6 @@
-bin_PROGRAMS = test_main
+bin_PROGRAMS = test_main bench_main
+
+bench_main_SOURCES = util.cpp
 
 # test_main_SOURCES = test_main.C \
 #                     test_Apodization.C \
@@ -16,6 +18,9 @@ test_main_SOURCES = test_main.C \
 
 
 if HAVE_CUFFT
+
+  bench_main_SOURCES += bench_main.cu
+
   test_main_SOURCES += test_InverseFilterbankEngineCUDA_kernels.cu \
                        test_InverseFilterbankEngineCUDA.cu \
                        test_InverseFilterbankEngine_integration.cu

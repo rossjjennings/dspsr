@@ -7,6 +7,7 @@
 
 void check_error (const char*);
 
+bool util::config::verbose = 0;
 
 std::chrono::time_point<std::chrono::high_resolution_clock> util::now ()
 {
@@ -28,18 +29,22 @@ void util::set_verbose (bool val)
   dsp::Operation::verbose = val;
   dsp::Observation::verbose = val;
   dsp::Shape::verbose = val;
-  util::verbose = val;
+  util::config::verbose = val;
 }
 
-
-std::string util::get_test_data_dir ()
+std::string util::get_test_env_var (std::string env_var_name)
 {
-  const char* env_data_dir = std::getenv("DSPSR_TEST_DATA_DIR");
-  if (env_data_dir) {
-    return std::string(env_data_dir);
+  const char* env_var = std::getenv(env_var_name.c_str());
+  if (env_var) {
+    return std::string(env_var);
   } else {
     return ".";
   }
+}
+
+std::string util::get_test_data_dir ()
+{
+  return util::get_test_env_var("DSPSR_TEST_DATA_DIR");
 }
 
 
@@ -63,6 +68,11 @@ std::function<void(dsp::TimeSeries*, dsp::TimeSeries*, cudaMemcpyKind)> util::tr
 
 bool util::allclose (dsp::TimeSeries* a, dsp::TimeSeries* b, float atol, float rtol)
 {
+  if (util::config::verbose) {
+    std::cerr << "util::allclose(dsp::TimeSeries*, dsp::TimeSeries*)" << std::endl;
+  }
+
+
   bool allclose = true;
 
   std::vector<std::string> shape_str = {"nchan", "npol", "ndat", "ndim"};
@@ -73,6 +83,26 @@ bool util::allclose (dsp::TimeSeries* a, dsp::TimeSeries* b, float atol, float r
   std::vector<unsigned> b_shape = {
       b->get_nchan(), b->get_npol(), b->get_ndat(), b->get_ndim()
   };
+  if (util::config::verbose) {
+
+    auto print_shape = [] (std::vector<unsigned> shape, std::string name) {
+      std::cerr << "util::allclose:" << name << " shape=(";
+      for (unsigned idx=0; idx<shape.size(); idx++) {
+        std::cerr << shape[idx];
+        if (idx == shape.size() - 1) {
+          std::cerr << ")";
+        } else {
+          std::cerr << " ";
+        }
+      }
+      std::cerr << std::endl;
+    };
+
+    print_shape (a_shape, "a");
+    print_shape (b_shape, "b");
+  }
+
+
 
   for (unsigned idx=0; idx<shape_str.size(); idx++) {
     if (a_shape[idx] != b_shape[idx])
@@ -82,20 +112,21 @@ bool util::allclose (dsp::TimeSeries* a, dsp::TimeSeries* b, float atol, float r
     }
   }
 
-  float* a_ptr;
-  float* b_ptr;
+  std::complex<float>* a_ptr;
+  std::complex<float>* b_ptr;
 
   for (unsigned ichan=0; ichan<a->get_nchan(); ichan++) {
     for (unsigned ipol=0; ipol<a->get_npol(); ipol++) {
-      std::cerr << "(ichan, ipol) = (" << ichan << ", " << ipol << ")" << std::endl;
-      a_ptr = a->get_datptr(ichan, ipol);
-      b_ptr = b->get_datptr(ichan, ipol);
-      for (unsigned idat=0; idat<a->get_ndat()*a->get_ndim(); idat++) {
-        if (idat < 100) {
-          std::cerr << "(" << *a_ptr << ", " << *b_ptr << ") ";          
-        }
+      // std::cerr << "(ichan, ipol) = (" << ichan << ", " << ipol << ")" << std::endl;
+      a_ptr = reinterpret_cast<std::complex<float>*> (a->get_datptr(ichan, ipol));
+      b_ptr = reinterpret_cast<std::complex<float>*> (b->get_datptr(ichan, ipol));
+      for (unsigned idat=0; idat<a->get_ndat(); idat++) {
+        // if (idat < 100) {
+        //   std::cerr << "[" << *a_ptr << ", " << *b_ptr << "] ";
+        // }
         if (! util::isclose(*a_ptr, *b_ptr, atol, rtol)) {
-          // std::cerr << "util::allclose: ipol=" << ipol << ", ichan=" << ichan << std::endl;
+          // std::cerr << "(" << ichan << ", " << ipol << ", " << idat << ")=" << *a_ptr << ", " << *b_ptr << " ";
+           // std::cerr << "util::allclose: ipol=" << ipol << ", ichan=" << ichan << std::endl;
           allclose = false;
           // break;
         }
@@ -106,4 +137,70 @@ bool util::allclose (dsp::TimeSeries* a, dsp::TimeSeries* b, float atol, float r
     }
   }
   return allclose;
+}
+
+
+
+
+void util::to_json(json& j, const util::TestShape& sh) {
+  j = json{
+      {"npart", sh.npart},
+      {"input_nchan", sh.input_nchan},
+      {"output_nchan", sh.output_nchan},
+      {"input_npol", sh.input_npol},
+      {"output_npol", sh.output_npol},
+      {"input_ndat", sh.input_ndat},
+      {"input_ndat", sh.input_ndat},
+      {"overlap_pos", sh.overlap_pos},
+      {"overlap_neg", sh.overlap_neg}
+  };
+}
+
+void util::from_json(const json& j, util::TestShape& sh) {
+  sh.npart = j["npart"].get<unsigned>();
+  sh.input_nchan = j["input_nchan"].get<unsigned>();
+  sh.output_nchan = j["output_nchan"].get<unsigned>();
+  sh.input_npol = j["input_npol"].get<unsigned>();
+  sh.output_npol = j["output_npol"].get<unsigned>();
+  sh.input_ndat = j["input_ndat"].get<unsigned>();
+  sh.output_ndat = j["output_ndat"].get<unsigned>();
+  sh.overlap_pos = j["overlap_pos"].get<unsigned>();
+  sh.overlap_neg = j["overlap_neg"].get<unsigned>();
+  // j.at("npart").get_to(sh.npart);
+  // j.at("input_nchan").get_to(sh.input_nchan);
+  // j.at("output_nchan").get_to(sh.output_nchan);
+  // j.at("input_npol").get_to(sh.input_npol);
+  // j.at("output_npol").get_to(sh.output_npol);
+  // j.at("input_ndat").get_to(sh.input_ndat);
+  // j.at("output_ndat").get_to(sh.output_ndat);
+  // j.at("overlap_pos").get_to(sh.overlap_pos);
+  // j.at("overlap_neg").get_to(sh.overlap_neg);
+}
+
+json util::load_json (std::string file_path)
+{
+  std::ifstream i(file_path);
+  json j;
+  i >> j;
+  return j;
+}
+
+std::vector<util::TestShape> util::InverseFilterbank::load_test_vector_shapes ()
+{
+
+  std::string test_data_dir = util::get_test_env_var("DSPSR_TEST_DIR");
+  std::string test_data_file_path = test_data_dir + "/test_config.json";
+
+  json j = util::load_json(test_data_file_path);
+
+  auto test_shapes = j["InverseFilterbank"]["test_shapes"];
+
+  std::vector<util::TestShape> vec(test_shapes.size());
+
+  for (unsigned idx=0; idx < test_shapes.size(); idx++)
+  {
+    vec[idx] = test_shapes[idx].get<util::TestShape>();
+  }
+
+  return vec;
 }

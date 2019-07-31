@@ -10,6 +10,8 @@
 #include <time.h>
 #include <cstdlib>
 
+#include "json.hpp"
+
 #include "dsp/MemoryCUDA.h"
 #include "dsp/TransferCUDA.h"
 #include "dsp/Scratch.h"
@@ -18,11 +20,36 @@
 #include "dsp/TimeSeries.h"
 #include "Rational.h"
 
+using json = nlohmann::json;
+
 void check_error (const char*);
 
 namespace util {
 
-  static bool verbose = false;
+
+  struct TestShape {
+    unsigned npart;
+
+    unsigned input_nchan;
+    unsigned output_nchan;
+
+    unsigned input_npol;
+    unsigned output_npol;
+
+    unsigned input_ndat;
+    unsigned output_ndat;
+
+    unsigned overlap_pos;
+    unsigned overlap_neg;
+  };
+
+  void to_json(json& j, const TestShape& sh);
+
+  void from_json(const json& j, TestShape& sh);
+
+  struct config {
+    static bool verbose;
+  };
 
   template<typename T>
   struct std2dspsr;
@@ -64,6 +91,8 @@ namespace util {
   template<typename T>
   void write_binary_data (std::string file_path, T* buffer, unsigned len);
 
+  json load_json (std::string file_path);
+
   template<typename T>
   void print_array (const std::vector<T>& arr, std::vector<unsigned>& dim);
 
@@ -83,6 +112,8 @@ namespace util {
   void load_psr_data (dsp::IOManager manager, unsigned block_size, dsp::TimeSeries* ts);
 
   void set_verbose (bool val);
+
+  std::string get_test_env_var (std::string);
 
   std::string get_test_data_dir ();
 
@@ -154,6 +185,8 @@ namespace util {
 
 
   namespace InverseFilterbank {
+
+    std::vector<TestShape> load_test_vector_shapes ();
 
     template<typename T>
     void response_stitch_cpu_FPT (
@@ -370,7 +403,7 @@ void util::loadTimeSeries (
   out->set_ndim (ndim);
   out->resize (dim[2]);
 
-  if (util::verbose) {
+  if (util::config::verbose) {
     std::cerr << "util::loadTimeSeries: ("
       << dim[0] << ","
       << dim[1] << ","
@@ -406,6 +439,10 @@ void util::IntegrationTestConfiguration<FilterbankType>::setup (
   dsp::TimeSeries* out
 )
 {
+  if (util::config::verbose) {
+    std::cerr << "util::IntegrationTestConfiguration::setup: input_ndat=" << input_ndat << std::endl;
+    std::cerr << "util::IntegrationTestConfiguration::setup: input_overlap=" << input_overlap << std::endl;
+  }
 
   auto os_in2out = [this] (unsigned n) -> unsigned {
     return this->os_factor.normalize(n) * this->input_nchan / this->output_nchan;
@@ -458,7 +495,7 @@ std::vector<float*> util::IntegrationTestConfiguration<FilterbankType>::allocate
   MemoryType* _memory
 )
 {
-  // if (util::verbose) {
+  // if (util::config::verbose) {
   // std::cerr << "util::IntegrationTestConfiguration::allocate_scratch(" << _memory << ")" << std::endl;
   // }
 
