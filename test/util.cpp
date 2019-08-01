@@ -32,13 +32,13 @@ void util::set_verbose (bool val)
   util::config::verbose = val;
 }
 
-std::string util::get_test_env_var (std::string env_var_name)
+std::string util::get_test_env_var (const std::string& env_var_name, const std::string& default_val)
 {
   const char* env_var = std::getenv(env_var_name.c_str());
   if (env_var) {
     return std::string(env_var);
   } else {
-    return ".";
+    return default_val;
   }
 }
 
@@ -72,16 +72,15 @@ bool util::allclose (dsp::TimeSeries* a, dsp::TimeSeries* b, float atol, float r
     std::cerr << "util::allclose(dsp::TimeSeries*, dsp::TimeSeries*)" << std::endl;
   }
 
-
   bool allclose = true;
 
   std::vector<std::string> shape_str = {"nchan", "npol", "ndat", "ndim"};
   std::vector<unsigned> a_shape = {
-      a->get_nchan(), a->get_npol(), a->get_ndat(), a->get_ndim()
+      a->get_nchan(), a->get_npol(), (unsigned) a->get_ndat(), a->get_ndim()
   };
 
   std::vector<unsigned> b_shape = {
-      b->get_nchan(), b->get_npol(), b->get_ndat(), b->get_ndim()
+      b->get_nchan(), b->get_npol(), (unsigned) b->get_ndat(), b->get_ndim()
   };
   if (util::config::verbose) {
 
@@ -117,16 +116,15 @@ bool util::allclose (dsp::TimeSeries* a, dsp::TimeSeries* b, float atol, float r
 
   for (unsigned ichan=0; ichan<a->get_nchan(); ichan++) {
     for (unsigned ipol=0; ipol<a->get_npol(); ipol++) {
-      // std::cerr << "(ichan, ipol) = (" << ichan << ", " << ipol << ")" << std::endl;
       a_ptr = reinterpret_cast<std::complex<float>*> (a->get_datptr(ichan, ipol));
       b_ptr = reinterpret_cast<std::complex<float>*> (b->get_datptr(ichan, ipol));
       for (unsigned idat=0; idat<a->get_ndat(); idat++) {
-        // if (idat < 100) {
-        //   std::cerr << "[" << *a_ptr << ", " << *b_ptr << "] ";
-        // }
         if (! util::isclose(*a_ptr, *b_ptr, atol, rtol)) {
-          // std::cerr << "(" << ichan << ", " << ipol << ", " << idat << ")=" << *a_ptr << ", " << *b_ptr << " ";
-           // std::cerr << "util::allclose: ipol=" << ipol << ", ichan=" << ichan << std::endl;
+          if (util::config::verbose) {
+            std::cerr << "[(" << ichan << ", " << ipol << ", " << idat << ")="
+              << *a_ptr << ", " << *b_ptr << ", " << abs(*a_ptr - *b_ptr) << ", "
+              << abs(*a_ptr - *b_ptr) / abs(*b_ptr) << "]" << std::endl;
+          }
           allclose = false;
           // break;
         }
@@ -179,17 +177,27 @@ void util::from_json(const json& j, util::TestShape& sh) {
 
 json util::load_json (std::string file_path)
 {
-  std::ifstream i(file_path);
+
+  std::ifstream in_stream(file_path);
+  if (! in_stream.good()) {
+    throw "util::load_json: file_path is either nonexistent or locked";
+  }
   json j;
-  i >> j;
+  in_stream >> j;
+  in_stream.close();
   return j;
 }
 
 std::vector<util::TestShape> util::InverseFilterbank::load_test_vector_shapes ()
 {
 
-  std::string test_data_dir = util::get_test_env_var("DSPSR_TEST_DIR");
+  std::string test_data_dir = util::get_test_env_var("DSPSR_TEST_DIR", "./test");
   std::string test_data_file_path = test_data_dir + "/test_config.json";
+
+  if (util::config::verbose) {
+    std::cerr << "util::InverseFilterbank::load_test_vector_shapes: test_data_file_path=" << test_data_file_path << std::endl;
+  }
+
 
   json j = util::load_json(test_data_file_path);
 

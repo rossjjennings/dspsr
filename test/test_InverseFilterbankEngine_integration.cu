@@ -20,8 +20,7 @@ TEST_CASE (
 )
 {
   std::vector<util::TestShape> test_shapes = util::InverseFilterbank::load_test_vector_shapes();
-  // int idx = 4;
-  auto idx = GENERATE(2);
+  auto idx = GENERATE_COPY(range(0, (int) test_shapes.size()));
   util::TestShape test_shape = test_shapes[idx];
   void* stream = 0;
   cudaStream_t cuda_stream = reinterpret_cast<cudaStream_t>(stream);
@@ -55,7 +54,6 @@ TEST_CASE (
     in, out, npart
   );
   engine_cpu.finish();
-  // std::cerr << "CPU engine finished" << std::endl;
 
   auto transfer = util::transferTimeSeries(cuda_stream, device_memory);
 
@@ -72,7 +70,7 @@ TEST_CASE (
   engine_cuda.finish();
   // now lets compare the two time series
   transfer(out_gpu, out_cuda, cudaMemcpyDeviceToHost);
-  REQUIRE(util::allclose(out_cuda, out, test_config::thresh));
+  REQUIRE(util::allclose(out_cuda, out, test_config::thresh, 10*test_config::thresh));
 
 
 

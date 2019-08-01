@@ -113,7 +113,7 @@ namespace util {
 
   void set_verbose (bool val);
 
-  std::string get_test_env_var (std::string);
+  std::string get_test_env_var (const std::string& env_var_name,const std::string& default_val = ".");
 
   std::string get_test_data_dir ();
 
@@ -327,7 +327,7 @@ bool util::allclose (T* a, T* b, unsigned size, float atol, float rtol)
 template<typename T>
 bool util::isclose (T a, T b, float atol, float rtol)
 {
-  return abs(a - b) <= (atol + rtol * abs(b));
+  return abs(a - b) <= (atol + rtol*abs(b));
 }
 
 template<typename T>

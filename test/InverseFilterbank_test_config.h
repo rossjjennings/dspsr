@@ -43,8 +43,7 @@ namespace test_config {
     integration_shape2
 	};
 
-  const float thresh = 1e-5;
-
+  const float thresh = 1e-4;
 }
 
 
