@@ -1,29 +1,31 @@
-bin_PROGRAMS = test_main bench_main
+bin_PROGRAMS = test_main
 
-bench_main_SOURCES = util.cpp
-
-# test_main_SOURCES = test_main.C \
-#                     test_Apodization.C \
-#                     test_FIRFilter.C \
-#                     test_InverseFilterbankResponse.C \
-#                     test_InverseFilterbankConfig.C \
-#                     test_InverseFilterbank.C \
-#                     test_InverseFilterbankPipeline.C \
-#                     test_InverseFilterbankEngineCPU.C \
-#                     util.cpp
-
-test_main_SOURCES = test_main.C \
-                    test_InverseFilterbankEngineCPU.C \
+test_main_SOURCES = test_main.cpp \
+                    test_Apodization.cpp \
+                    test_FIRFilter.cpp \
+                    InverseFilterbank/test_InverseFilterbankResponse.cpp \
+                    InverseFilterbank/test_InverseFilterbankConfig.cpp \
+                    InverseFilterbank/test_InverseFilterbank.cpp \
+                    InverseFilterbank/test_InverseFilterbankPipeline.cpp \
+                    InverseFilterbankTestConfig.cpp \
                     util.cpp
+
+                    # InverseFilterbank/test_InverseFilterbankEngineCPU.cpp
+
+# test_main_SOURCES = test_main.cpp \
+#                     InverseFilterbank/test_InverseFilterbankEngineCPU.cpp \
+#                     util.cpp
 
 
 if HAVE_CUFFT
+  # bin_PROGRAMS += bench_InverseFilterbankEngineCUDA
+  # bench_InverseFilterbankEngineCUDA_SOURCES = InverseFilterbank/bench_InverseFilterbankEngineCUDA.cu
 
-  bench_main_SOURCES += bench_main.cu
+  # test_main_SOURCES += InverseFilterbank/test_InverseFilterbankEngineCUDA_kernels.cu
 
-  test_main_SOURCES += test_InverseFilterbankEngineCUDA_kernels.cu \
-                       test_InverseFilterbankEngineCUDA.cu \
-                       test_InverseFilterbankEngine_integration.cu
+  test_main_SOURCES += InverseFilterbank/test_InverseFilterbankEngineCUDA_kernels.cu \
+                       InverseFilterbank/test_InverseFilterbankEngineCUDA.cu \
+                       InverseFilterbank/test_InverseFilterbankEngine_integration.cu
 
 endif
 

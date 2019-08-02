@@ -2,7 +2,7 @@
   "InverseFilterbank":
   {
     "atol": 1e-4,
-    "rtol": 1e-4,
+    "rtol": 1e-3,
     "test_shapes": [
       {
         "npart": 2,
@@ -16,12 +16,34 @@
         "overlap_neg": 4
       },
       {
-        "npart": 1,
-        "input_nchan": 1024,
+        "npart": 10,
+        "input_nchan": 128,
         "output_nchan": 1,
         "input_npol": 1,
         "output_npol": 1,
-        "input_ndat": 1024,
+        "input_ndat": 128,
+        "output_ndat": 0,
+        "overlap_pos": 4,
+        "overlap_neg": 4
+      },
+      {
+        "npart": 2,
+        "input_nchan": 8,
+        "output_nchan": 2,
+        "input_npol": 2,
+        "output_npol": 2,
+        "input_ndat": 32,
+        "output_ndat": 0,
+        "overlap_pos": 4,
+        "overlap_neg": 4
+      },
+      {
+        "npart": 10,
+        "input_nchan": 256,
+        "output_nchan": 32,
+        "input_npol": 2,
+        "output_npol": 2,
+        "input_ndat": 512,
         "output_ndat": 0,
         "overlap_pos": 4,
         "overlap_neg": 4

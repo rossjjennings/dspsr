@@ -8,8 +8,9 @@
 #include "dsp/MemoryCUDA.h"
 
 #include "util.hpp"
-#include "InverseFilterbank_test_config.h"
+#include "InverseFilterbankTestConfig.hpp"
 
+static util::InverseFilterbank::InverseFilterbankTestConfig test_config;
 
 void check_error (const char*);
 
@@ -19,14 +20,17 @@ TEST_CASE (
   "[InverseFilterbankEngineCPU]"
 )
 {
-  std::vector<util::TestShape> test_shapes = util::InverseFilterbank::load_test_vector_shapes();
-  auto idx = GENERATE_COPY(range(0, (int) test_shapes.size()));
-  util::TestShape test_shape = test_shapes[idx];
+  std::vector<float> thresh = test_config.get_thresh();
+  std::vector<util::TestShape> test_shapes = test_config.get_test_vector_shapes();
   void* stream = 0;
   cudaStream_t cuda_stream = reinterpret_cast<cudaStream_t>(stream);
   CUDA::DeviceMemory* device_memory = new CUDA::DeviceMemory(cuda_stream);
   CUDA::InverseFilterbankEngineCUDA engine_cuda(cuda_stream);
   dsp::InverseFilterbankEngineCPU engine_cpu;
+  // auto idx = GENERATE_COPY(range(0, (int) test_shapes.size()));
+  auto idx = GENERATE(0, 1);
+  std::cerr << idx << std::endl;
+  util::TestShape test_shape = test_shapes[idx];
 
   Reference::To<dsp::TimeSeries> in = new dsp::TimeSeries;
   Reference::To<dsp::TimeSeries> out = new dsp::TimeSeries;
@@ -70,8 +74,5 @@ TEST_CASE (
   engine_cuda.finish();
   // now lets compare the two time series
   transfer(out_gpu, out_cuda, cudaMemcpyDeviceToHost);
-  REQUIRE(util::allclose(out_cuda, out, test_config::thresh, 10*test_config::thresh));
-
-
-
+  REQUIRE(util::allclose(out_cuda, out, thresh[0], thresh[1]));
 }

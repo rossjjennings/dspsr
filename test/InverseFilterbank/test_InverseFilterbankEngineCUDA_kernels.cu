@@ -11,24 +11,28 @@
 #include "Rational.h"
 
 #include "util.hpp"
-#include "InverseFilterbank_test_config.h"
+#include "InverseFilterbankTestConfig.hpp"
 
 void check_error (const char*);
+
+static util::InverseFilterbank::InverseFilterbankTestConfig test_config;
 
 TEST_CASE (
   "output overlap discard kernel should produce expected output",
   "[overlap_discard]"
 )
 {
-	auto idx = GENERATE(range(0, (int) test_config::test_shapes.size() - 1));
+  std::vector<float> thresh = test_config.get_thresh();
+  std::vector<util::TestShape> test_shapes = test_config.get_test_vector_shapes();
+  auto idx = GENERATE_COPY(range(0, (int) test_shapes.size()));
 
-	test_config::TestShape test_shape = test_config::test_shapes[idx];
+	util::TestShape test_shape = test_shapes[idx];
 
   unsigned npart = test_shape.npart;
-  unsigned npol = test_shape.npol;
-  unsigned nchan = test_shape.nchan;
-  unsigned ndat = test_shape.ndat;
-  unsigned overlap = test_shape.overlap;
+  unsigned npol = test_shape.input_npol;
+  unsigned nchan = test_shape.input_nchan;
+  unsigned ndat = test_shape.input_ndat;
+  unsigned overlap = test_shape.overlap_pos;
 
   unsigned total_discard = 2*overlap;
   unsigned step = ndat - total_discard;
@@ -86,7 +90,7 @@ TEST_CASE (
       << std::endl;
   }
 
-  bool allclose = util::allclose(out_cpu, out_gpu, test_config::thresh);
+  bool allclose = util::allclose(out_cpu, out_gpu, thresh[0]);
   REQUIRE(allclose == true);
 }
 
@@ -97,15 +101,17 @@ TEST_CASE (
   "[overlap_save]"
 )
 {
-	auto idx = GENERATE(range(0, (int) test_config::test_shapes.size() - 1));
+  std::vector<float> thresh = test_config.get_thresh();
+  std::vector<util::TestShape> test_shapes = test_config.get_test_vector_shapes();
+  auto idx = GENERATE_COPY(range(0, (int) test_shapes.size()));
 
-	test_config::TestShape test_shape = test_config::test_shapes[idx];
+  util::TestShape test_shape = test_shapes[idx];
 
   unsigned npart = test_shape.npart;
-  unsigned npol = test_shape.npol;
-  unsigned nchan = test_shape.nchan;
-  unsigned ndat = test_shape.ndat;
-  unsigned overlap = test_shape.overlap;
+  unsigned npol = test_shape.input_npol;
+  unsigned nchan = test_shape.input_nchan;
+  unsigned ndat = test_shape.input_ndat;
+  unsigned overlap = test_shape.overlap_pos;
 
   unsigned total_discard = 2*overlap;
   unsigned step = ndat - total_discard;
@@ -166,7 +172,7 @@ TEST_CASE (
       << std::endl;
   }
 
-  bool allclose = util::allclose(out_cpu, out_gpu, test_config::thresh);
+  bool allclose = util::allclose(out_cpu, out_gpu, thresh[0]);
   REQUIRE(allclose == true);
 }
 
@@ -177,15 +183,17 @@ TEST_CASE (
   "[apodization_overlap]"
 )
 {
-	auto idx = GENERATE(range(0, (int) test_config::test_shapes.size() - 1));
+  std::vector<float> thresh = test_config.get_thresh();
+  std::vector<util::TestShape> test_shapes = test_config.get_test_vector_shapes();
+  auto idx = GENERATE_COPY(range(0, (int) test_shapes.size()));
 
-	test_config::TestShape test_shape = test_config::test_shapes[idx];
+	util::TestShape test_shape = test_shapes[idx];
 
   unsigned npart = test_shape.npart;
-  unsigned npol = test_shape.npol;
-  unsigned nchan = test_shape.nchan;
-  unsigned ndat = test_shape.ndat;
-  unsigned overlap = test_shape.overlap;
+  unsigned npol = test_shape.input_npol;
+  unsigned nchan = test_shape.input_nchan;
+  unsigned ndat = test_shape.input_ndat;
+  unsigned overlap = test_shape.overlap_pos;
 
   unsigned total_discard = 2*overlap;
   unsigned step = ndat - total_discard;
@@ -250,7 +258,7 @@ TEST_CASE (
       << std::endl;
   }
 
-  bool allclose = util::allclose(out_cpu, out_gpu, test_config::thresh);
+  bool allclose = util::allclose(out_cpu, out_gpu, thresh[0]);
   REQUIRE(allclose == true);
 }
 
@@ -259,16 +267,18 @@ TEST_CASE (
   "[response_stitch]"
 )
 {
-	auto idx = GENERATE(range(0, (int) test_config::test_shapes.size() - 1));
+  std::vector<float> thresh = test_config.get_thresh();
+  std::vector<util::TestShape> test_shapes = test_config.get_test_vector_shapes();
+  auto idx = GENERATE_COPY(range(0, (int) test_shapes.size()));
 
-	test_config::TestShape test_shape = test_config::test_shapes[idx];
+  util::TestShape test_shape = test_shapes[idx];
 
   auto rand_gen = util::random<float>();
 
   unsigned npart = test_shape.npart;
-  unsigned npol = test_shape.npol;
-  unsigned nchan = test_shape.nchan;
-  unsigned ndat = test_shape.ndat;
+  unsigned npol = test_shape.input_npol;
+  unsigned nchan = test_shape.input_nchan;
+  unsigned ndat = test_shape.input_ndat;
 
   Rational os_factor(4, 3);
   unsigned in_ndat_keep = os_factor.normalize(ndat);
@@ -342,7 +352,7 @@ TEST_CASE (
       // util::print_array(out_gpu, out_dim);
       // util::print_array(out_cpu, out_dim);
 
-      allclose = util::allclose<std::complex<float>>(out_cpu, out_gpu, test_config::thresh);
+      allclose = util::allclose<std::complex<float>>(out_cpu, out_gpu, thresh[0]);
 
       REQUIRE(allclose == true);
     }

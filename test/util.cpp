@@ -187,28 +187,3 @@ json util::load_json (std::string file_path)
   in_stream.close();
   return j;
 }
-
-std::vector<util::TestShape> util::InverseFilterbank::load_test_vector_shapes ()
-{
-
-  std::string test_data_dir = util::get_test_env_var("DSPSR_TEST_DIR", "./test");
-  std::string test_data_file_path = test_data_dir + "/test_config.json";
-
-  if (util::config::verbose) {
-    std::cerr << "util::InverseFilterbank::load_test_vector_shapes: test_data_file_path=" << test_data_file_path << std::endl;
-  }
-
-
-  json j = util::load_json(test_data_file_path);
-
-  auto test_shapes = j["InverseFilterbank"]["test_shapes"];
-
-  std::vector<util::TestShape> vec(test_shapes.size());
-
-  for (unsigned idx=0; idx < test_shapes.size(); idx++)
-  {
-    vec[idx] = test_shapes[idx].get<util::TestShape>();
-  }
-
-  return vec;
-}

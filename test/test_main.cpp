@@ -8,6 +8,7 @@
 #include "catch.hpp"
 
 #include "util.hpp"
+#include "InverseFilterbankTestConfig.hpp"
 
 int main( int argc, char* argv[] )
 {
@@ -25,7 +26,8 @@ int main( int argc, char* argv[] )
       }
     }
   }
-  
+
+
   Catch::Session session; // There must be exactly one instance
 
   int returnCode = session.applyCommandLine( argc, argv );

@@ -9,14 +9,16 @@
 #include "Rational.h"
 
 #include "util.hpp"
-#include "InverseFilterbank_test_config.h"
+#include "InverseFilterbankTestConfig.hpp"
 
 void check_error (const char*);
 
 int main ()
 {
+  util::InverseFilterbank::config.load_json_config();
+  std::vector<util::TestShape> test_shapes = config.get_test_vector_shapes();
   int idx = 2;
-  test_config::TestShape test_shape = test_config::test_shapes[idx];
+  util::TestShape test_shape = test_config::test_shapes[idx];
 
   void* stream = 0;
   cudaStream_t cuda_stream = reinterpret_cast<cudaStream_t>(stream);
