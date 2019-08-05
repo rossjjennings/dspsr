@@ -304,7 +304,7 @@ void dsp::LoadToFold::construct () try
   // convolved and filterbank are out of place
   TimeSeries* filterbanked = unpacked;
 
-  Convolution::Config::When convolve_when;
+  Filterbank::Config::When convolve_when;
   unsigned filter_channels;
   bool using_inverse_filterbank = false;
 
@@ -344,7 +344,7 @@ void dsp::LoadToFold::construct () try
       inverse_filterbank_response->set_apply_deripple(config->do_deripple);
     }
 
-    if (convolve_when == Convolution::Config::During) {
+    if (convolve_when == Filterbank::Config::During) {
       if (kernel) {
         std::cerr << "dspsr: adding InverseFilterbankResponse to Dedispersion kernel" << std::endl;
         if (!response_product) {
@@ -367,7 +367,7 @@ void dsp::LoadToFold::construct () try
 
 
     // for now, inverse filterbank does convolution during inversion.
-    if (convolve_when != Convolution::Config::Before){
+    if (convolve_when != Filterbank::Config::Before){
       operations.push_back (inverse_filterbank.get());
     }
   } else {
@@ -399,7 +399,7 @@ void dsp::LoadToFold::construct () try
       // default engine is the CPU engine
       // dsp::FilterbankEngineCPU* filterbank_engine = filterbank->get_engine();
 
-      if (convolve_when == Convolution::Config::During)
+      if (convolve_when == Filterbank::Config::During)
       {
         filterbank->set_response (response);
         if (!config->integration_turns)
@@ -408,7 +408,7 @@ void dsp::LoadToFold::construct () try
       }
       // filterbank->set_engine (filterbank_engine);
       // Get order of operations correct
-      if (!convolve_when == Convolution::Config::Before){
+      if (!convolve_when == Filterbank::Config::Before){
         operations.push_back (filterbank.get());
       }
     }
@@ -419,10 +419,10 @@ void dsp::LoadToFold::construct () try
   TimeSeries* convolved = filterbanked;
 
   bool filterbank_after_dedisp
-    = convolve_when == Convolution::Config::After;
+    = convolve_when == Filterbank::Config::After;
 
   if (config->coherent_dedispersion &&
-      convolve_when != Convolution::Config::During)
+      convolve_when != Filterbank::Config::During)
   {
     if (!convolution)
       convolution = new Convolution;

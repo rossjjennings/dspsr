@@ -20,10 +20,12 @@
 #endif
 
 #include <iostream>
+
 using namespace std;
 
+using dsp::Filterbank;
 
-dsp::Filterbank::Config::Config ()
+Filterbank::Config::Config ()
 {
   memory = 0;
   stream = 0; //(void*)-1;
@@ -31,6 +33,71 @@ dsp::Filterbank::Config::Config ()
   nchan = 1;
   freq_res = 0;  // unspecified
   when = After;  // not good, but the original default
+}
+
+std::ostream& dsp::operator << (std::ostream& os, const Filterbank::Config& config)
+{
+  os << config.get_nchan();
+  if (config.get_convolve_when() == Filterbank::Config::Before)
+    os << ":B";
+  else if (config.get_convolve_when() == Filterbank::Config::During)
+    os << ":D";
+  else if (config.get_freq_res() != 1)
+    os << ":" << config.get_freq_res();
+
+  return os;
+}
+
+//! Extraction operator
+std::istream& dsp::operator >> (std::istream& is, Filterbank::Config& config)
+{
+  unsigned value;
+  is >> value;
+
+  config.set_nchan (value);
+  config.set_convolve_when (Filterbank::Config::After);
+
+  if (is.eof())
+    return is;
+
+  if (is.peek() != ':')
+  {
+    is.fail();
+    return is;
+  }
+
+  // throw away the colon
+  is.get();
+
+  if (is.peek() == 'D' || is.peek() == 'd')
+  {
+    is.get();  // throw away the D
+    config.set_convolve_when (Filterbank::Config::During);
+  }
+  else if (is.peek() == 'B' || is.peek() == 'b')
+  {
+    is.get();  // throw away the B
+    config.set_convolve_when (Filterbank::Config::Before);
+  }
+  else
+  {
+    unsigned nfft;
+    is >> nfft;
+    config.set_freq_res (nfft);
+  }
+
+  return is;
+}
+
+//! Set the device on which the unpacker will operate
+void dsp::Filterbank::Config::set_device (Memory* mem)
+{
+  memory = mem;
+}
+
+void dsp::Filterbank::Config::set_stream (void* ptr)
+{
+  stream = ptr;
 }
 
 //! Return a new Filterbank instance and configure it

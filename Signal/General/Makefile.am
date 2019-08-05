@@ -11,7 +11,6 @@ nobase_include_HEADERS = dsp/ACFilterbank.h dsp/Detection.h	       \
 	dsp/TimeOrder.h dsp/Chomper.h dsp/LevelMonitor.h	       \
 	dsp/ExcisionHistoryPlotter.h dsp/ExcisionStatsPlotter.h	       \
 	dsp/Convolution.h dsp/Dedispersion.h dsp/DedispersionHistory.h \
-	dsp/ConvolutionConfig.h \
 	dsp/RFIFilter.h dsp/DedispersionSampleDelay.h dsp/Response.h   \
 	dsp/Rescale.h dsp/BandpassMonitor.h dsp/PScrunch.h	       \
 	dsp/FourthMoment.h dsp/PolnCalibration.h dsp/Dump.h	       \

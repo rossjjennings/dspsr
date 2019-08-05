@@ -19,6 +19,7 @@
 #include <iostream>
 #include <assert.h>
 #include <cstring>
+#include <complex>
 
 
 dsp::InverseFilterbankEngineCPU::InverseFilterbankEngineCPU ()
@@ -133,6 +134,11 @@ void dsp::InverseFilterbankEngineCPU::setup (dsp::InverseFilterbank* filterbank)
       << " input_os_keep=" << input_os_keep
       << " input_os_discard=" << input_os_discard
       << std::endl;
+  }
+
+  if (input_os_discard % 2 != 0)
+  {
+    throw "dsp::InverseFilterbankEngineCPU::setup: input_os_discard must be divisible by two";
   }
 
   // setup scratch space
@@ -299,7 +305,12 @@ void dsp::InverseFilterbankEngineCPU::perform (
         }
       }
 
-
+      std::complex<float>* stitch_scratch_complex = reinterpret_cast<std::complex<float>*>(stitch_scratch);
+      for (int idat=0; idat<output_fft_length*output_nchan; idat++)
+      {
+        std::cerr << stitch_scratch_complex[idat] << " ";
+      }
+      std::cerr << std::endl;
 
       if (out != nullptr) {
         if (verbose) {
@@ -307,7 +318,9 @@ void dsp::InverseFilterbankEngineCPU::perform (
         }
         output_freq_dom_ptr = stitch_scratch;
         for (unsigned output_ichan=0; output_ichan<output_nchan; output_ichan++) {
-
+          // if (verbose) {
+          //   std::cerr << "dsp::InverseFilterbankEngineCPU::perform output_ichan=" << output_ichan << std::endl;
+          // }
           // std::cerr << "dsp::InverseFilterbankEngineCPU::perform: before fft" << std::endl;
           backward->bcc1d(output_fft_length, output_fft_scratch, output_freq_dom_ptr);
           // std::cerr << "dsp::InverseFilterbankEngineCPU::perform: after fft" << std::endl;

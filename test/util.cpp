@@ -134,12 +134,13 @@ bool util::allclose (dsp::TimeSeries* a, dsp::TimeSeries* b, float atol, float r
       a_ptr = reinterpret_cast<std::complex<float>*> (a->get_datptr(ichan, ipol));
       b_ptr = reinterpret_cast<std::complex<float>*> (b->get_datptr(ichan, ipol));
       for (unsigned idat=0; idat<a->get_ndat(); idat++) {
+        std::cerr << "[" << *a_ptr << ", " << *b_ptr << "] ";
         if (! util::isclose(*a_ptr, *b_ptr, atol, rtol)) {
-          if (util::config::verbose) {
-            std::cerr << "[(" << ichan << ", " << ipol << ", " << idat << ")="
-              << *a_ptr << ", " << *b_ptr << ", " << abs(*a_ptr - *b_ptr) << ", "
-              << abs(*a_ptr - *b_ptr) / abs(*b_ptr) << "]" << std::endl;
-          }
+          // if (util::config::verbose) {
+          //   std::cerr << "[(" << ichan << ", " << ipol << ", " << idat << ")="
+          //     << *a_ptr << ", " << *b_ptr << ", " << abs(*a_ptr - *b_ptr) << ", "
+          //     << abs(*a_ptr - *b_ptr) / abs(*b_ptr) << "]" << std::endl;
+          // }
           allclose = false;
           // break;
         }
@@ -148,7 +149,7 @@ bool util::allclose (dsp::TimeSeries* a, dsp::TimeSeries* b, float atol, float r
       }
       // if (util::config::verbose)
       // {
-      //   std::cerr << std::endl;
+        std::cerr << std::endl;
       // }
     }
   }

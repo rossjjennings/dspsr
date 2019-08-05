@@ -4,15 +4,14 @@
 
 #include "catch.hpp"
 
-#include "dsp/InverseFilterbankConfig.h"
 #include "dsp/FilterbankConfig.h"
 
-TEST_CASE("InverseFilterbankConfig can intake arguments", "[InverseFilterbankConfig]")
+TEST_CASE("FilterbankConfig can intake arguments", "[FilterbankConfig]")
 {
 
   SECTION ("istream method produces correct configuration")
   {
-    dsp::InverseFilterbank::Config config;
+    dsp::Filterbank::Config config;
     std::string stringvalues = "1:D";
     std::istringstream iss (stringvalues);
 
@@ -27,21 +26,12 @@ TEST_CASE("InverseFilterbankConfig can intake arguments", "[InverseFilterbankCon
     REQUIRE(config.get_convolve_when() == dsp::Filterbank::Config::After);
     REQUIRE(config.get_nchan() == 1);
     REQUIRE(config.get_freq_res() == 16384);
-
-    stringvalues = "1:16384:128";
-    iss = std::istringstream(stringvalues);
-
-    iss >> config;
-    REQUIRE(config.get_convolve_when() == dsp::Filterbank::Config::After);
-    REQUIRE(config.get_nchan() == 1);
-    REQUIRE(config.get_freq_res() == 16384);
-    REQUIRE(config.get_input_overlap() == 128);
   }
 }
 
-TEST_CASE("InverseFilterbank can stream correct internal representation", "[InverseFilterbankConfig]")
+TEST_CASE("Filterbank can stream correct internal representation", "[FilterbankConfig]")
 {
-  dsp::InverseFilterbank::Config config;
+  dsp::Filterbank::Config config;
   // std::string stringvalues = "1:D";
   std::ostringstream oss ;
 
@@ -60,15 +50,5 @@ TEST_CASE("InverseFilterbank can stream correct internal representation", "[Inve
     config.set_freq_res(16384);
     oss << config;
     REQUIRE(oss.str() == "1:16384");
-  }
-
-  SECTION ("can output string indicating convolution happens after operation, with input overlap information")
-  {
-    config.set_convolve_when(dsp::Filterbank::Config::After);
-    config.set_nchan(1);
-    config.set_freq_res(16384);
-    config.set_input_overlap(128);
-    oss << config;
-    REQUIRE(oss.str() == "1:16384:128");
   }
 }

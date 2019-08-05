@@ -3,12 +3,17 @@ bin_PROGRAMS = test_main
 test_main_SOURCES = test_main.cpp \
                     test_Apodization.cpp \
                     test_FIRFilter.cpp \
-                    InverseFilterbank/test_InverseFilterbankResponse.cpp \
+                    Filterbank/test_FilterbankConfig.cpp \
                     InverseFilterbank/test_InverseFilterbankConfig.cpp \
-                    InverseFilterbank/test_InverseFilterbank.cpp \
-                    InverseFilterbank/test_InverseFilterbankPipeline.cpp \
-                    InverseFilterbankTestConfig.cpp \
-                    util.cpp
+                    util.cpp \
+                    InverseFilterbankTestConfig.cpp
+
+                    # InverseFilterbank/test_InverseFilterbankResponse.cpp \
+                    # InverseFilterbank/test_InverseFilterbankConfig.cpp \
+                    # InverseFilterbank/test_InverseFilterbank.cpp \
+                    # InverseFilterbank/test_InverseFilterbankPipeline.cpp \
+                    # InverseFilterbankTestConfig.cpp \
+                    # util.cpp
 
                     # InverseFilterbank/test_InverseFilterbankEngineCPU.cpp
 

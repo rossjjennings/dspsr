@@ -57,6 +57,7 @@ TEST_CASE (
     in, out, npart
   );
   engine_cpu.finish();
+  std::cerr << std::endl << std::endl;
   auto transfer = util::transferTimeSeries(cuda_stream, device_memory);
   transfer(in, in_gpu, cudaMemcpyHostToDevice);
   transfer(out, out_gpu, cudaMemcpyHostToDevice);
