@@ -130,6 +130,7 @@ bool util::allclose (dsp::TimeSeries* a, dsp::TimeSeries* b, float atol, float r
 
   for (unsigned ichan=0; ichan<a->get_nchan(); ichan++) {
     for (unsigned ipol=0; ipol<a->get_npol(); ipol++) {
+      std::cerr << ichan << ", " << ipol << std::endl;
       a_ptr = reinterpret_cast<std::complex<float>*> (a->get_datptr(ichan, ipol));
       b_ptr = reinterpret_cast<std::complex<float>*> (b->get_datptr(ichan, ipol));
       for (unsigned idat=0; idat<a->get_ndat(); idat++) {

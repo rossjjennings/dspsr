@@ -60,23 +60,12 @@
         "overlap_neg": 4
       },
       {
-        "npart": 10,
-        "input_nchan": 128,
-        "output_nchan": 16,
+        "npart": 2,
+        "input_nchan": 32,
+        "output_nchan": 8,
         "input_npol": 2,
         "output_npol": 2,
-        "input_ndat": 128,
-        "output_ndat": 0,
-        "overlap_pos": 4,
-        "overlap_neg": 4
-      },
-      {
-        "npart": 10,
-        "input_nchan": 128,
-        "output_nchan": 16,
-        "input_npol": 1,
-        "output_npol": 1,
-        "input_ndat": 128,
+        "input_ndat": 16,
         "output_ndat": 0,
         "overlap_pos": 4,
         "overlap_neg": 4

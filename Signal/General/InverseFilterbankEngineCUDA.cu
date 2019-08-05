@@ -31,7 +31,7 @@ void check_error (const char*);
  * @param  in_ndat          [description]
  * @param  out_ndat         [description]
  */
-__global__ void k_overlap_save (
+__global__ void k_overlap_save_one_to_many (
   float2* t_in,
   float2* t_out,
   int discard_pos,
@@ -40,13 +40,13 @@ __global__ void k_overlap_save (
   int ipart_begin_out,
   int npart,
   int npol,
-  int output_nchan,
+  int nchan,
   int samples_per_part,
   int in_ndat,
   int out_ndat
 )
 {
-  int total_size_output_nchan = gridDim.x; // for input nchan
+  int total_size_nchan = gridDim.x; // for input nchan
   int total_size_ndat = blockDim.x; // for ndat
   int total_size_z = blockDim.z * gridDim.z; // for npart and npol
   int npol_incr = total_size_z <= npol ? 1: npol;
@@ -56,14 +56,14 @@ __global__ void k_overlap_save (
 
   int step = samples_per_part - (discard_pos + discard_neg);
   // make sure we're not trying to access data that are out of bounds
-  if (threadIdx.x > step || blockIdx.x > output_nchan || idz > npol*npart) {
+  if (threadIdx.x > step || blockIdx.x > nchan || idz > npol*npart) {
     return;
   }
 
   int in_offset;
   int out_offset;
 
-  for (int ochan=blockIdx.y; ochan<output_nchan; ochan+=total_size_output_nchan) {
+  for (int ochan=blockIdx.x; ochan<nchan; ochan+=total_size_nchan) {
     for (int ipol=idz%npol; ipol<npol; ipol+=npol_incr) {
       for (int ipart=idz/npol; ipart<npart; ipart+=npart_incr) {
         in_offset = ipol*in_ndat + ochan*samples_per_part + (ipart + ipart_begin_in)*samples_per_part;
@@ -90,61 +90,50 @@ __global__ void k_overlap_save (
  * \param ndat the number of time samples in t_in
  * \param nchan the number of channels in t_in
  */
-// __global__ void k_overlap_save (
-//   float2* t_in,
-//   float2* t_out,
-//   int discard_pos,
-//   int discard_neg,
-//   int ipart_begin_in,
-//   int ipart_begin_out,
-//   int npart,
-//   int npol,
-//   int input_nchan,
-//   int output_nchan,
-//   int samples_per_part,
-//   int in_ndat,
-//   int out_ndat
-// )
-// {
-//   int total_size_input_nchan = gridDim.x; // for input nchan
-//   int total_size_output_nchan = gridDim.y; // for output_nchan
-//   int total_size_ndat = blockDim.x; // for ndat
-//   int total_size_z = blockDim.z * gridDim.z; // for npart and npol
-//   int npol_incr = total_size_z <= npol ? 1: npol;
-//   int npart_incr = total_size_z/npol == 0 ? 1: total_size_z/npol;
-//
-//   int idz = blockIdx.z*blockDim.z + threadIdx.z;
-//
-//   int step = samples_per_part - (discard_pos + discard_neg);
-//   int output_chan_per_input_chan = output_nchan / input_nchan;
-//   // make sure we're not trying to access data that are out of bounds
-//   if (threadIdx.x > step || blockIdx.x > input_nchan ||
-//       blockIdx.y > output_chan_per_input_chan || idz > npol*npart) {
-//     return;
-//   }
-//
-//   int in_offset;
-//   int out_offset;
-//   int output_chan_idx;
-//
-//   for (int ichan=blockIdx.x; ichan<input_nchan; ichan+=total_size_input_nchan) {
-//     for (int ochan=blockIdx.y; ochan<output_chan_per_input_chan; ochan+=total_size_output_nchan) {
-//       output_chan_idx = ichan*output_chan_per_input_chan + ochan;
-//       for (int ipol=idz%npol; ipol<npol; ipol+=npol_incr) {
-//         for (int ipart=idz/npol; ipart<npart; ipart+=npart_incr) {
-//           in_offset = ichan*npol*samples_per_part + ipol*in_ndat + (ipart + ipart_begin_in)*samples_per_part;
-//           out_offset = output_chan_idx*npol*out_ndat + ipol*out_ndat + (ipart + ipart_begin_out)*step;
-//           for (int idat=threadIdx.x; idat<step; idat += total_size_ndat) {
-//             t_out[out_offset + idat] = t_in[in_offset + idat + discard_pos];
-//           }
-//         }
-//       }
-//     }
-//   }
-//   // for (int ichan=idy; ichan<nchan; ichan+=total_size_y) {
-//   //
-//   // }
-// }
+__global__ void k_overlap_save (
+  float2* t_in,
+  float2* t_out,
+  int discard_pos,
+  int discard_neg,
+  int ipart_begin_in,
+  int ipart_begin_out,
+  int npart,
+  int npol,
+  int nchan,
+  int samples_per_part,
+  int in_ndat,
+  int out_ndat
+)
+{
+  int total_size_nchan = gridDim.x; // for input nchan
+  int total_size_ndat = blockDim.x; // for ndat
+  int total_size_z = blockDim.z * gridDim.z; // for npart and npol
+  int npol_incr = total_size_z <= npol ? 1: npol;
+  int npart_incr = total_size_z/npol == 0 ? 1: total_size_z/npol;
+
+  int idz = blockIdx.z*blockDim.z + threadIdx.z;
+
+  int step = samples_per_part - (discard_pos + discard_neg);
+  // make sure we're not trying to access data that are out of bounds
+  if (threadIdx.x > step || blockIdx.x > nchan || idz > npol*npart) {
+    return;
+  }
+
+  int in_offset;
+  int out_offset;
+
+  for (int ichan=blockIdx.x; ichan<nchan; ichan+=total_size_nchan) {
+    for (int ipol=idz%npol; ipol<npol; ipol+=npol_incr) {
+      for (int ipart=idz/npol; ipart<npart; ipart+=npart_incr) {
+        in_offset = ichan*npol*in_ndat + ipol*in_ndat + (ipart + ipart_begin_in)*samples_per_part;
+        out_offset = ichan*npol*out_ndat + ipol*out_ndat + (ipart + ipart_begin_out)*step;
+        for (int idat=threadIdx.x; idat<step; idat += total_size_ndat) {
+          t_out[out_offset + idat] = t_in[in_offset + idat + discard_pos];
+        }
+      }
+    }
+  }
+}
 /*!
  * Kernel for removing any overlap discard regions, optionally multiplying
  * by a response kernel in the process. Assumes input data is FPT order.
@@ -883,7 +872,7 @@ void CUDA::InverseFilterbankEngineCUDA::perform (
 		}
     grid.x = output_nchan;
     grid.y = 1;
-    k_overlap_save<<<grid, threads, 0, stream>>>(
+    k_overlap_save_one_to_many<<<grid, threads, 0, stream>>>(
       (float2*) d_stitching,
       (float2*) out_ptr,
       output_discard_pos,
