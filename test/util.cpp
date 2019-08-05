@@ -54,15 +54,29 @@ std::function<void(dsp::TimeSeries*, dsp::TimeSeries*, cudaMemcpyKind)> util::tr
 )
 {
   return [stream, memory] (dsp::TimeSeries* in, dsp::TimeSeries* out, cudaMemcpyKind k){
+    if (util::config::verbose)
+    {
+      std::cerr << "util::transferTimeSeries lambda(" << in << ", " << out << ", " << k << ")" << std::endl;
+    }
     dsp::TransferCUDA transfer(stream);
     transfer.set_kind(k);
     if (k == cudaMemcpyHostToDevice) {
+      if (util::config::verbose) {
+        std::cerr << "util::transferTimeSeries setting output memory" << std::endl;
+      }
       out->set_memory(memory);
     }
     transfer.set_input(in);
     transfer.set_output(out);
+    if (util::config::verbose) {
+      std::cerr << "util::transferTimeSeries prepare" << std::endl;
+    }
     transfer.prepare();
+    if (util::config::verbose) {
+      std::cerr << "util::transferTimeSeries operate" << std::endl;
+    }
     transfer.operate();
+    check_error("util::transferTimeSeries lambda");
   };
 }
 
@@ -131,7 +145,10 @@ bool util::allclose (dsp::TimeSeries* a, dsp::TimeSeries* b, float atol, float r
         a_ptr++;
         b_ptr++;
       }
-      std::cerr << std::endl;
+      // if (util::config::verbose)
+      // {
+      //   std::cerr << std::endl;
+      // }
     }
   }
   return allclose;

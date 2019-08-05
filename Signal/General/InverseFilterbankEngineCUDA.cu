@@ -14,6 +14,69 @@
 
 void check_error (const char*);
 
+
+/**
+ * Asssumes input data is single channel
+ * @method k_overlap_save
+ * @param  t_in             [description]
+ * @param  t_out            [description]
+ * @param  discard_pos      [description]
+ * @param  discard_neg      [description]
+ * @param  ipart_begin_in   [description]
+ * @param  ipart_begin_out  [description]
+ * @param  npart            [description]
+ * @param  npol             [description]
+ * @param  output_nchan     [description]
+ * @param  samples_per_part [description]
+ * @param  in_ndat          [description]
+ * @param  out_ndat         [description]
+ */
+__global__ void k_overlap_save (
+  float2* t_in,
+  float2* t_out,
+  int discard_pos,
+  int discard_neg,
+  int ipart_begin_in,
+  int ipart_begin_out,
+  int npart,
+  int npol,
+  int output_nchan,
+  int samples_per_part,
+  int in_ndat,
+  int out_ndat
+)
+{
+  int total_size_output_nchan = gridDim.x; // for input nchan
+  int total_size_ndat = blockDim.x; // for ndat
+  int total_size_z = blockDim.z * gridDim.z; // for npart and npol
+  int npol_incr = total_size_z <= npol ? 1: npol;
+  int npart_incr = total_size_z/npol == 0 ? 1: total_size_z/npol;
+
+  int idz = blockIdx.z*blockDim.z + threadIdx.z;
+
+  int step = samples_per_part - (discard_pos + discard_neg);
+  // make sure we're not trying to access data that are out of bounds
+  if (threadIdx.x > step || blockIdx.x > output_nchan || idz > npol*npart) {
+    return;
+  }
+
+  int in_offset;
+  int out_offset;
+
+  for (int ochan=blockIdx.y; ochan<output_nchan; ochan+=total_size_output_nchan) {
+    for (int ipol=idz%npol; ipol<npol; ipol+=npol_incr) {
+      for (int ipart=idz/npol; ipart<npart; ipart+=npart_incr) {
+        in_offset = ipol*in_ndat + ochan*samples_per_part + (ipart + ipart_begin_in)*samples_per_part;
+        out_offset = ochan*npol*out_ndat + ipol*out_ndat + (ipart + ipart_begin_out)*step;
+        for (int idat=threadIdx.x; idat<step; idat += total_size_ndat) {
+          t_out[out_offset + idat] = t_in[in_offset + idat + discard_pos];
+        }
+      }
+    }
+  }
+
+}
+
 /*!
  * Kernel for removing any overlap discard regions, optionally multiplying
  * by a response kernel in the process. Assumes input data is FPT order.
@@ -27,53 +90,61 @@ void check_error (const char*);
  * \param ndat the number of time samples in t_in
  * \param nchan the number of channels in t_in
  */
-__global__ void k_overlap_save (
-  float2* t_in,
-  float2* t_out,
-  int discard_pos,
-  int discard_neg,
-  int ipart_begin_in,
-  int ipart_begin_out,
-  int npart,
-  int npol,
-  int nchan,
-  int samples_per_part,
-  int in_ndat,
-  int out_ndat
-)
-{
-  int total_size_x = blockDim.x * gridDim.x; // for ndat
-  int total_size_y = blockDim.y * gridDim.y; // for nchan
-  int total_size_z = blockDim.z * gridDim.z; // for npart and npol
-  int npol_incr = total_size_z <= npol ? 1: npol;
-  int npart_incr = total_size_z/npol == 0 ? 1: total_size_z/npol;
-
-  int idx = blockIdx.x*blockDim.x + threadIdx.x;
-  int idy = blockIdx.y*blockDim.y + threadIdx.y;
-  int idz = blockIdx.z*blockDim.z + threadIdx.z;
-
-  int step = samples_per_part - (discard_pos + discard_neg);
-  // make sure we're not trying to access data that are out of bounds
-  if (idx > step || idy > nchan || idz > npol*npart) {
-    return;
-  }
-
-  int in_offset;
-  int out_offset;
-
-  for (int ichan=idy; ichan<nchan; ichan+=total_size_y) {
-    for (int ipol=idz%npol; ipol<npol; ipol+=npol_incr) {
-      for (int ipart=idz/npol; ipart<npart; ipart+=npart_incr) {
-        in_offset = ichan*npol*in_ndat + ipol*in_ndat + (ipart + ipart_begin_in)*samples_per_part;
-        out_offset = ichan*npol*out_ndat + ipol*out_ndat + (ipart + ipart_begin_out)*step;
-
-        for (int idat=idx; idat<step; idat += total_size_x) {
-          t_out[out_offset + idat] = t_in[in_offset + idat + discard_pos];
-        }
-      }
-    }
-  }
-}
+// __global__ void k_overlap_save (
+//   float2* t_in,
+//   float2* t_out,
+//   int discard_pos,
+//   int discard_neg,
+//   int ipart_begin_in,
+//   int ipart_begin_out,
+//   int npart,
+//   int npol,
+//   int input_nchan,
+//   int output_nchan,
+//   int samples_per_part,
+//   int in_ndat,
+//   int out_ndat
+// )
+// {
+//   int total_size_input_nchan = gridDim.x; // for input nchan
+//   int total_size_output_nchan = gridDim.y; // for output_nchan
+//   int total_size_ndat = blockDim.x; // for ndat
+//   int total_size_z = blockDim.z * gridDim.z; // for npart and npol
+//   int npol_incr = total_size_z <= npol ? 1: npol;
+//   int npart_incr = total_size_z/npol == 0 ? 1: total_size_z/npol;
+//
+//   int idz = blockIdx.z*blockDim.z + threadIdx.z;
+//
+//   int step = samples_per_part - (discard_pos + discard_neg);
+//   int output_chan_per_input_chan = output_nchan / input_nchan;
+//   // make sure we're not trying to access data that are out of bounds
+//   if (threadIdx.x > step || blockIdx.x > input_nchan ||
+//       blockIdx.y > output_chan_per_input_chan || idz > npol*npart) {
+//     return;
+//   }
+//
+//   int in_offset;
+//   int out_offset;
+//   int output_chan_idx;
+//
+//   for (int ichan=blockIdx.x; ichan<input_nchan; ichan+=total_size_input_nchan) {
+//     for (int ochan=blockIdx.y; ochan<output_chan_per_input_chan; ochan+=total_size_output_nchan) {
+//       output_chan_idx = ichan*output_chan_per_input_chan + ochan;
+//       for (int ipol=idz%npol; ipol<npol; ipol+=npol_incr) {
+//         for (int ipart=idz/npol; ipart<npart; ipart+=npart_incr) {
+//           in_offset = ichan*npol*samples_per_part + ipol*in_ndat + (ipart + ipart_begin_in)*samples_per_part;
+//           out_offset = output_chan_idx*npol*out_ndat + ipol*out_ndat + (ipart + ipart_begin_out)*step;
+//           for (int idat=threadIdx.x; idat<step; idat += total_size_ndat) {
+//             t_out[out_offset + idat] = t_in[in_offset + idat + discard_pos];
+//           }
+//         }
+//       }
+//     }
+//   }
+//   // for (int ichan=idy; ichan<nchan; ichan+=total_size_y) {
+//   //
+//   // }
+// }
 /*!
  * Kernel for removing any overlap discard regions, optionally multiplying
  * by a response kernel in the process. Assumes input data is FPT order.
@@ -102,6 +173,8 @@ __global__ void k_overlap_discard (
   int out_ndat
 )
 {
+  // int total_size_ndat = blockDim.x;
+  // int total_size_nchan = gridDim.x;
   int total_size_x = blockDim.x * gridDim.x; // for ndat
   int total_size_y = blockDim.y * gridDim.y; // for nchan
   int total_size_z = blockDim.z * gridDim.z; // for npart and npol
@@ -121,7 +194,7 @@ __global__ void k_overlap_discard (
   int in_offset;
   int out_offset;
 
-  for (int ichan=idy; ichan < nchan; ichan += total_size_y) {
+  for (int ichan=idy; ichan<nchan; ichan += total_size_y) {
     for (int ipol=idz%npol; ipol<npol; ipol+=npol_incr) {
       for (int ipart=idz/npol; ipart<npart; ipart+=npart_incr) {
         in_offset = ichan*npol*in_ndat + ipol*in_ndat + (ipart + ipart_begin_in)*step;
@@ -415,18 +488,19 @@ CUDA::InverseFilterbankEngineCUDA::~InverseFilterbankEngineCUDA ()
 
 std::vector<cufftResult> CUDA::InverseFilterbankEngineCUDA::setup_forward_fft_plan (
   unsigned _input_fft_length,
-  unsigned _input_nchan,
+  unsigned _howmany,
   cufftType _type_forward
 )
 {
 	if (verbose)
 	{
-		std::cerr << "CUDA::InverseFilterbankEngineCUDA::setup_forward_fft_plan" << std::endl;
+		std::cerr << "CUDA::InverseFilterbankEngineCUDA::setup_forward_fft_plan("
+      << _input_fft_length << ", " << _howmany << ", " << _type_forward << ")" << std::endl;
 	}
   // setup forward batched plan
   int rank = 1; // 1D transform
-  int n[] = {_input_fft_length}; /* 1d transforms of length 10 */
-  int howmany = _input_nchan;
+  int n[] = {_input_fft_length}; /* 1d transforms of length _input_fft_length */
+  int howmany = _howmany;
   int idist = _input_fft_length;
   int odist = _input_fft_length;
   int istride = 1;
@@ -471,17 +545,18 @@ std::vector<cufftResult> CUDA::InverseFilterbankEngineCUDA::setup_forward_fft_pl
 
 std::vector<cufftResult> CUDA::InverseFilterbankEngineCUDA::setup_backward_fft_plan (
   unsigned _output_fft_length,
-  unsigned _output_nchan
+  unsigned _howmany
 )
 {
 	if (verbose)
 	{
-		std::cerr << "CUDA::InverseFilterbankEngineCUDA::setup_backward_fft_plan" << std::endl;
+		std::cerr << "CUDA::InverseFilterbankEngineCUDA::setup_backward_fft_plan("
+      << _output_fft_length << "," << _howmany << ")" << std::endl;
 	}
   // setup forward batched plan
   int rank = 1; // 1D transform
-  int n[] = { _output_fft_length}; /* 1d transforms of length 10 */
-  int howmany = _output_nchan;
+  int n[] = {_output_fft_length}; /* 1d transforms of length _output_fft_length */
+  int howmany = _howmany;
   int idist = _output_fft_length;
   int odist = _output_fft_length;
   int istride = 1;
@@ -598,11 +673,11 @@ void CUDA::InverseFilterbankEngineCUDA::setup (dsp::InverseFilterbank* filterban
   }
 
   setup_forward_fft_plan(
-    input_fft_length, input_nchan, type_forward
+    input_fft_length, input_nchan*input_npol, type_forward
   );
 
   setup_backward_fft_plan(
-    output_fft_length, output_nchan
+    output_fft_length, output_nchan*input_npol
   );
 
   cudaError_t error;
@@ -806,15 +881,18 @@ void CUDA::InverseFilterbankEngineCUDA::perform (
 		{
 			std::cerr << "CUDA::InverseFilterbankEngineCUDA::perform: applying overlap save kernel" << std::endl;
 		}
+    grid.x = output_nchan;
+    grid.y = 1;
     k_overlap_save<<<grid, threads, 0, stream>>>(
       (float2*) d_stitching,
       (float2*) out_ptr,
       output_discard_pos,
       output_discard_neg,
       0, ipart, 1,
-      input_npol, output_nchan,
+      input_npol,
+      output_nchan,
       output_fft_length,
-      output_fft_length,
+      output_fft_length*output_nchan,
       output_stride
     );
   }
@@ -1020,10 +1098,8 @@ void CUDA::InverseFilterbankEngineCUDA::apply_k_overlap_save (
   cudaMemcpy(
     in_device, (float2*) in.data(), in_size*sz, cudaMemcpyHostToDevice);
 
-  dim3 grid (1, nchan, npol*npart);
+  dim3 grid (nchan, 1, npol*npart);
   dim3 threads (1024, 1, 1);
-
-  grid.x = (ndat / threads.x) + 1;
 
   // std::cerr << grid.x << " " << grid.y << " " << grid.z << std::endl;
   // std::cerr << threads.x << " " << threads.y << " " << threads.z << std::endl;

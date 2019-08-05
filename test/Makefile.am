@@ -23,6 +23,9 @@ if HAVE_CUFFT
 
   # test_main_SOURCES += InverseFilterbank/test_InverseFilterbankEngineCUDA_kernels.cu
 
+  # test_main_SOURCES += InverseFilterbank/test_InverseFilterbankEngineCUDA_kernels.cu \
+  #                      InverseFilterbank/test_InverseFilterbankEngineCUDA.cu
+
   test_main_SOURCES += InverseFilterbank/test_InverseFilterbankEngineCUDA_kernels.cu \
                        InverseFilterbank/test_InverseFilterbankEngineCUDA.cu \
                        InverseFilterbank/test_InverseFilterbankEngine_integration.cu

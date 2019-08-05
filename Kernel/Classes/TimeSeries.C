@@ -726,10 +726,14 @@ void dsp::TimeSeries::set_engine( Engine* _engine )
 unsigned dsp::TimeSeries::get_stride () const
 {
   if (order == OrderFPT) {
-    if (get_nchan() > 1) {
-      return get_datptr(1, 0) - get_datptr(0, 0);
+    if (get_npol() > 1) {
+      return get_datptr(0, 1) - get_datptr(0, 0);
     } else {
-      return (unsigned) get_nfloat_span();
+      if (get_nchan() > 1) {
+        return get_datptr(1, 0) - get_datptr(0, 0);
+      } else {
+        return (unsigned) get_nfloat_span();
+      }
     }
   } else {
     throw "dsp::TimeSeries::get_stride not supported for OrderTFP";

@@ -27,9 +27,8 @@ TEST_CASE (
   CUDA::DeviceMemory* device_memory = new CUDA::DeviceMemory(cuda_stream);
   CUDA::InverseFilterbankEngineCUDA engine_cuda(cuda_stream);
   dsp::InverseFilterbankEngineCPU engine_cpu;
-  // auto idx = GENERATE_COPY(range(0, (int) test_shapes.size()));
-  auto idx = GENERATE(0, 1);
-  std::cerr << idx << std::endl;
+  auto idx = GENERATE_COPY(range(0, (int) test_shapes.size()));
+  // auto idx = GENERATE(0, 1);
   util::TestShape test_shape = test_shapes[idx];
 
   Reference::To<dsp::TimeSeries> in = new dsp::TimeSeries;
@@ -58,13 +57,11 @@ TEST_CASE (
     in, out, npart
   );
   engine_cpu.finish();
-
   auto transfer = util::transferTimeSeries(cuda_stream, device_memory);
-
   transfer(in, in_gpu, cudaMemcpyHostToDevice);
   transfer(out, out_gpu, cudaMemcpyHostToDevice);
 
-  config.filterbank->set_device(device_memory);
+  // config.filterbank->set_device(device_memory);
   engine_cuda.setup(config.filterbank);
   std::vector<float *> scratch_cuda = config.allocate_scratch<CUDA::DeviceMemory>(device_memory);
   engine_cuda.set_scratch(scratch_cuda[0]);

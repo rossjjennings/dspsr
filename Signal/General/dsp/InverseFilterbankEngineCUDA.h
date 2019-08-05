@@ -95,13 +95,13 @@ namespace CUDA
     //! setup backward fft plans. This is public so we can test it.
     std::vector<cufftResult> setup_backward_fft_plan (
       unsigned _output_fft_length,
-      unsigned _output_nchan
+      unsigned _howmany
     );
 
     //! setup forward fft plans. This is public so we can test it.
     std::vector<cufftResult> setup_forward_fft_plan (
       unsigned _input_fft_length,
-      unsigned _input_nchan,
+      unsigned _howmany,
       cufftType _type_forward
     );
 
