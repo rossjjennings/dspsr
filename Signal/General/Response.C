@@ -321,7 +321,7 @@ void dsp::Response::set_optimal_fft (OptimalFFT* policy)
   optimal_fft = policy;
 }
 
-dsp::OptimalFFT* dsp::Response::get_optimal_fft ()
+dsp::OptimalFFT* dsp::Response::get_optimal_fft () const
 {
   return optimal_fft;
 }

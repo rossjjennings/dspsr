@@ -103,7 +103,7 @@ namespace dsp {
 
     //! Set the policy used to compute the optimal FFT length
     void set_optimal_fft (OptimalFFT*);
-    OptimalFFT* get_optimal_fft ();
+    OptimalFFT* get_optimal_fft () const;
     bool has_optimal_fft () const;
 
     //! Given impulse_pos and impulse_neg, check that ndat is large enough

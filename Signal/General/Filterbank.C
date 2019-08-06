@@ -257,40 +257,40 @@ void dsp::Filterbank::make_preparations ()
   prepare_output ();
 
   // the engine should delete the passband if it doesn't support this feature
-  // if (passband)
-  // {
-  //   if (response)
-  //     passband -> match (response);
+  if (passband)
+  {
+    if (response)
+      passband -> match (response);
+
+    unsigned passband_npol = input->get_npol();
+    if (matrix_convolution)
+      passband_npol = 4;
+
+    passband->resize (passband_npol, input->get_nchan(), n_fft, 1);
+
+    if (!response)
+      passband->match (input);
+  }
+
+  // using namespace FTransform;
   //
-  //   unsigned passband_npol = input->get_npol();
-  //   if (matrix_convolution)
-  //     passband_npol = 4;
+  // OptimalFFT* optimal = 0;
+  // if (response && response->has_optimal_fft())
+  //   optimal = response->get_optimal_fft();
   //
-  //   passband->resize (passband_npol, input->get_nchan(), n_fft, 1);
+  // if (optimal)
+  //   FTransform::set_library( optimal->get_library( nsamp_fft ) );
   //
-  //   if (!response)
-  //     passband->match (input);
-  // }
-
-  using namespace FTransform;
-
-  OptimalFFT* optimal = 0;
-  if (response && response->has_optimal_fft())
-    optimal = response->get_optimal_fft();
-
-  if (optimal)
-    FTransform::set_library( optimal->get_library( nsamp_fft ) );
-
-  if (input->get_state() == Signal::Nyquist)
-    forward = Agent::current->get_plan (nsamp_fft, FTransform::frc);
-  else
-    forward = Agent::current->get_plan (nsamp_fft, FTransform::fcc);
-
-  if (optimal)
-    FTransform::set_library( optimal->get_library( freq_res ) );
-
-  if (freq_res > 1)
-    backward = Agent::current->get_plan (freq_res, FTransform::bcc);
+  // if (input->get_state() == Signal::Nyquist)
+  //   forward = Agent::current->get_plan (nsamp_fft, FTransform::frc);
+  // else
+  //   forward = Agent::current->get_plan (nsamp_fft, FTransform::fcc);
+  //
+  // if (optimal)
+  //   FTransform::set_library( optimal->get_library( freq_res ) );
+  //
+  // if (freq_res > 1)
+  //   backward = Agent::current->get_plan (freq_res, FTransform::bcc);
 
   if (engine)
   {

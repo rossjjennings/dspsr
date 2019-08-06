@@ -55,6 +55,9 @@ void dsp::FilterbankEngineCPU::setup (dsp::Filterbank* filterbank)
   if (filterbank->has_apodization()) {
     apodization = filterbank->get_apodization();
   }
+  if (filterbank->has_passband()) {
+    passband = filterbank->get_passband();
+  }
 
   matrix_convolution = filterbank->get_matrix_convolution();
   freq_res = filterbank->get_frequency_resolution();
@@ -64,51 +67,30 @@ void dsp::FilterbankEngineCPU::setup (dsp::Filterbank* filterbank)
   nfilt_neg = filterbank->get_nfilt_neg();
   nkeep = freq_res - (nfilt_pos + nfilt_neg);
 
-  unsigned n_fft = nchan_subband * freq_res;
-  //! configure passband
-  if (passband)
-  {
-    if (response)
-      passband -> match (response);
+  using namespace FTransform;
 
-    unsigned passband_npol = input->get_npol();
-    if (matrix_convolution)
-      passband_npol = 4;
-
-    passband->resize (passband_npol, input->get_nchan(), n_fft, 1);
-
-    if (!response)
-      passband->match (input);
+  OptimalFFT* optimal = 0;
+  if (response && response->has_optimal_fft()){
+    optimal = response->get_optimal_fft();
   }
 
-  // setup fourier transform plans
-  forward = filterbank->get_forward();
-  backward = filterbank->get_backward();
+  if (optimal){
+    FTransform::set_library( optimal->get_library( nsamp_fft ) );
+  }
 
-  // using namespace FTransform;
-  //
-  // OptimalFFT* optimal = 0;
-  // if (response && response->has_optimal_fft()){
-  //   optimal = response->get_optimal_fft();
-  // }
-  //
-  // if (optimal){
-  //   FTransform::set_library( optimal->get_library( nsamp_fft ) );
-  // }
-  //
-  // if (input->get_state() == Signal::Nyquist){
-  //   forward = FTransform::Agent::current->get_plan (nsamp_fft, FTransform::frc);
-  // } else {
-  //   forward = FTransform::Agent::current->get_plan (nsamp_fft, FTransform::fcc);
-  // }
-  //
-  // if (optimal){
-  //   FTransform::set_library( optimal->get_library( freq_res ) );
-  // }
-  //
-  // if (freq_res > 1){
-  //   backward = FTransform::Agent::current->get_plan (freq_res, FTransform::bcc);
-  // }
+  if (input->get_state() == Signal::Nyquist){
+    forward = FTransform::Agent::current->get_plan (nsamp_fft, FTransform::frc);
+  } else {
+    forward = FTransform::Agent::current->get_plan (nsamp_fft, FTransform::fcc);
+  }
+
+  if (optimal){
+    FTransform::set_library( optimal->get_library( freq_res ) );
+  }
+
+  if (freq_res > 1){
+    backward = FTransform::Agent::current->get_plan (freq_res, FTransform::bcc);
+  }
 
   // setup scratch space
   unsigned bigfftsize = nchan_subband * freq_res * 2;
@@ -141,9 +123,6 @@ void dsp::FilterbankEngineCPU::setup (dsp::Filterbank* filterbank)
   }
   time_domain_scratch = freq_domain_scratch[1] + bigfftsize;
   windowed_time_domain_scratch = time_domain_scratch + 2 * freq_res;
-
-
-
 
   if (verbose) {
     cerr << "dsp::FilterbankEngineCPU::setup: freq_res=" << freq_res <<

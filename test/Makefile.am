@@ -3,6 +3,7 @@ bin_PROGRAMS = test_main
 test_main_SOURCES = test_main.cpp \
                     test_Apodization.cpp \
                     test_FIRFilter.cpp \
+                    Filterbank/test_FilterbankEngineCPU.cpp \
                     Filterbank/test_FilterbankConfig.cpp \
                     InverseFilterbank/test_InverseFilterbankConfig.cpp \
                     util.cpp \
@@ -23,6 +24,7 @@ test_main_SOURCES = test_main.cpp \
 
 
 if HAVE_CUFFT
+  test_main_SOURCES += Filterbank/test_FilterbankEngineCUDA.cu
   # bin_PROGRAMS += bench_InverseFilterbankEngineCUDA
   # bench_InverseFilterbankEngineCUDA_SOURCES = InverseFilterbank/bench_InverseFilterbankEngineCUDA.cu
 

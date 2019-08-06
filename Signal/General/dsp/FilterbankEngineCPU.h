@@ -35,10 +35,6 @@ namespace dsp
 
     void finish ();
 
-    // virtual void set_passband (dsp::Response* _passband);
-
-    // virtual const dsp::Response* get_passband () const;
-
 
   protected:
 
@@ -64,12 +60,14 @@ namespace dsp
     //! scratch space for apodization operation
     float* windowed_time_domain_scratch;
 
-
     //! response kernel, from Filterbank
     const dsp::Response* response;
 
     //! apodization kernel, from Filterbank
     const dsp::Apodization* apodization;
+
+    //! passband kernel, from Filterbank
+    dsp::Response* passband;
 
     //! Whether or not to do matrix convolution, from Filterbank
     bool matrix_convolution;
