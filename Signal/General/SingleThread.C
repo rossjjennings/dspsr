@@ -197,24 +197,18 @@ void dsp::SingleThread::construct () try
   if (thread_id < config->affinity.size())
     set_affinity (config->affinity[thread_id]);
 
-
   // only the first thread should prepare the input
   if (thread_id == 0)
     config->prepare( manager->get_input() );
 
-
   if (!unpacked)
     unpacked = new_time_series();
-
 
   manager->set_output (unpacked);
 
   operations.push_back (manager.get());
 
-
-
   Unpacker* unpacker = manager->get_unpacker ();
-
 
 #if HAVE_CUDA
 

@@ -35,17 +35,6 @@ namespace dsp
 
   public:
 
-    // struct fir_filter {
-    //   // number of taps in FIR filter
-    //   unsigned ntaps;
-    //   // number of output channels from PFB step
-    //   unsigned nchan_pfb;
-    //   // PFB oversampling ratio
-    //   Rational oversamp;
-    //   // FIR coefficients
-    //   std::vector<float> coeff;
-    // };
-
     //! Verbosity flag
     static bool verbose;
 

@@ -157,15 +157,12 @@ namespace dsp {
     void calc_lcf (unsigned a, unsigned b, const Rational& osf, std::vector<unsigned>& result);
 
     void calc_oversampled_discard_region(
-      // unsigned* _input_discard_pos,
-      // unsigned* _input_discard_neg,
       unsigned* _discard_neg,
       unsigned* _discard_pos,
       unsigned _nchan,
       const Rational& osf);
 
     void calc_oversampled_fft_length(
-      // unsigned* _input_fft_length,
       unsigned* _fft_length,
       unsigned _nchan,
       const Rational& osf);

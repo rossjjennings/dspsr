@@ -64,10 +64,6 @@ namespace dsp {
 
     Type get_type () { return getType(); };
 
-    // void setType (Type _type) { type = _type; };
-    //
-    // void set_type (Type _type) { setType(_type); };
-
     //! Multiply indata by the window function
     void operate (float* indata, float* outdata = 0) const;
 

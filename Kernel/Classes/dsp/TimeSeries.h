@@ -151,8 +151,6 @@ namespace dsp {
 
     unsigned get_stride () const;
 
-
-
   protected:
 
     //! Returns a uchar pointer to the first piece of data
