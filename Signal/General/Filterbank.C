@@ -12,7 +12,6 @@
 #include "dsp/Response.h"
 #include "dsp/Apodization.h"
 #include "dsp/InputBuffering.h"
-#include "dsp/Scratch.h"
 #include "dsp/OptimalFFT.h"
 
 #include "FTransform.h"
@@ -43,7 +42,6 @@ dsp::Filterbank::Engine* dsp::Filterbank::get_engine ()
   return engine;
 }
 
-
 void dsp::Filterbank::prepare ()
 {
   if (verbose)
@@ -52,7 +50,6 @@ void dsp::Filterbank::prepare ()
   make_preparations ();
   prepared = true;
 }
-
 
 /*
   These are preparations that could be performed once at the start of
@@ -271,26 +268,6 @@ void dsp::Filterbank::make_preparations ()
     if (!response)
       passband->match (input);
   }
-
-  // using namespace FTransform;
-  //
-  // OptimalFFT* optimal = 0;
-  // if (response && response->has_optimal_fft())
-  //   optimal = response->get_optimal_fft();
-  //
-  // if (optimal)
-  //   FTransform::set_library( optimal->get_library( nsamp_fft ) );
-  //
-  // if (input->get_state() == Signal::Nyquist)
-  //   forward = Agent::current->get_plan (nsamp_fft, FTransform::frc);
-  // else
-  //   forward = Agent::current->get_plan (nsamp_fft, FTransform::fcc);
-  //
-  // if (optimal)
-  //   FTransform::set_library( optimal->get_library( freq_res ) );
-  //
-  // if (freq_res > 1)
-  //   backward = Agent::current->get_plan (freq_res, FTransform::bcc);
 
   if (engine)
   {
@@ -517,48 +494,6 @@ void dsp::Filterbank::transformation ()
 
 void dsp::Filterbank::filterbank ()
 {
-  // initialize scratch space for FFTs
-  // unsigned bigfftsize = nchan_subband * freq_res * 2;
-  // if (input->get_state() == Signal::Nyquist)
-  //   bigfftsize += 256;
-  //
-  // // also need space to hold backward FFTs
-  // unsigned scratch_needed = bigfftsize + 2 * freq_res;
-  //
-  // if (apodization){
-  //   scratch_needed += bigfftsize;
-  // }
-  //
-  // if (matrix_convolution){
-  //   scratch_needed += bigfftsize;
-  // }
-  //
-  // // divide up the scratch space
-  // float* c_spectrum[2];
-  // c_spectrum[0] = scratch->space<float> (scratch_needed);
-  // c_spectrum[1] = c_spectrum[0];
-  // if (matrix_convolution) {
-  //   c_spectrum[1] += bigfftsize;
-  // }
-  // float* c_time = c_spectrum[1] + bigfftsize;
-  // float* windowed_time_domain = c_time + 2 * freq_res;
-
-  // unsigned cross_pol = 1;
-  // if (matrix_convolution) {
-  //   cross_pol = 2;
-  // }
-
-  // if (verbose) {
-  //   cerr << "dsp::Filterbank::transformation enter main loop" <<
-  //     " cpol=" << cross_pol << " npol=" << input->get_npol() <<
-  //     " npart=" << npart  << endl;
-  // }
-  if (engine) {
-	  if (verbose) {
-		  cerr << "dsp::Filterbank::filterbank: has engine" << endl;
-    }
-  }
-
   if (verbose){
     cerr << "dsp::Filterbank::filterbank: computing in_step and out_step" << endl;
   }
@@ -571,153 +506,10 @@ void dsp::Filterbank::filterbank ()
   // number of floats to step between output from filterbank
   const uint64_t out_step = nkeep * 2;
 
-  // // counters
-  // unsigned ipt, ipol, jpol, ichan;
-  // uint64_t ipart;
-
-  // const unsigned npol = input->get_npol();
-
-  // // offsets into input and output
-  // uint64_t in_offset, out_offset;
-
-  // // some temporary pointers
-  // float* time_dom_ptr = NULL;
-  // float* freq_dom_ptr = NULL;
-
-  // // do a 64-bit copy
-  // uint64_t* data_into = NULL;
-  // uint64_t* data_from = NULL;
-
-  // engine->set_scratch(c_spectrum[0]);
   engine->perform (input, output, npart, in_step, out_step);
   if (Operation::record_time){
     engine->finish ();
   }
-
-  // /////////////////////////////////////////////////////////////////////
-  //
-  // PERFORM FILTERBANK VIA ENGINE (e.g. on GPU)
-  //
-  // /////////////////////////////////////////////////////////////////////
-  // if (engine)
-  // {
-  //   engine->set_scratch(c_spectrum[0]);
-  //   engine->perform (input, output, npart, in_step, out_step);
-  //   if (Operation::record_time)
-  //     engine->finish ();
-  // }
-//  cerr << "output ndat=" <<output->get_ndat() << " output ptr=" << output->get_datptr(0,0) << endl;
-
-  // /////////////////////////////////////////////////////////////////////
-  //
-  // PERFORM FILTERBANK DIRECTLY (CPU)
-  //
-  // /////////////////////////////////////////////////////////////////////
-//   else
-//   {
-//     for (unsigned input_ichan=0; input_ichan<input->get_nchan(); input_ichan++)
-//     {
-//
-//       for (ipart=0; ipart<npart; ipart++)
-//       {
-// #ifdef _DEBUG
-//         cerr << "ipart=" << ipart << endl;
-// #endif
-//         in_offset = ipart * in_step;
-//         out_offset = ipart * out_step;
-//
-//         for (ipol=0; ipol < npol; ipol++)
-//         {
-//           for (jpol=0; jpol<cross_pol; jpol++)
-//           {
-//             if (matrix_convolution)
-//               ipol = jpol;
-//
-//             time_dom_ptr = const_cast<float*>(input->get_datptr (input_ichan, ipol));
-//
-//             time_dom_ptr += in_offset;
-//
-//             if (apodization)
-//             {
-//               apodization -> operate (time_dom_ptr, windowed_time_domain);
-//               time_dom_ptr = windowed_time_domain;
-//             }
-//             if (input->get_state() == Signal::Nyquist)
-//               forward->frc1d (nsamp_fft, c_spectrum[ipol], time_dom_ptr);
-//             else
-//               forward->fcc1d (nsamp_fft, c_spectrum[ipol], time_dom_ptr);
-//
-//
-//           }
-//
-//           if (matrix_convolution)
-//           {
-//             if (passband)
-//               passband->integrate (c_spectrum[0], c_spectrum[1], input_ichan);
-//
-//             // cross filt can be set only if there is a response
-//             response->operate (c_spectrum[0], c_spectrum[1]);
-//           }
-//           else
-//           {
-//             if (passband)
-//               passband->integrate (c_spectrum[ipol], ipol, input_ichan);
-//
-//             if (response)
-//               response->operate (c_spectrum[ipol], ipol,
-//                                  input_ichan*nchan_subband, nchan_subband);
-//           }
-//
-//           for (jpol=0; jpol<cross_pol; jpol++)
-//           {
-//             if (matrix_convolution)
-//               ipol = jpol;
-//
-//             if (freq_res == 1)
-//             {
-//               data_from = (uint64_t*)( c_spectrum[ipol] );
-//               for (ichan=0; ichan < nchan_subband; ichan++)
-//               {
-//                 data_into = (uint64_t*)( output->get_datptr (input_ichan*nchan_subband+ichan, ipol) + out_offset );
-//
-//                 *data_into = data_from[ichan];
-//               }
-//               continue;
-//             }
-//
-//
-//             // freq_res > 1 requires a backward fft into the time domain
-//             // for each channel
-//
-//             unsigned jchan = input_ichan * nchan_subband;
-//             freq_dom_ptr = c_spectrum[ipol];
-//
-//             for (ichan=0; ichan < nchan_subband; ichan++)
-//             {
-//               backward->bcc1d (freq_res, c_time, freq_dom_ptr);
-//
-//               freq_dom_ptr += freq_res*2;
-//
-//               data_into = (uint64_t*)( output->get_datptr (jchan+ichan, ipol) + out_offset);
-//               data_from = (uint64_t*)( c_time + nfilt_pos*2 );  // complex nos.
-//
-//               for (ipt=0; ipt < nkeep; ipt++)
-//                 data_into[ipt] = data_from[ipt];
-//
-//             } // for each output channel
-//
-//           } // for each cross poln
-//
-//         } // for each polarization
-//
-//       } // for each big fft (ipart)
-//
-//     } // for each input channel
-//
-//   } // if no engine (on CPU)
-
-  // if (Operation::record_time && engine)
-  //   engine->finish ();
 
   if (verbose)
     cerr << "dsp::Filterbank::transformation return with output ndat="

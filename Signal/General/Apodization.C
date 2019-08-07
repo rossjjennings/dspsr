@@ -48,7 +48,6 @@ void dsp::Apodization::Hanning (int npts, bool analytic)
     *datptr = value; datptr++;
     if (analytic) {
       *datptr = value; datptr++;
-      // *datptr = 0.0; datptr++;
     }
   }
   type = hanning;
@@ -201,12 +200,6 @@ void dsp::Apodization::TopHat (int npts, int stop_band, bool analytic)
 void dsp::Apodization::operate (float* indata, float* outdata) const
 {
   int npts = ndat * ndim;
-  // if (verbose) {
-  //   std::cerr << "dsp::Apodization::operate ndat=" << ndat
-  //     << " ndim=" << ndim
-  //     << " npts=" << npts
-  //     << std::endl;
-  // }
   float* winptr = buffer;
 
   if (outdata == NULL)

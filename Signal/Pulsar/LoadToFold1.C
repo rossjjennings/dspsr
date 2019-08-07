@@ -78,7 +78,6 @@
 #include "Pulsar/TextParameters.h"
 #include "Pulsar/SimplePredictor.h"
 
-
 #include "Error.h"
 #include "debug.h"
 
@@ -121,7 +120,6 @@ unsigned count (const std::vector<T>& data, T element)
 void dsp::LoadToFold::construct () try
 {
   SingleThread::construct ();
-  // std::cerr << "dsp::LoadToFold::construct" << std::endl;
 
 #if HAVE_CUDA
   bool run_on_gpu = thread_id < config->get_cuda_ndevice();
@@ -210,7 +208,6 @@ void dsp::LoadToFold::construct () try
 
   if (config->coherent_dedispersion)
   {
-    std::cerr << "dspsr: creating Dedispersion kernel" << std::endl;
     if (!kernel)
       kernel = new Dedispersion;
 
@@ -396,17 +393,13 @@ void dsp::LoadToFold::construct () try
 
       filterbank->set_input (unpacked);
       filterbank->set_output (filterbanked);
-      // default engine is the CPU engine
-      // dsp::FilterbankEngineCPU* filterbank_engine = filterbank->get_engine();
 
       if (convolve_when == Filterbank::Config::During)
       {
         filterbank->set_response (response);
         if (!config->integration_turns)
-          // filterbank_engine->set_passband(passband);
           filterbank->get_engine()->set_passband (passband);
       }
-      // filterbank->set_engine (filterbank_engine);
       // Get order of operations correct
       if (!convolve_when == Filterbank::Config::Before){
         operations.push_back (filterbank.get());
@@ -418,8 +411,7 @@ void dsp::LoadToFold::construct () try
   // output of convolved will be filterbanked|unpacked
   TimeSeries* convolved = filterbanked;
 
-  bool filterbank_after_dedisp
-    = convolve_when == Filterbank::Config::After;
+  bool filterbank_after_dedisp = convolve_when == Filterbank::Config::Before;
 
   if (config->coherent_dedispersion &&
       convolve_when != Filterbank::Config::During)
@@ -917,7 +909,6 @@ void dsp::LoadToFold::prepare ()
 
   uint64_t block_size = ( minimum_samples - block_overlap )
     * config->get_times_minimum_ndat() + block_overlap;
-  cerr << "block_size=" << block_size << endl;
   // set the block size to at least minimum_samples
   manager->set_maximum_RAM( config->get_maximum_RAM() );
   manager->set_minimum_RAM( config->get_minimum_RAM() );

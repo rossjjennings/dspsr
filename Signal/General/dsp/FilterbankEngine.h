@@ -10,7 +10,7 @@
 #define __FilterbankEngine_h
 
 #include "dsp/Filterbank.h"
-//#include "dsp/filterbank_engine.h"
+
 namespace dsp {
   class Filterbank::Engine : public Reference::Able
   {
@@ -35,8 +35,6 @@ namespace dsp {
     virtual void finish () { }
 
     virtual void set_passband (dsp::Response* _passband) { passband = _passband; }
-
-    // virtual const dsp::Response* get_passband () const ;
 
   protected:
 

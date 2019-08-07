@@ -716,15 +716,15 @@ void dsp::Response::flagswap (unsigned divisions)
 void dsp::Response::calc_lcf (
 	unsigned a, unsigned b, const Rational& osf, vector<unsigned>& result)
 {
-  // if (verbose) {
-  //   std::cerr << "dsp::Response::calc_lcf:"
-  //     << " a=" << a
-  //     << " b=" << b
-  //     << " osf=" << osf
-  //     << std::endl;
-  //   std::cerr << "dsp::Response::calc_lcf: quot=" << a / (osf.get_denominator()*b) << std::endl;
-  //   std::cerr << "dsp::Response::calc_lcf: rem=" << a % (osf.get_denominator()*b) << std::endl;
-  // }
+  if (verbose) {
+    std::cerr << "dsp::Response::calc_lcf:"
+      << " a=" << a
+      << " b=" << b
+      << " osf=" << osf
+      << std::endl;
+    std::cerr << "dsp::Response::calc_lcf: quot=" << a / (osf.get_denominator()*b) << std::endl;
+    std::cerr << "dsp::Response::calc_lcf: rem=" << a % (osf.get_denominator()*b) << std::endl;
+  }
   result[0] = a / (osf.get_denominator()*b);
   result[1] = a % (osf.get_denominator()*b);
 }
@@ -757,13 +757,9 @@ void dsp::Response::calc_oversampled_fft_length (
       << " _fft_length=" << *_fft_length
       << std::endl;
   }
-
-  // *_input_fft_length = max_input_fft_length_lcf.quot * osf.get_numerator();
 }
 
 void dsp::Response::calc_oversampled_discard_region(
-  // int* _input_discard_neg,
-  // int* _input_discard_pos,
   unsigned* _discard_neg,
   unsigned* _discard_pos,
   unsigned _nchan,
@@ -802,6 +798,4 @@ void dsp::Response::calc_oversampled_discard_region(
       << " _discard_pos=" << *_discard_pos
       << std::endl;
   }
-  // *_input_discard_pos = lcfs[0].quot * osf.get_numerator();
-  // *_input_discard_neg = lcfs[1].quot * osf.get_numerator();
 }
