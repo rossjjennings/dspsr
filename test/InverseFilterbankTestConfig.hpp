@@ -20,13 +20,19 @@ namespace util {
 
       std::vector<float> get_thresh ();
 
-      void load_json_config (bool force=false);
+      // void load_json_config (bool force=false);
+
+      void load_toml_config (bool force=false);
 
     private:
 
-      json json_config;
+      toml::Value toml_config;
 
-      bool json_config_loaded;
+      bool toml_config_loaded;
+
+      // json json_config;
+      //
+      // bool json_config_loaded;
     };
 
     template<typename T>

@@ -10,7 +10,8 @@
 #include <time.h>
 #include <cstdlib>
 
-#include "json.hpp"
+// #include "json.hpp"
+#include "toml.h"
 
 #include "dsp/MemoryCUDA.h"
 #include "dsp/TransferCUDA.h"
@@ -20,7 +21,7 @@
 #include "dsp/TimeSeries.h"
 #include "Rational.h"
 
-using json = nlohmann::json;
+// using json = nlohmann::json;
 
 void check_error (const char*);
 
@@ -42,9 +43,11 @@ namespace util {
     unsigned overlap_neg;
   };
 
-  void to_json(json& j, const TestShape& sh);
+  void from_toml (const toml::Value& val, TestShape& sh);
 
-  void from_json(const json& j, TestShape& sh);
+  // void to_json(json& j, const TestShape& sh);
+  //
+  // void from_json(const json& j, TestShape& sh);
 
   struct config {
     static bool verbose;
@@ -90,7 +93,8 @@ namespace util {
   template<typename T>
   void write_binary_data (std::string file_path, T* buffer, unsigned len);
 
-  json load_json (std::string file_path);
+  // json load_json (std::string file_path);
+  const toml::Value load_toml (const std::string& file_path);
 
   template<typename T>
   void print_array (const std::vector<T>& arr, std::vector<unsigned>& dim);
