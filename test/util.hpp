@@ -74,10 +74,10 @@ namespace util {
   bool isclose (T a, T b, float atol=1e-7, float rtol=1e-5);
 
   template<typename T>
-  bool allclose (T* a, T* b, unsigned size, float atol=1e-7, float rtol=1e-5);
+  bool allclose (const T* a, const T* b, unsigned size, float atol=1e-7, float rtol=1e-5);
 
   template<typename T>
-  bool allclose (std::vector<T> a, std::vector<T> b, float atol=1e-7, float rtol=1e-5);
+  bool allclose (const std::vector<T>& a, const std::vector<T>& b, float atol=1e-7, float rtol=1e-5);
 
   bool allclose (dsp::TimeSeries* a, dsp::TimeSeries* b, float atol=1e-7, float rtol=1e-5);
 
@@ -227,20 +227,32 @@ void util::write_binary_data (std::string file_path, T* buffer, unsigned len)
 
 
 template<typename T>
-bool util::allclose (std::vector<T> a, std::vector<T> b, float atol, float rtol) {
+bool util::allclose (const std::vector<T>& a, const std::vector<T>& b, float atol, float rtol) {
+
   if (a.size() != b.size()) {
+     if (util::config::verbose) {
+       std::cerr << "util::allclose vectors not the same size" << std::endl;
+     }
      return false;
+  }
+  if (util::config::verbose) {
+    std::cerr << "util::allclose size=" << a.size() << std::endl;
   }
   return util::allclose(a.data(), b.data(), (unsigned) a.size(), atol, rtol);
 }
 
 
 template<typename T>
-bool util::allclose (T* a, T* b, unsigned size, float atol, float rtol)
+bool util::allclose (const T* a, const T* b, unsigned size, float atol, float rtol)
 {
+  bool close;
   bool ret = true;
   for (unsigned i=0; i<size; i++) {
-    ret = util::isclose<T>(a[i], b[i], atol, rtol);
+    close = util::isclose<T>(a[i], b[i], atol, rtol);
+    if (! close) {
+      ret = false;
+      break;
+    }
   }
   return ret;
 }

@@ -254,7 +254,7 @@ void dsp::InverseFilterbankEngineCPU::perform (
 
         if (pfb_dc_chan) {
           if (input_ichan == 0) {
-            stitched_offset_neg = n_dims*(output_fft_length - input_os_keep_2);
+            stitched_offset_neg = n_dims*(output_nchan*output_fft_length - input_os_keep_2);
             stitched_offset_pos = 0;
           } else {
             stitched_offset_neg = n_dims*(input_os_keep*input_ichan - input_os_keep_2);
@@ -287,7 +287,7 @@ void dsp::InverseFilterbankEngineCPU::perform (
         if (verbose) {
           std::cerr << "dsp::InverseFilterbankEngineCPU::perform: zeroing last half channel" << std::endl;
         }
-        int offset = n_dims*(output_fft_length - input_os_keep_2);
+        int offset = n_dims*(output_nchan*output_fft_length - input_os_keep_2);
         for (unsigned i=0; i<n_dims*input_os_keep_2; i++) {
           stitch_scratch[offset + i] = 0.0;
         }
@@ -305,7 +305,7 @@ void dsp::InverseFilterbankEngineCPU::perform (
         }
       }
 
-      reporter.emit("data", stitch_scratch, 1, n_pol, output_fft_length*output_nchan, 2);
+      reporter.emit("data", stitch_scratch, 1, 1, output_fft_length*output_nchan, 2);
       // std::complex<float>* stitch_scratch_complex = reinterpret_cast<std::complex<float>*>(stitch_scratch);
       // for (int idat=0; idat<output_fft_length*output_nchan; idat++)
       // {

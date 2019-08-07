@@ -890,16 +890,8 @@ void CUDA::InverseFilterbankEngineCUDA::perform (
       pfb_dc_chan, pfb_all_chan
     );
     check_error("CUDA::InverseFilterbankEngineCUDA::perform");
-    // cudaMemcpyAsync((float2*) h_stitching.data(),
-    //                 d_stitching,
-    //                 (d_stitching_size/2)*sizeof(float2),
-    //                 cudaMemcpyDeviceToHost,
-    //                 stream);
-    // cudaStreamSynchronize(stream);
-    std::cerr << "CUDA::InverseFilterbankEngineCUDA::perform d_stitching=" << d_stitching << std::endl;
 
     h_stitching = (float*) d_stitching;
-    std::cerr << "CUDA::InverseFilterbankEngineCUDA::perform h_stitching=" << h_stitching << std::endl;
 
     reporter.emit("data", h_stitching,
       1, input_npol, output_fft_length*output_nchan, 2);

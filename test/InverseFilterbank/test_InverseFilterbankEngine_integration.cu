@@ -24,6 +24,7 @@ public:
 
   void operator() (float* arr, unsigned nchan, unsigned npol, unsigned ndat, unsigned ndim)
   {
+    unsigned total_size = nchan * npol * ndat * ndim;
     if (util::config::verbose)
     {
       std::cerr << "Reporter::operator() ("
@@ -33,11 +34,10 @@ public:
         << ndat << ", "
         << ndim << ")"
         << std::endl;
+      std::cerr << "Reporter::operator() total_size=" << total_size << std::endl;
     }
-    unsigned total_size = nchan * npol * ndat * ndim;
-    std::vector<float> data;
+    std::vector<float> data (total_size);
     if (iscuda) {
-      data = std::vector<float>(total_size);
       float* data_ptr = data.data();
       size_t total_size_bytes = total_size * sizeof(float);
       cudaError error;
@@ -56,7 +56,10 @@ public:
       }
       check_error("Reporter::operator()");
     } else {
-      data = std::vector<float>(arr, arr + total_size);
+      if (util::config::verbose) {
+        std::cerr << "Reporter::operator() assigning vector contents" << std::endl;
+      }
+      data.assign(arr, arr + total_size);
     }
     data_vectors.push_back(data);
   }
@@ -133,8 +136,18 @@ TEST_CASE (
   engine_cuda.finish();
   // now lets compare the two time series
   transfer(out_gpu, out_cuda, cudaMemcpyDeviceToHost);
-  // std::cerr << "reporter_cpu.data_vectors.size()=" << reporter_cpu.data_vectors.size() << std::endl;
-  // std::cerr << "reporter_cuda.data_vectors.size()=" << reporter_cuda.data_vectors.size() << std::endl;
+
+  // for (unsigned i=0; i<reporter_cpu.data_vectors.size(); i++)
+  // {
+  //   REQUIRE(util::allclose<float>(
+  //     reporter_cpu.data_vectors[i],
+  //     reporter_cuda.data_vectors[i],
+  //     thresh[0], thresh[1]
+  //   ));
+  // }
+
+
+
   REQUIRE(util::allclose(out_cuda, out, thresh[0], thresh[1]));
 
 
