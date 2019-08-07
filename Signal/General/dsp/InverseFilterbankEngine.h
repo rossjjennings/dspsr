@@ -9,8 +9,11 @@
 #ifndef __InverseFilterbankEngine_h
 #define __InverseFilterbankEngine_h
 
+#include <functional>
+
 #include "dsp/InverseFilterbank.h"
-//#include "dsp/filterbank_engine.h"
+#include "EventEmitter.h"
+#include "Functor.h"
 
 //! Abstract base class for derived engines that operate on data
 //! in order to perform  inverse (synthesis) filterbank operation
@@ -36,12 +39,22 @@ public:
   //! Finish up
   virtual void finish () { }
 
+  class Reporter {
+  public:
+    virtual void operator() (float*, unsigned, unsigned, unsigned, unsigned) {};
+  };
+
+  // A event emitter that takes a data array, and the nchan, npol, ndat and ndim
+  // associated with the data array
+  EventEmitter<Reporter> reporter;
+
 protected:
 
   float* scratch;
 
   float* output;
   unsigned output_span;
+
 
 };
 

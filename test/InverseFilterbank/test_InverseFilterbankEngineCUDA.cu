@@ -99,6 +99,10 @@ TEST_CASE (
   Reference::To<dsp::TimeSeries> out_gpu = new dsp::TimeSeries;
 
   Rational os_factor (4, 3);
+
+
+
+
   unsigned npart = test_shape.npart;
   util::IntegrationTestConfiguration<dsp::InverseFilterbank> config(
     os_factor, npart, test_shape.input_npol,

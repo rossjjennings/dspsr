@@ -812,6 +812,9 @@ void CUDA::InverseFilterbankEngineCUDA::perform (
   int k_response_stitch_in_ndat = input_fft_length;
   int k_response_stitch_out_ndat = output_nchan * output_fft_length;
 
+  float* h_stitching;
+  // unsigned d_stitching_size = output_nchan*input_npol*output_fft_length*output_nchan*2;
+  // std::vector<float> h_stitching (d_stitching_size);
 
   for (unsigned ipart=0; ipart<npart; ipart++)
   {
@@ -886,7 +889,22 @@ void CUDA::InverseFilterbankEngineCUDA::perform (
       k_response_stitch_out_samples_per_part,
       pfb_dc_chan, pfb_all_chan
     );
-    k_print_array<<<1, 1, 0, stream>>>(d_stitching, output_nchan, input_npol, output_fft_length*output_nchan);
+    check_error("CUDA::InverseFilterbankEngineCUDA::perform");
+    // cudaMemcpyAsync((float2*) h_stitching.data(),
+    //                 d_stitching,
+    //                 (d_stitching_size/2)*sizeof(float2),
+    //                 cudaMemcpyDeviceToHost,
+    //                 stream);
+    // cudaStreamSynchronize(stream);
+    std::cerr << "CUDA::InverseFilterbankEngineCUDA::perform d_stitching=" << d_stitching << std::endl;
+
+    h_stitching = (float*) d_stitching;
+    std::cerr << "CUDA::InverseFilterbankEngineCUDA::perform h_stitching=" << h_stitching << std::endl;
+
+    reporter.emit("data", h_stitching,
+      1, input_npol, output_fft_length*output_nchan, 2);
+    check_error("CUDA::InverseFilterbankEngineCUDA::perform");
+    // k_print_array<<<1, 1, 0, stream>>>(d_stitching, output_nchan, input_npol, output_fft_length*output_nchan);
     if (verbose)
     {
       std::cerr << "CUDA::InverseFilterbankEngineCUDA::perform: applying inverse FFT" << std::endl;

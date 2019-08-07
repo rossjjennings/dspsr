@@ -47,11 +47,20 @@ namespace util {
 
       auto test_shapes = json_config["InverseFilterbank"]["test_shapes"];
 
+      if (util::config::verbose) {
+        std::cerr << "InverseFilterbankTestConfig::get_test_vector_shapes: test_shapes.size()=" << test_shapes.size() << std::endl;
+      }
+
+
       std::vector<util::TestShape> vec(test_shapes.size());
 
       for (unsigned idx=0; idx < test_shapes.size(); idx++)
       {
         vec[idx] = test_shapes[idx].get<util::TestShape>();
+      }
+
+      if (util::config::verbose) {
+        std::cerr << "InverseFilterbankTestConfig::get_test_vector_shapes: vec.size()=" << vec.size() << std::endl;
       }
 
       return vec;

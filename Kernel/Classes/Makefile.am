@@ -34,7 +34,8 @@ nobase_include_HEADERS = environ.h ascii_header.h Rational.h \
 	dsp/GenericFourBitUnpacker.h \
 	dsp/GenericTwoBitCorrection.h \
 	dsp/CommandLineHeader.h dsp/OutputFileShare.h \
-	dsp/FIRFilter.h
+	dsp/FIRFilter.h \
+	EventEmitter.h
 
 libClasses_la_SOURCES = ascii_header.c Rational.C ASCIIObservation.C \
 	InputBufferingShare.C Reserve.C \
