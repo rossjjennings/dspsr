@@ -402,8 +402,8 @@ void util::IntegrationTestConfiguration<FilterbankType>::setup (
   auto random_gen = util::random<float>();
 
   for (unsigned idx=0; idx<in_size; idx++) {
-    in_vec[idx] = std::complex<float>((float) idx, (float) idx);
-    // in_vec[idx] = std::complex<float>(random_gen(), random_gen());
+    // in_vec[idx] = std::complex<float>((float) idx, (float) idx);
+    in_vec[idx] = std::complex<float>(random_gen(), random_gen());
   }
 
   util::loadTimeSeries<std::complex<float>>(in_vec, in, in_dim);

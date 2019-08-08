@@ -217,8 +217,8 @@ const toml::Value util::load_toml (const std::string& file_path)
   {
     throw "util::load_toml: invalid TOML file";
   }
-
-  return pr.value;
+  const toml::Value result = pr.value;
+  return result;
 }
 
 

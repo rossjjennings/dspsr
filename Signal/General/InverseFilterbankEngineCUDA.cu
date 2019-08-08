@@ -977,8 +977,10 @@ void CUDA::InverseFilterbankEngineCUDA::apply_k_response_stitch (
     resp_device, (float2*) response.data(), out_ndat*sz, cudaMemcpyHostToDevice);
 
   // 10 is sort of arbitrary here.
+  int nthreads = in_ndat <= 1024 ? in_ndat: 1024;
+
   dim3 grid (1, nchan, npart*npol);
-  dim3 threads (in_ndat, 1, 1);
+  dim3 threads (nthreads, 1, 1);
 
   k_response_stitch<<<grid, threads>>>(
     in_device, resp_device, out_device, os_discard, 0, 0, npart,
