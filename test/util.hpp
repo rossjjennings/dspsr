@@ -90,7 +90,6 @@ namespace util {
   template<typename T>
   unsigned nclose (const std::vector<T>& a, const std::vector<T>& b, float atol=1e-7, float rtol=1e-5);
 
-
   template<typename T>
   void load_binary_data (std::string file_path, std::vector<T>& test_data);
 
