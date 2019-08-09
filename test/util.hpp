@@ -85,6 +85,13 @@ namespace util {
   bool allclose (dsp::TimeSeries* a, dsp::TimeSeries* b, float atol=1e-7, float rtol=1e-5);
 
   template<typename T>
+  unsigned nclose (const T* a, const T* b, unsigned size, float atol=1e-7, float rtol=1e-5);
+
+  template<typename T>
+  unsigned nclose (const std::vector<T>& a, const std::vector<T>& b, float atol=1e-7, float rtol=1e-5);
+
+
+  template<typename T>
   void load_binary_data (std::string file_path, std::vector<T>& test_data);
 
   template<typename T>
@@ -231,34 +238,48 @@ void util::write_binary_data (std::string file_path, T* buffer, unsigned len)
 
 
 template<typename T>
-bool util::allclose (const std::vector<T>& a, const std::vector<T>& b, float atol, float rtol) {
+unsigned util::nclose (const std::vector<T>& a, const std::vector<T>& b, float atol, float rtol) {
 
   if (a.size() != b.size()) {
-     if (util::config::verbose) {
-       std::cerr << "util::allclose vectors not the same size" << std::endl;
-     }
-     return false;
+    std::string msg ("util::nclose: vectors not the same size");
+    if (util::config::verbose) {
+     std::cerr << msg << std::endl;
+    }
+    throw msg;
   }
   if (util::config::verbose) {
-    std::cerr << "util::allclose size=" << a.size() << std::endl;
+    std::cerr << "util::nclose size=" << a.size() << std::endl;
   }
-  return util::allclose(a.data(), b.data(), (unsigned) a.size(), atol, rtol);
+  return util::nclose(a.data(), b.data(), (unsigned) a.size(), atol, rtol);
+}
+
+
+template<typename T>
+unsigned util::nclose (const T* a, const T* b, unsigned size, float atol, float rtol)
+{
+  unsigned nclose=0;
+  bool close;
+  for (unsigned i=0; i<size; i++) {
+    close = util::isclose<T>(a[i], b[i], atol, rtol);
+    if (close) {
+      nclose++;
+    }
+  }
+  return nclose;
+}
+
+
+template<typename T>
+bool util::allclose (const std::vector<T>& a, const std::vector<T>& b, float atol, float rtol) {
+
+  return util::nclose<T> (a, b, atol, rtol) == a.size();
 }
 
 
 template<typename T>
 bool util::allclose (const T* a, const T* b, unsigned size, float atol, float rtol)
 {
-  bool close;
-  bool ret = true;
-  for (unsigned i=0; i<size; i++) {
-    close = util::isclose<T>(a[i], b[i], atol, rtol);
-    if (! close) {
-      ret = false;
-      break;
-    }
-  }
-  return ret;
+  return util::nclose<T> (a, b, size, atol, rtol) == size;
 }
 
 template<typename T>
@@ -404,6 +425,7 @@ void util::IntegrationTestConfiguration<FilterbankType>::setup (
   for (unsigned idx=0; idx<in_size; idx++) {
     // in_vec[idx] = std::complex<float>((float) idx, (float) idx);
     in_vec[idx] = std::complex<float>(random_gen(), random_gen());
+    // std::cerr << in_vec[idx] << std::endl;
   }
 
   util::loadTimeSeries<std::complex<float>>(in_vec, in, in_dim);

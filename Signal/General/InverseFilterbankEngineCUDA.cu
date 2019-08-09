@@ -812,9 +812,6 @@ void CUDA::InverseFilterbankEngineCUDA::perform (
   int k_response_stitch_in_ndat = input_fft_length;
   int k_response_stitch_out_ndat = output_nchan * output_fft_length;
 
-  float* h_stitching;
-  // unsigned d_stitching_size = output_nchan*input_npol*output_fft_length*output_nchan*2;
-  // std::vector<float> h_stitching (d_stitching_size);
 
   for (unsigned ipart=0; ipart<npart; ipart++)
   {
@@ -863,12 +860,25 @@ void CUDA::InverseFilterbankEngineCUDA::perform (
         input_stride,
         input_fft_length
       );
+
+      reporter.emit("fft_window",
+        (float*) d_input_overlap_discard,
+        input_nchan, input_npol, input_fft_length, 2
+      );
+
        cufftExecC2C(
          forward,
           (cufftComplex*) d_input_overlap_discard,
          (cufftComplex*) d_input_overlap_discard,
          CUFFT_FORWARD
        );
+
+       reporter.emit("fft",
+         (float*) d_input_overlap_discard,
+         input_nchan, input_npol, input_fft_length, 2
+       );
+
+
       // cudaDeviceSynchronize();
     }
 
@@ -889,13 +899,11 @@ void CUDA::InverseFilterbankEngineCUDA::perform (
       k_response_stitch_out_samples_per_part,
       pfb_dc_chan, pfb_all_chan
     );
-    check_error("CUDA::InverseFilterbankEngineCUDA::perform");
+    check_error("CUDA::InverseFilterbankEngineCUDA::perform: k_response_stitch");
 
-    h_stitching = (float*) d_stitching;
-
-    reporter.emit("data", h_stitching,
+    reporter.emit("response_stitch", (float*) d_stitching,
       1, input_npol, output_fft_length*output_nchan, 2);
-    check_error("CUDA::InverseFilterbankEngineCUDA::perform");
+    check_error("CUDA::InverseFilterbankEngineCUDA::perform emit(\"response_stitch\")");
     // k_print_array<<<1, 1, 0, stream>>>(d_stitching, output_nchan, input_npol, output_fft_length*output_nchan);
     if (verbose)
     {
@@ -907,6 +915,11 @@ void CUDA::InverseFilterbankEngineCUDA::perform (
       (cufftComplex*) d_stitching,
       CUFFT_INVERSE
     );
+    check_error("CUDA::InverseFilterbankEngineCUDA::perform: cufftExecC2C");
+    reporter.emit("ifft", (float*) d_stitching,
+      1, input_npol, output_fft_length*output_nchan, 2);
+    check_error("CUDA::InverseFilterbankEngineCUDA::perform: emit(\"ifft\")");
+
     if (verbose)
     {
       std::cerr << "CUDA::InverseFilterbankEngineCUDA::perform: applying overlap save kernel" << std::endl;

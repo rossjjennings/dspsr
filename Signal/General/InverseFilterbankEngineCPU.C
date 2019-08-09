@@ -244,6 +244,8 @@ void dsp::InverseFilterbankEngineCPU::perform (
           fft_window->operate(input_time_scratch);
         }
 
+        reporter.emit("fft_window", input_time_scratch, 1, 1, input_fft_length, 2);
+
         if (real_to_complex) {
           forward->frc1d(input_fft_length, freq_dom_ptr, input_time_scratch);
         } else {
@@ -251,6 +253,7 @@ void dsp::InverseFilterbankEngineCPU::perform (
           forward->fcc1d(input_fft_length, freq_dom_ptr, input_time_scratch);
         }
         // discard oversampled regions and do circular shift
+        reporter.emit("fft", freq_dom_ptr, 1, 1, input_fft_length, 2);
 
         if (pfb_dc_chan) {
           if (input_ichan == 0) {
@@ -305,7 +308,7 @@ void dsp::InverseFilterbankEngineCPU::perform (
         }
       }
 
-      reporter.emit("data", stitch_scratch, 1, 1, output_fft_length*output_nchan, 2);
+      reporter.emit("response_stitch", stitch_scratch, 1, 1, output_fft_length*output_nchan, 2);
       // std::complex<float>* stitch_scratch_complex = reinterpret_cast<std::complex<float>*>(stitch_scratch);
       // for (int idat=0; idat<output_fft_length*output_nchan; idat++)
       // {
@@ -324,6 +327,7 @@ void dsp::InverseFilterbankEngineCPU::perform (
           // }
           // std::cerr << "dsp::InverseFilterbankEngineCPU::perform: before fft" << std::endl;
           backward->bcc1d(output_fft_length, output_fft_scratch, output_freq_dom_ptr);
+          reporter.emit("ifft", output_fft_scratch, 1, 1, output_fft_length, 2);
           // std::cerr << "dsp::InverseFilterbankEngineCPU::perform: after fft" << std::endl;
           // ifft_file.write(
           //   reinterpret_cast<const char*>(output_fft_scratch),
