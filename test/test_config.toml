@@ -69,9 +69,9 @@ rtol = 1e-4
 # overlap_neg = 16
 
 [[InverseFilterbank.test_shapes]]
-npart = 5
-input_nchan = 2560
-output_nchan = 128
+npart = 2
+input_nchan = 256
+output_nchan = 1
 input_npol = 1
 output_npol = 1
 input_ndat = 1024

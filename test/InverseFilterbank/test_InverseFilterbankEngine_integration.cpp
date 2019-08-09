@@ -1,5 +1,6 @@
 #include <vector>
 #include <fstream>
+#include <string>
 
 #include "catch.hpp"
 
@@ -49,7 +50,7 @@ public:
         }
         error = cudaStreamSynchronize(stream);
       } else {
-        error = cudaMemcpy((void*) data_ptr, (void*) arr, total_size_bytes, cudaMemcpyDeviceToHost);
+        error = cudaMemcpy(data_ptr, arr, total_size_bytes, cudaMemcpyDeviceToHost);
         if (error != 0) {
           throw "cudaMemcpy error";
         }
@@ -62,21 +63,28 @@ public:
       // }
       data.assign(arr, arr + total_size);
     }
+    // if (util::config::verbose) {
+    //   std::cerr << "Reporter::operator() data_vectors.size()=" << data_vectors.size() << std::endl;
+    // }
     data_vectors.push_back(data);
   }
 
 
   void concatenate_data_vectors (std::vector<float>& result)
   {
+
     unsigned n_vec = data_vectors.size();
     unsigned size_each = data_vectors[0].size();
     unsigned total_size = size_each * n_vec;
-
+    // if (util::config::verbose) {
+    //   std::cerr << "Reporter::concatenate_data_vectors: n_vec=" << n_vec
+    //     << " size_each=" << size_each << " total_size=" << total_size << std::endl;
+    // }
     result.resize(total_size);
 
-    for (unsigned idx=0; idx<n_vec; idx++) {
-      for (unsigned idat=0; idat<size_each; idx++) {
-        result[idx * size_each + idat] = data_vectors[idx][idat];
+    for (unsigned ipart=0; ipart<n_vec; ipart++) {
+      for (unsigned idat=0; idat<size_each; idat++) {
+        result[ipart * size_each + idat] = data_vectors[ipart][idat];
       }
     }
 
@@ -170,7 +178,7 @@ TEST_CASE (
   // now lets compare the two time series
   transfer(out_gpu, out_cuda, cudaMemcpyDeviceToHost);
 
-  std::vector<Repoter> reporters = {
+  std::vector<Reporter> reporters = {
     reporter_cpu_fft_window,
     reporter_cuda_fft_window,
     reporter_cpu_fft,
@@ -179,14 +187,14 @@ TEST_CASE (
     reporter_cuda_response_stitch,
     reporter_cpu_ifft,
     reporter_cuda_ifft
-  }
+  };
 
   std::vector<std::string> reporter_names = {
     "fft_window",
     "fft",
     "response_stitch",
     "ifft"
-  }
+  };
 
   if (npol == 2) {
     reporters = {
@@ -194,12 +202,12 @@ TEST_CASE (
       reporter_cuda_response_stitch,
       reporter_cpu_ifft,
       reporter_cuda_ifft
-    }
+    };
 
     reporter_names = {
       "response_stitch",
       "ifft"
-    }
+    };
   }
 
   unsigned nclose;
@@ -207,7 +215,7 @@ TEST_CASE (
   std::vector<float> cpu_vector;
   std::vector<float> cuda_vector;
 
-  for (unsigned r_idx=0; r_idx=reporter_names.size(); r_idx++)
+  for (unsigned r_idx=0; r_idx<reporter_names.size(); r_idx++)
   {
     reporters[r_idx*2].concatenate_data_vectors(cpu_vector);
     reporters[r_idx*2 + 1].concatenate_data_vectors(cuda_vector);
@@ -221,8 +229,14 @@ TEST_CASE (
     );
     std::ofstream cpu_file(
       reporter_names[r_idx] + ".cpu.dat", std::ios::out | std::ios::binary);
-    std::ofstream cpu_file(
+    std::ofstream cuda_file(
       reporter_names[r_idx] + ".cuda.dat", std::ios::out | std::ios::binary);
+
+    cpu_file.write(
+      reinterpret_cast<const char*>(cpu_vector.data()),
+      size * sizeof(float)
+    );
+    cpu_file.close();
 
     cuda_file.write(
       reinterpret_cast<const char*>(cuda_vector.data()),
