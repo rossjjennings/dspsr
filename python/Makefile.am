@@ -5,7 +5,7 @@ python_LTLIBRARIES = _dspsr.la
 
 _dspsr_la_SOURCES = dspsr.i
 
-nodist__dspsr_la_SOURCES = dspsr_wrap.cxx
+nodist__dspsr_la_SOURCES = ./dspsr_wrap.cxx
 
 _dspsr_la_LDFLAGS = -module -avoid-version -no-undefined
 
@@ -18,7 +18,7 @@ _dspsr_la_LIBADD = \
 
 SWIG_FLAGS = -Wall -python -I$(top_builddir)/local_include @PSRCHIVE_INCLUDE@
 
-dspsr_wrap.cxx: $(srcdir)/dspsr.i
+./dspsr_wrap.cxx: $(srcdir)/dspsr.i
 	$(SWIG) $(SWIG_FLAGS) -outdir $(builddir) $(srcdir)/dspsr.i
  
 CLEANFILES = dspsr.py dspsr.pyc dspsr_wrap.cxx
