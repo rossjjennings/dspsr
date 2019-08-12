@@ -150,17 +150,24 @@ void dsp::InverseFilterbankEngineCPU::setup (dsp::InverseFilterbank* filterbank)
   unsigned output_fft_points = 2*output_fft_length; // always return complex result
   unsigned stitch_points = 2*output_nchan*output_fft_length;
 
-  dsp::Scratch* scratch = new Scratch;
-  input_fft_scratch = scratch->space<float>
-    (input_time_points + input_fft_points + output_fft_points  + stitch_points);
-  input_time_scratch = input_fft_scratch + input_fft_points;
-  output_fft_scratch = input_time_scratch + input_time_points;
-  stitch_scratch = output_fft_scratch + output_fft_points;
+  total_scratch_needed = input_time_points + input_fft_points + output_fft_points  + stitch_points;
+
+  // dsp::Scratch* scratch = new Scratch;
+  // input_fft_scratch = scratch->space<float>
+  //   (input_time_points + input_fft_points + output_fft_points  + stitch_points);
+  // input_time_scratch = input_fft_scratch + input_fft_points;
+  // output_fft_scratch = input_time_scratch + input_time_points;
+  // stitch_scratch = output_fft_scratch + output_fft_points;
 }
 
 
-void dsp::InverseFilterbankEngineCPU::set_scratch (float *)
+void dsp::InverseFilterbankEngineCPU::set_scratch (float * _scratch)
 {
+  input_fft_scratch = _scratch;
+  input_time_scratch = input_fft_scratch + input_fft_points;
+  output_fft_scratch = input_time_scratch + input_time_points;
+  stitch_scratch = output_fft_scratch + output_fft_points;
+
 }
 
 void dsp::InverseFilterbankEngineCPU::perform (

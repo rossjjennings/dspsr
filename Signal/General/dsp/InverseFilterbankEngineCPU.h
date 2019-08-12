@@ -121,6 +121,9 @@ namespace dsp
     //! upsampled spectrum
     float* stitch_scratch;
 
+
+
+
     //! Flag indicating whether FFT plans have been setup
     bool fft_plans_setup;
 

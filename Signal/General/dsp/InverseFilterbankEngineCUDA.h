@@ -233,6 +233,8 @@ namespace CUDA
     //! FFT window in CUDA memory
     float2* d_fft_window;
 
+    unsigned total_scratch_needed;
+
     //! scratch space
     float2* d_scratch;
 

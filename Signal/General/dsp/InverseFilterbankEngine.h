@@ -55,6 +55,7 @@ protected:
   float* output;
   unsigned output_span;
 
+  unsigned total_scratch_needed;
 
 };
 

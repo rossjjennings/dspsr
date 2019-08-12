@@ -98,19 +98,7 @@ __global__ void k_overlap_save_one_to_many (
 
 }
 
-/*!
- * Kernel for removing any overlap discard regions, optionally multiplying
- * by a response kernel in the process. Assumes input data is FPT order.
- * \method k_overlap_save
- * \param t_in the input data array pointer. The shape of the array should be
- *    (nchan, ndat)
- * \param apodization the apodization kernel
- * \param t_out the output data array pointer
- * \param discard_pos the positive overlap discard region, in *complex samples*
- * \param discard_neg the negative overlap discard region, in *complex samples*
- * \param ndat the number of time samples in t_in
- * \param nchan the number of channels in t_in
- */
+
 __global__ void k_overlap_save (
   float2* t_in,
   float2* t_out,
@@ -753,6 +741,26 @@ void CUDA::InverseFilterbankEngineCUDA::setup (dsp::InverseFilterbank* filterban
       throw Error (InvalidState, "CUDA::InverseFilterbankEngineCUDA::setup",
        "could not copy FFT window response to device");
     }
+
+
+    unsigned overlap_discard_scratch_space = 2*npol*input_nchan*input_fft_length;
+    unsigned stitching_scratch_space = 2*npol*output_nchan*output_fft_length;
+
+    total_scratch_needed = overlap_discard_scratch_space + stitching_scratch_space;
+
+    // unsigned input_fft_points = input->get_ndim()*input_fft_length;
+    // unsigned input_time_points = input_fft_points;
+    // unsigned output_fft_points = 2*output_fft_length; // always return complex result
+    // unsigned stitch_points = 2*output_nchan*output_fft_length;
+    //
+    // dsp::Scratch* scratch = new Scratch;
+    // input_fft_scratch = scratch->space<float>
+    //   (input_time_points + input_fft_points + output_fft_points  + stitch_points);
+    // input_time_scratch = input_fft_scratch + input_fft_points;
+    // output_fft_scratch = input_time_scratch + input_time_points;
+    // stitch_scratch = output_fft_scratch + output_fft_points;
+    //
+
   }
 
 
@@ -874,6 +882,7 @@ void CUDA::InverseFilterbankEngineCUDA::perform (
         input_stride,
         input_fft_length
       );
+      check_error("CUDA::InverseFilterbankEngineCUDA::perform: k_overlap_discard");
 
       reporter.emit("fft_window",
         (float*) d_input_overlap_discard,
@@ -886,6 +895,8 @@ void CUDA::InverseFilterbankEngineCUDA::perform (
          (cufftComplex*) d_input_overlap_discard,
          CUFFT_FORWARD
        );
+
+       check_error("CUDA::InverseFilterbankEngineCUDA::perform: fft");
 
        reporter.emit("fft",
          (float*) d_input_overlap_discard,
