@@ -106,6 +106,8 @@ TEST_CASE (
 
   std::vector<float> thresh = test_config.get_thresh();
   std::vector<util::TestShape> test_shapes = test_config.get_test_vector_shapes();
+  bool do_fft_window = test_config.get_field<bool>("InverseFilterbank.do_fft_window");
+  bool do_response = test_config.get_field<bool>("InverseFilterbank.do_response");
   auto idx = GENERATE_COPY(range(0, (int) test_shapes.size()));
   util::TestShape test_shape = test_shapes[idx];
 
@@ -154,7 +156,7 @@ TEST_CASE (
   config.filterbank->set_pfb_dc_chan(true);
   config.filterbank->set_pfb_all_chan(true);
 
-  config.setup (in, out);
+  config.setup (in, out, do_fft_window, do_response);
 
   engine_cpu.setup(config.filterbank);
   std::vector<float *> scratch_cpu = config.allocate_scratch<dsp::Memory> ();
@@ -246,9 +248,14 @@ TEST_CASE (
 
     if (util::config::verbose)
     {
-      std::cerr << "test_InverseFitlerbankEngine_integration: "
+      std::cerr << "test_InverseFilterbankEngine_integration: "
         << reporter_names[r_idx] << " " << nclose << "/" << size
         << " (" << 100 * (float) nclose / size << "%)" << std::endl;
+      std::cerr << "test_InverseFilterbankEngine_integration: "
+        << reporter_names[r_idx]
+        << " max cpu=" << util::max(cpu_vector)
+        << ", max gpu=" << util::max(cuda_vector)
+        << std::endl;
     }
 
     CHECK (nclose == size);

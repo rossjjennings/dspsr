@@ -94,6 +94,9 @@ void dsp::InverseFilterbankEngineCPU::setup (dsp::InverseFilterbank* filterbank)
 
   OptimalFFT* optimal = 0;
   if (response && response->has_optimal_fft()) {
+    if (verbose) {
+      std::cerr << "dsp::InverseFilterbankEngineCPU::setup: getting OptimalFFT object" << std::endl;
+    }
     optimal = response->get_optimal_fft();
     if (optimal) {
       FTransform::set_library(optimal->get_library(input_fft_length));
@@ -108,7 +111,7 @@ void dsp::InverseFilterbankEngineCPU::setup (dsp::InverseFilterbank* filterbank)
   }
   backward = FTransform::Agent::current->get_plan(output_fft_length, FTransform::bcc);
   if (verbose) {
-    std::cerr << "dsp::InverseFilterbankEngineCPU::setup_fft_plans: done setting up FFT plans" << std::endl;
+    std::cerr << "dsp::InverseFilterbankEngineCPU::setup: done setting up FFT plans" << std::endl;
   }
   fft_plans_setup = true;
 
@@ -241,6 +244,9 @@ void dsp::InverseFilterbankEngineCPU::perform (
         );
 
         if (fft_window) {
+          if (verbose && input_ichan == 0) {
+            std::cerr << "dsp::InverseFilterbankEngineCPU::perform: applying fft_window" << std::endl;
+          }
           fft_window->operate(input_time_scratch);
         }
 

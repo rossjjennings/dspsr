@@ -100,9 +100,6 @@ TEST_CASE (
 
   Rational os_factor (4, 3);
 
-
-
-
   unsigned npart = test_shape.npart;
   util::IntegrationTestConfiguration<dsp::InverseFilterbank> config(
     os_factor, npart, test_shape.input_npol,
@@ -113,7 +110,7 @@ TEST_CASE (
   config.filterbank->set_pfb_dc_chan(true);
   config.filterbank->set_pfb_all_chan(true);
 
-  config.setup(in, out);
+  config.setup(in, out, false, false);
 
   auto transfer = util::transferTimeSeries(cuda_stream, device_memory);
 

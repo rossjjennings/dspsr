@@ -1,38 +1,21 @@
 // configuration for InverseFilterbank testing
 
-#ifndef __InverseFilterbankTestConfig_h
-#define __InverseFilterbankTestConfig_h
+#ifndef __InverseFilterbankTestConfig_hpp
+#define __InverseFilterbankTestConfig_hpp
 
 #include <vector>
 
-#include "util.hpp"
+#include "TestConfig.hpp"
 
 namespace util {
   namespace InverseFilterbank {
 
-    class InverseFilterbankTestConfig {
+    class InverseFilterbankTestConfig : public util::TestConfig {
 
     public:
 
-      InverseFilterbankTestConfig ();
-
       std::vector<TestShape> get_test_vector_shapes ();
 
-      std::vector<float> get_thresh ();
-
-      // void load_json_config (bool force=false);
-
-      void load_toml_config (bool force=false);
-
-    private:
-
-      toml::Value toml_config;
-
-      bool toml_config_loaded;
-
-      // json json_config;
-      //
-      // bool json_config_loaded;
     };
 
     template<typename T>

@@ -213,7 +213,9 @@ __global__ void k_overlap_discard (
           if (resp == nullptr) {
             t_out[out_offset + idat] = t_in[in_offset + idat];
           } else {
-            t_out[out_offset + idat] = cuCmulf(resp[idat], t_in[in_offset + idat]);
+            // t_out[out_offset + idat] = cuCmulf(resp[idat], t_in[in_offset + idat]);
+            t_out[out_offset + idat].x = resp[idat].x * t_in[in_offset + idat].x;
+            t_out[out_offset + idat].y = resp[idat].y * t_in[in_offset + idat].y;
           }
         }
       }
@@ -704,6 +706,9 @@ void CUDA::InverseFilterbankEngineCUDA::setup (dsp::InverseFilterbank* filterban
   cudaError_t error;
   // need device memory for response
   if (response) {
+    if (verbose) {
+      std::cerr << "CUDA::InverseFilterbankEngineCUDA::setup: copying response from host to device" << std::endl;
+    }
     unsigned response_size = response->get_nchan() * response->get_ndat() * sizeof(cufftComplex);
     const float* response_kernel = response->get_datptr(0, 0);
     cudaMalloc((void**) &d_response, response_size);
@@ -723,6 +728,15 @@ void CUDA::InverseFilterbankEngineCUDA::setup (dsp::InverseFilterbank* filterban
   }
   // need device memory for apodization
   if (fft_window) {
+    if (verbose) {
+      std::cerr << "CUDA::InverseFilterbankEngineCUDA::setup: copying fft window from host to device" << std::endl;
+      std::cerr << "CUDA::InverseFilterbankEngineCUDA::setup: fft_window.get_type() "
+        << fft_window->get_type() << std::endl;
+      std::cerr << "CUDA::InverseFilterbankEngineCUDA::setup: fft_window.get_ndim() "
+        << fft_window->get_ndim() << std::endl;
+      std::cerr << "CUDA::InverseFilterbankEngineCUDA::setup: fft_window.get_ndat() "
+        << fft_window->get_ndat() << std::endl;
+    }
     unsigned fft_window_size = fft_window->get_nchan() * fft_window->get_ndat() * sizeof(cufftComplex);
     const float* fft_window_kernel = fft_window->get_datptr(0, 0);
     cudaMalloc((void**) &d_fft_window, fft_window_size);

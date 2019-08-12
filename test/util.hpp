@@ -13,6 +13,8 @@
 // #include "json.hpp"
 #include "toml.h"
 
+#include "dsp/Apodization.h"
+#include "dsp/Response.h"
 #include "dsp/MemoryCUDA.h"
 #include "dsp/TransferCUDA.h"
 #include "dsp/Scratch.h"
@@ -68,6 +70,34 @@ namespace util {
     static const unsigned ndim = 2;
   };
 
+  template<typename T>
+  struct tomltype;
+
+  template<>
+  struct tomltype<float> {
+    typedef double type;
+  };
+
+  template<>
+  struct tomltype<double> {
+    typedef double type;
+  };
+
+  template<>
+  struct tomltype<unsigned> {
+    typedef int type;
+  };
+
+  template<>
+  struct tomltype<int> {
+    typedef int type;
+  };
+
+  template<>
+  struct tomltype<bool> {
+    typedef bool type;
+  };
+
   template<typename unit>
   using delta = std::chrono::duration<double, unit>;
 
@@ -89,6 +119,18 @@ namespace util {
 
   template<typename T>
   unsigned nclose (const std::vector<T>& a, const std::vector<T>& b, float atol=1e-7, float rtol=1e-5);
+
+  template<typename T>
+  T max (const T* a, unsigned size);
+
+  template<typename T>
+  T max (const std::vector<T>& a);
+
+  template<typename T>
+  T min (const T* a, unsigned size);
+
+  template<typename T>
+  T min (const std::vector<T>& a);
 
   template<typename T>
   void load_binary_data (std::string file_path, std::vector<T>& test_data);
@@ -164,7 +206,8 @@ namespace util {
 
     void setup (
       dsp::TimeSeries* in,
-      dsp::TimeSeries* out
+      dsp::TimeSeries* out,
+      bool, bool
     );
 
     template<class MemoryType>
@@ -288,6 +331,45 @@ bool util::isclose (T a, T b, float atol, float rtol)
 }
 
 template<typename T>
+T util::max (const T* a, unsigned size)
+{
+  T max_val = a[0];
+  for (unsigned idx=1; idx<size; idx++)
+  {
+    if (a[idx] > max_val) {
+      max_val = a[idx];
+    }
+  }
+  return max_val;
+}
+
+template<typename T>
+T util::max (const std::vector<T>& a)
+{
+  return util::max<T>(a.data(), a.size());
+}
+
+template<typename T>
+T util::min (const T* a, unsigned size)
+{
+  T min_val = a[0];
+  for (unsigned idx=1; idx<size; idx++)
+  {
+    if (a[idx] < min_val) {
+      min_val = a[idx];
+    }
+  }
+  return min_val;
+}
+
+template<typename T>
+T util::min (const std::vector<T>& a)
+{
+  return util::min<T>(a.data(), a.size());
+}
+
+
+template<typename T>
 void util::print_array (const std::vector<T>& arr, std::vector<unsigned>& dim)
 {
   util::print_array<T>(const_cast<T*>(arr.data()), dim);
@@ -393,7 +475,9 @@ void util::loadTimeSeries (
 template<typename FilterbankType>
 void util::IntegrationTestConfiguration<FilterbankType>::setup (
   dsp::TimeSeries* in,
-  dsp::TimeSeries* out
+  dsp::TimeSeries* out,
+  bool do_fft_window,
+  bool do_response
 )
 {
   if (util::config::verbose) {
@@ -429,6 +513,36 @@ void util::IntegrationTestConfiguration<FilterbankType>::setup (
 
   util::loadTimeSeries<std::complex<float>>(in_vec, in, in_dim);
   util::loadTimeSeries<std::complex<float>>(out_vec, out, out_dim);
+
+  if (do_fft_window)
+  {
+    if (util::config::verbose) {
+      std::cerr << "util::IntegrationTestConfiguration::setup creating Tukey FFT window" << std::endl;
+    }
+    Reference::To<dsp::Apodization> fft_window = new dsp::Apodization;
+    fft_window->Tukey(input_fft_length, 0, input_overlap, true);
+    filterbank->set_apodization(fft_window);
+  }
+
+  if (do_response)
+  {
+    if (util::config::verbose) {
+      std::cerr << "util::IntegrationTestConfiguration::setup creating Response" << std::endl;
+    }
+    Reference::To<dsp::Response> response = new dsp::Response;
+    response->resize(1, output_nchan, output_fft_length, 2);
+    float* ptr;
+
+    for (unsigned ichan=0; ichan<response->get_nchan(); ichan++) {
+      ptr = response->get_datptr(ichan, 0);
+      for (unsigned idat=0; idat<response->get_ndat(); idat++) {
+        ptr[2*idat] = random_gen();
+        ptr[2*idat + 1] = random_gen();
+      }
+    }
+    filterbank->set_response(response);
+  }
+
 
   filterbank->set_input(in);
 	filterbank->set_output(out);

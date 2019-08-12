@@ -11,6 +11,7 @@ test_main_SOURCES = test_main.cpp \
                     InverseFilterbank/test_InverseFilterbank.cpp \
                     InverseFilterbank/test_InverseFilterbankPipeline.cpp \
                     util.cpp \
+                    TestConfig.cpp \
                     InverseFilterbankTestConfig.cpp
 
 
@@ -21,7 +22,7 @@ if HAVE_CUFFT
                        InverseFilterbank/test_InverseFilterbankEngineCUDA.cpp \
                        InverseFilterbank/test_InverseFilterbankEngine_integration.cpp
 
-  test_main_SOURCES += test_cufft_fftw_precision.cpp
+  test_main_SOURCES += test_FTransform_cufft_precision.cpp
 
 endif
 

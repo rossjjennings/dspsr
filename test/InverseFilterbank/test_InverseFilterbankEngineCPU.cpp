@@ -40,7 +40,7 @@ TEST_CASE (
 
   config.filterbank->set_pfb_dc_chan(true);
   config.filterbank->set_pfb_all_chan(true);
-  config.setup (in, out);
+  config.setup (in, out, false, false);
 
   SECTION ("can call setup method")
   {
