@@ -133,6 +133,18 @@ namespace util {
   T min (const std::vector<T>& a);
 
   template<typename T>
+  std::vector<T> subtract (const std::vector<T>& a, const std::vector<T>& b);
+
+  template<typename T>
+  void subtract (T* a, T* b, T* res, unsigned size);
+
+  template<typename T>
+  std::vector<T> abs (const std::vector<T>& a);
+
+  template<typename T>
+  void abs (T* a, unsigned size);
+
+  template<typename T>
   void load_binary_data (std::string file_path, std::vector<T>& test_data);
 
   template<typename T>
@@ -367,6 +379,30 @@ T util::min (const std::vector<T>& a)
 {
   return util::min<T>(a.data(), a.size());
 }
+
+
+template<typename T>
+std::vector<T> util::subtract (const std::vector<T>& a, const std::vector<T>& b)
+{
+}
+
+template<typename T>
+void util::subtract (const T* a, const T* b, T* res, unsigned size)
+{
+}
+
+template<typename T>
+std::vector<T> util::abs (const std::vector<T>& a)
+{
+  std::vector<T> res(a.size());
+  util::abs (a.data(), res.data(), a.size());
+}
+
+template<typename T>
+void util::abs (const T* a, T* res, unsigned size)
+{
+}
+
 
 
 template<typename T>
