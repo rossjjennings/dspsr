@@ -39,6 +39,9 @@ public:
   //! Finish up
   virtual void finish () { }
 
+  //! get the amount of scratch space the engine has calculated that it needs
+  unsigned get_total_scratch_needed () const { return total_scratch_needed; }
+
   class Reporter {
   public:
     virtual void operator() (float*, unsigned, unsigned, unsigned, unsigned) {};

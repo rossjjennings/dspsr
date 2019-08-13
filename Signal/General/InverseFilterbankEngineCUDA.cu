@@ -65,7 +65,7 @@ __global__ void k_overlap_save_one_to_many (
   int out_ndat
 )
 {
-  int total_size_nchan = gridDim.x; // for input nchan
+  int total_size_nchan = gridDim.x; // for nchan
   int total_size_ndat = blockDim.x; // for ndat
   int total_size_z = blockDim.z * gridDim.z; // for npart and npol
   int npol_incr = total_size_z <= npol ? 1: npol;
@@ -81,8 +81,6 @@ __global__ void k_overlap_save_one_to_many (
 
   int in_offset;
   int out_offset;
-
-  // printf("samples_per_part=%d total_size_nchan=%d, total_size_ndat=%d, blockIdx.x=%d, blockIdx.y=%d\n", samples_per_part, total_size_nchan, total_size_ndat, blockIdx.x, blockIdx.y);
 
   for (int ochan=blockIdx.x; ochan<nchan; ochan+=total_size_nchan) {
     for (int ipol=idz%npol; ipol<npol; ipol+=npol_incr) {
@@ -741,43 +739,35 @@ void CUDA::InverseFilterbankEngineCUDA::setup (dsp::InverseFilterbank* filterban
       throw Error (InvalidState, "CUDA::InverseFilterbankEngineCUDA::setup",
        "could not copy FFT window response to device");
     }
-
-
-    unsigned overlap_discard_scratch_space = 2*npol*input_nchan*input_fft_length;
-    unsigned stitching_scratch_space = 2*npol*output_nchan*output_fft_length;
-
-    total_scratch_needed = overlap_discard_scratch_space + stitching_scratch_space;
-
-    // unsigned input_fft_points = input->get_ndim()*input_fft_length;
-    // unsigned input_time_points = input_fft_points;
-    // unsigned output_fft_points = 2*output_fft_length; // always return complex result
-    // unsigned stitch_points = 2*output_nchan*output_fft_length;
-    //
-    // dsp::Scratch* scratch = new Scratch;
-    // input_fft_scratch = scratch->space<float>
-    //   (input_time_points + input_fft_points + output_fft_points  + stitch_points);
-    // input_time_scratch = input_fft_scratch + input_fft_points;
-    // output_fft_scratch = input_time_scratch + input_time_points;
-    // stitch_scratch = output_fft_scratch + output_fft_points;
-    //
-
   }
 
+  d_input_overlap_discard_samples = input_npol*input_nchan*input_fft_length;
+  d_stitching_samples = input_npol*output_nchan*output_fft_length;
+
+  // we multiply by two because the device scratch space point to float2 arrays,
+  // and the Scratch object allocates in float.
+  total_scratch_needed = 2*(d_input_overlap_discard_samples + d_stitching_samples);
+
+  if (verbose) {
+    std::cerr << "CUDA::InverseFilterbankEngineCUDA::setup:"
+      << " d_input_overlap_discard_samples=" << d_input_overlap_discard_samples
+      << " d_stitching_samples=" << d_stitching_samples
+      << " total_scratch_needed=" << total_scratch_needed
+      << std::endl;
+  }
 
 }
 
 
-void CUDA::InverseFilterbankEngineCUDA::set_scratch (
-  float* _scratch
-)
+void CUDA::InverseFilterbankEngineCUDA::set_scratch (float* _scratch)
 {
-  unsigned offset = input_npol*input_nchan*input_fft_length;
   if (verbose) {
-    std::cerr << "CUDA::InverseFilterbankEngineCUDA::set_scratch: stitching pointer offset=" << offset << std::endl;
+    std::cerr << "CUDA::InverseFilterbankEngineCUDA::set_scratch(" << _scratch << ")" << std::endl;
   }
   d_scratch = (float2*) _scratch;
   d_input_overlap_discard = d_scratch;
-  d_stitching = d_scratch + offset;
+  d_stitching = d_scratch + d_input_overlap_discard_samples;
+  // check_error ("CUDA::InverseFilterbankEngineCUDA::set_scratch");
 }
 
 
@@ -806,13 +796,18 @@ void CUDA::InverseFilterbankEngineCUDA::perform (
   unsigned input_stride = in->get_stride() / in->get_ndim();
   unsigned output_stride = out->get_stride() / out->get_ndim();
 
+  unsigned _input_stride = in->internal_get_subsize();
+  unsigned _output_stride = out->internal_get_subsize();
+
   if (verbose) {
     std::cerr << "CUDA::InverseFilterbankEngineCUDA::perform: in shape=("
       << in->get_nchan() << ", " << in->get_npol() << ", " << in->get_ndat() << ")" << std::endl;
     std::cerr << "CUDA::InverseFilterbankEngineCUDA::perform: out shape=("
       << out->get_nchan() << ", " << out->get_npol() << ", " << out->get_ndat() << ")" << std::endl;
     std::cerr << "CUDA::InverseFilterbankEngineCUDA::perform: input_stride=" << input_stride << std::endl;
+    std::cerr << "CUDA::InverseFilterbankEngineCUDA::perform: _input_stride=" << _input_stride << std::endl;
     std::cerr << "CUDA::InverseFilterbankEngineCUDA::perform: output_stride=" << output_stride << std::endl;
+    std::cerr << "CUDA::InverseFilterbankEngineCUDA::perform: _output_stride=" << _output_stride << std::endl;
     std::cerr << "CUDA::InverseFilterbankEngineCUDA::perform: in.internal_get_size()=" << in->internal_get_size() << std::endl;
     std::cerr << "CUDA::InverseFilterbankEngineCUDA::perform: out.internal_get_size()=" << out->internal_get_size() << std::endl;
   }
@@ -952,7 +947,8 @@ void CUDA::InverseFilterbankEngineCUDA::perform (
     grid.x = output_nchan;
     grid.y = 1;
     threads.x = (output_fft_length <= 1024) ? output_fft_length: 1024;
-    k_overlap_save_one_to_many<<<grid, threads, 0, stream>>>(
+    // k_overlap_save_one_to_many<<<grid, threads, 0, stream>>>(
+    k_overlap_save_one_to_many<<<1, 1, 0, stream>>>(
       (float2*) d_stitching,
       (float2*) out_ptr,
       output_discard_pos,
@@ -964,6 +960,7 @@ void CUDA::InverseFilterbankEngineCUDA::perform (
       output_fft_length*output_nchan,
       output_stride
     );
+    check_error("CUDA::InverseFilterbankEngineCUDA::perform: k_overlap_save_one_to_many");
   }
 }
 

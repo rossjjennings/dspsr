@@ -233,16 +233,22 @@ namespace CUDA
     //! FFT window in CUDA memory
     float2* d_fft_window;
 
-    unsigned total_scratch_needed;
-
     //! scratch space
     float2* d_scratch;
 
     //! scratch space for overlap discard on input data
     float2* d_input_overlap_discard;
 
+    //! Scratch space, in samples, needed for the d_input_overlap_discard space
+    unsigned d_input_overlap_discard_samples;
+
     //! scratch space for stitching together results of forward FFTs
     float2* d_stitching;
+
+    //! Scratch space, in samples, needed for the d_stitching space
+    unsigned d_stitching_samples;
+
+
 
   };
 

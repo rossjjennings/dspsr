@@ -294,6 +294,15 @@ void dsp::InverseFilterbank::make_preparations ()
          << endl;
   }
 
+  if (verbose) {
+    std::cerr << "dsp::InverseFilterbank::make_preparations: allocating "
+      << engine->get_total_scratch_needed() << " floats for engine scratch space"
+      << std::endl;
+  }
+
+  float* scratch_space = scratch->space<float>(engine->get_total_scratch_needed());
+  engine->set_scratch(scratch_space);
+
 }
 
 void dsp::InverseFilterbank::prepare_output (uint64_t ndat, bool set_ndat)
@@ -473,7 +482,7 @@ void dsp::InverseFilterbank::resize_output (bool reserve_extra)
                  "input_sample_step == 0 ... not properly prepared");
   }
 
-  if (ndat > input_discard_total) {
+  if (ndat > (unsigned) input_discard_total) {
     npart = (ndat-input_discard_total)/input_sample_step;
   }
 

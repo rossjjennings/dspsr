@@ -312,6 +312,11 @@ void dsp::LoadToFold::construct () try
     filter_channels = config->inverse_filterbank.get_nchan();
 
     filterbanked = new_time_series();
+#if HAVE_CUDA
+    if (run_on_gpu) {
+      filterbanked->set_memory (device_memory);
+    }
+#endif
     config->inverse_filterbank.set_device( device_memory.ptr() );
     config->inverse_filterbank.set_stream( gpu_stream );
 
