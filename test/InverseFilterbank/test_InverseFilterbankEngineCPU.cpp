@@ -32,26 +32,26 @@ TEST_CASE (
   util::TestShape test_shape = test_shapes[idx];
   unsigned npart = test_shape.npart;
 
-  util::IntegrationTestConfiguration<dsp::InverseFilterbank> config (
+  util::InverseFilterbank::InverseFilterbankProxy proxy (
     os_factor, npart, test_shape.input_npol,
     test_shape.input_nchan, test_shape.output_nchan,
     test_shape.input_ndat, test_shape.overlap_pos
   );
+  proxy.filterbank->set_pfb_dc_chan(true);
+  proxy.filterbank->set_pfb_all_chan(true);
 
-  config.filterbank->set_pfb_dc_chan(true);
-  config.filterbank->set_pfb_all_chan(true);
-  config.setup (in, out, false, false);
+  proxy.setup (in, out, false, false);
 
   SECTION ("can call setup method")
   {
-    engine.setup(config.filterbank);
+    engine.setup(proxy.filterbank);
   }
 
   SECTION ("can call perform method")
   {
-    engine.setup(config.filterbank);
-    std::vector<float*> scratch = config.allocate_scratch<dsp::Memory>();
-    engine.set_scratch(scratch[0]);
+    engine.setup(proxy.filterbank);
+    float* scratch = proxy.allocate_scratch(engine.get_total_scratch_needed());
+    engine.set_scratch(scratch);
     engine.perform(
       in, out, npart
     );

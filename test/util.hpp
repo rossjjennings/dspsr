@@ -191,60 +191,6 @@ namespace util {
   std::function<void(dsp::TimeSeries*, dsp::TimeSeries*, cudaMemcpyKind)> transferTimeSeries (
     cudaStream_t stream, CUDA::DeviceMemory* memory);
 
-  template<class FilterbankType>
-  class IntegrationTestConfiguration {
-
-  public:
-
-    IntegrationTestConfiguration (
-      const Rational& _os_factor,
-      unsigned _npart,
-      unsigned _npol,
-      unsigned _input_nchan,
-      unsigned _output_nchan,
-      unsigned _input_ndat,
-      unsigned _input_overlap
-    ) : os_factor(_os_factor),
-        npart(_npart),
-        npol(_npol),
-        input_nchan(_input_nchan),
-        output_nchan(_output_nchan),
-        input_ndat(_input_ndat),
-        input_overlap(_input_overlap)
-    {
-      scratch = new dsp::Scratch;
-      filterbank = new FilterbankType;
-    }
-
-    void setup (
-      dsp::TimeSeries* in,
-      dsp::TimeSeries* out,
-      bool, bool
-    );
-
-    template<class MemoryType>
-    std::vector<float*> allocate_scratch(
-      MemoryType* _memory=nullptr
-    );
-
-    Reference::To<dsp::Scratch> scratch;
-    Reference::To<FilterbankType> filterbank;
-
-  private:
-
-    unsigned total_scratch_needed;
-    unsigned stitching_scratch_space;
-    unsigned overlap_discard_scratch_space;
-
-    const Rational& os_factor;
-    unsigned npart;
-    unsigned npol;
-    unsigned input_nchan;
-    unsigned output_nchan;
-    unsigned input_ndat;
-    unsigned input_overlap;
-
-  };
 }
 
 template<typename T>
@@ -339,7 +285,7 @@ bool util::allclose (const T* a, const T* b, unsigned size, float atol, float rt
 template<typename T>
 bool util::isclose (T a, T b, float atol, float rtol)
 {
-  return abs(a - b) <= (atol + rtol*abs(b));
+  return std::abs(a - b) <= (atol + rtol*std::abs(b));
 }
 
 template<typename T>
@@ -505,124 +451,6 @@ void util::loadTimeSeries (
     }
   }
 }
-
-
-
-template<typename FilterbankType>
-void util::IntegrationTestConfiguration<FilterbankType>::setup (
-  dsp::TimeSeries* in,
-  dsp::TimeSeries* out,
-  bool do_fft_window,
-  bool do_response
-)
-{
-  if (util::config::verbose) {
-    std::cerr << "util::IntegrationTestConfiguration::setup: input_ndat=" << input_ndat << std::endl;
-    std::cerr << "util::IntegrationTestConfiguration::setup: input_overlap=" << input_overlap << std::endl;
-  }
-
-  auto os_in2out = [this] (unsigned n) -> unsigned {
-    return this->os_factor.normalize(n) * this->input_nchan / this->output_nchan;
-  };
-  unsigned input_fft_length = input_ndat;
-  unsigned output_fft_length = os_in2out(input_fft_length);
-  unsigned output_overlap = os_in2out(input_overlap);
-
-  std::vector<unsigned> in_dim = {
-    input_nchan, npol, input_fft_length*npart};
-  std::vector<unsigned> out_dim = {
-    output_nchan, npol, output_fft_length*npart};
-
-  unsigned in_size = util::product(in_dim);
-  unsigned out_size = util::product(out_dim);
-
-  std::vector<std::complex<float>> in_vec(in_size);
-  std::vector<std::complex<float>> out_vec(out_size);
-
-  auto random_gen = util::random<float>();
-
-  for (unsigned idx=0; idx<in_size; idx++) {
-    // in_vec[idx] = std::complex<float>((float) idx, (float) idx);
-    in_vec[idx] = std::complex<float>(random_gen(), random_gen());
-    // std::cerr << in_vec[idx] << std::endl;
-  }
-
-  util::loadTimeSeries<std::complex<float>>(in_vec, in, in_dim);
-  util::loadTimeSeries<std::complex<float>>(out_vec, out, out_dim);
-
-  if (do_fft_window)
-  {
-    if (util::config::verbose) {
-      std::cerr << "util::IntegrationTestConfiguration::setup creating Tukey FFT window" << std::endl;
-    }
-    Reference::To<dsp::Apodization> fft_window = new dsp::Apodization;
-    fft_window->Tukey(input_fft_length, 0, input_overlap, true);
-    filterbank->set_apodization(fft_window);
-  }
-
-  if (do_response)
-  {
-    if (util::config::verbose) {
-      std::cerr << "util::IntegrationTestConfiguration::setup creating Response" << std::endl;
-    }
-    Reference::To<dsp::Response> response = new dsp::Response;
-    response->resize(1, output_nchan, output_fft_length, 2);
-    float* ptr;
-
-    for (unsigned ichan=0; ichan<response->get_nchan(); ichan++) {
-      ptr = response->get_datptr(ichan, 0);
-      for (unsigned idat=0; idat<response->get_ndat(); idat++) {
-        ptr[2*idat] = random_gen();
-        ptr[2*idat + 1] = random_gen();
-      }
-    }
-    filterbank->set_response(response);
-  }
-
-
-  filterbank->set_input(in);
-	filterbank->set_output(out);
-
-  filterbank->set_oversampling_factor(os_factor);
-  filterbank->set_input_fft_length(input_fft_length);
-  filterbank->set_output_fft_length(output_fft_length);
-  filterbank->set_input_discard_pos(input_overlap);
-  filterbank->set_input_discard_neg(input_overlap);
-  filterbank->set_output_discard_pos(output_overlap);
-  filterbank->set_output_discard_neg(output_overlap);
-
-  overlap_discard_scratch_space = 2*npol*input_nchan*input_fft_length;
-  stitching_scratch_space = 2*npol*output_nchan*output_fft_length;
-
-  total_scratch_needed = overlap_discard_scratch_space + stitching_scratch_space;
-}
-
-
-template<typename FilterbankType>
-template<typename MemoryType>
-std::vector<float*> util::IntegrationTestConfiguration<FilterbankType>::allocate_scratch (
-  MemoryType* _memory
-)
-{
-  // if (util::config::verbose) {
-  // std::cerr << "util::IntegrationTestConfiguration::allocate_scratch(" << _memory << ")" << std::endl;
-  // }
-
-  if (_memory != nullptr) {
-    // std::cerr << "util::IntegrationTestConfiguration::allocate_scratch: creating new scratch" << std::endl;
-    Reference::To<dsp::Scratch> new_scratch = new dsp::Scratch;
-    new_scratch->set_memory(_memory);
-    scratch = new_scratch;
-  }
-
-  float* space = scratch->space<float> (total_scratch_needed);
-  std::vector<float*> space_vector = {space, space + overlap_discard_scratch_space};
-  return space_vector;
-}
-
-
-
-
 
 
 #endif

@@ -101,16 +101,16 @@ TEST_CASE (
   Rational os_factor (4, 3);
 
   unsigned npart = test_shape.npart;
-  util::IntegrationTestConfiguration<dsp::InverseFilterbank> config(
+  util::InverseFilterbank::InverseFilterbankProxy proxy(
     os_factor, npart, test_shape.input_npol,
     test_shape.input_nchan, test_shape.output_nchan,
     test_shape.input_ndat, test_shape.overlap_pos
   );
-  config.filterbank->set_device(device_memory);
-  config.filterbank->set_pfb_dc_chan(true);
-  config.filterbank->set_pfb_all_chan(true);
+  proxy.filterbank->set_device(device_memory);
+  proxy.filterbank->set_pfb_dc_chan(true);
+  proxy.filterbank->set_pfb_all_chan(true);
 
-  config.setup(in, out, false, false);
+  proxy.setup(in, out, false, false);
 
   auto transfer = util::transferTimeSeries(cuda_stream, device_memory);
 
@@ -119,14 +119,15 @@ TEST_CASE (
 
   SECTION ("can call setup method")
   {
-    engine.setup(config.filterbank);
+    engine.setup(proxy.filterbank);
   }
 
   SECTION ("can call perform method")
   {
-    engine.setup(config.filterbank);
-    std::vector<float *> scratch = config.allocate_scratch<CUDA::DeviceMemory>(device_memory);
-    engine.set_scratch(scratch[0]);
+    engine.setup(proxy.filterbank);
+    proxy.set_memory<CUDA::DeviceMemory>(device_memory);
+    float* scratch = proxy.allocate_scratch(engine.get_total_scratch_needed());
+    engine.set_scratch(scratch);
     engine.perform(
       in_gpu, out_gpu, npart
     );

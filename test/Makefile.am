@@ -1,4 +1,4 @@
-bin_PROGRAMS = test_main
+bin_PROGRAMS = test_main bench_InverseFilterbank
 
 test_main_SOURCES = test_main.cpp \
                     test_Apodization.cpp \
@@ -23,6 +23,11 @@ if HAVE_CUFFT
                        InverseFilterbank/test_InverseFilterbankEngine_integration.cpp
 
   test_main_SOURCES += test_FTransform_cufft_precision.cpp
+
+  bench_InverseFilterbank_SOURCES = util.cpp \
+                                    TestConfig.cpp \
+                                    InverseFilterbankTestConfig.cpp \
+                                    InverseFilterbank/bench_InverseFilterbank.cpp
 
 endif
 

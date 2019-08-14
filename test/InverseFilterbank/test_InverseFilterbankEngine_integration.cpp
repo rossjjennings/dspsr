@@ -148,19 +148,19 @@ TEST_CASE (
   unsigned npart = test_shape.npart;
   unsigned npol = test_shape.input_npol;
 
-  util::IntegrationTestConfiguration<dsp::InverseFilterbank> config(
+  util::InverseFilterbank::InverseFilterbankProxy proxy(
     os_factor, npart, npol,
     test_shape.input_nchan, test_shape.output_nchan,
     test_shape.input_ndat, test_shape.overlap_pos
   );
-  config.filterbank->set_pfb_dc_chan(true);
-  config.filterbank->set_pfb_all_chan(true);
+  proxy.filterbank->set_pfb_dc_chan(true);
+  proxy.filterbank->set_pfb_all_chan(true);
 
-  config.setup (in, out, do_fft_window, do_response);
+  proxy.setup (in, out, do_fft_window, do_response);
 
-  engine_cpu.setup(config.filterbank);
-  std::vector<float *> scratch_cpu = config.allocate_scratch<dsp::Memory> ();
-  engine_cpu.set_scratch(scratch_cpu[0]);
+  engine_cpu.setup(proxy.filterbank);
+  float* scratch_cpu = proxy.allocate_scratch(engine_cpu.get_total_scratch_needed());
+  engine_cpu.set_scratch(scratch_cpu);
   engine_cpu.perform(
     in, out, npart
   );
@@ -169,10 +169,11 @@ TEST_CASE (
   transfer(in, in_gpu, cudaMemcpyHostToDevice);
   transfer(out, out_gpu, cudaMemcpyHostToDevice);
 
-  // config.filterbank->set_device(device_memory);
-  engine_cuda.setup(config.filterbank);
-  std::vector<float *> scratch_cuda = config.allocate_scratch<CUDA::DeviceMemory>(device_memory);
-  engine_cuda.set_scratch(scratch_cuda[0]);
+  // proxy.filterbank->set_device(device_memory);
+  engine_cuda.setup(proxy.filterbank);
+  proxy.set_memory<CUDA::DeviceMemory>(device_memory);
+  float * scratch_cuda = proxy.allocate_scratch(engine_cuda.get_total_scratch_needed());
+  engine_cuda.set_scratch(scratch_cuda);
   engine_cuda.perform(
     in_gpu, out_gpu, npart
   );

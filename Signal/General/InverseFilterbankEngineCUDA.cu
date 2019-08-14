@@ -947,8 +947,8 @@ void CUDA::InverseFilterbankEngineCUDA::perform (
     grid.x = output_nchan;
     grid.y = 1;
     threads.x = (output_fft_length <= 1024) ? output_fft_length: 1024;
-    // k_overlap_save_one_to_many<<<grid, threads, 0, stream>>>(
-    k_overlap_save_one_to_many<<<1, 1, 0, stream>>>(
+    k_overlap_save_one_to_many<<<grid, threads, 0, stream>>>(
+    // k_overlap_save_one_to_many<<<1, 1, 0, stream>>>(
       (float2*) d_stitching,
       (float2*) out_ptr,
       output_discard_pos,
