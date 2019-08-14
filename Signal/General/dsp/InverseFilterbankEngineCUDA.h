@@ -248,8 +248,6 @@ namespace CUDA
     //! Scratch space, in samples, needed for the d_stitching space
     unsigned d_stitching_samples;
 
-
-
   };
 
 }

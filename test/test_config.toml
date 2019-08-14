@@ -1,5 +1,5 @@
 atol = 1e-2
-rtol = 1e-3	
+rtol = 1e-3
 
 [test_FTransform_cufft_precision]
 nchan = 256
@@ -7,71 +7,60 @@ fft_size = 256
 scale = 500.0
 
 [InverseFilterbank]
-do_fft_window = false
-do_response = false
+do_fft_window = true
+do_response = true
+
+# [[InverseFilterbank.test_shapes]]
+# npart = 2
+# input_nchan = 256
+# output_nchan = 1
+# input_npol = 1
+# output_npol = 1
+# input_ndat = 128
+# output_ndat = 0
+# overlap_pos = 16
+# overlap_neg = 16
+
+# [[InverseFilterbank.test_shapes]]
+# npart = 10
+# input_nchan = 256
+# output_nchan = 1
+# input_npol = 2
+# output_npol = 2
+# input_ndat = 128
+# output_ndat = 0
+# overlap_pos = 16
+# overlap_neg = 16
+#
+# [[InverseFilterbank.test_shapes]]
+# npart = 10
+# input_nchan = 256
+# output_nchan = 16
+# input_npol = 1
+# output_npol = 1
+# input_ndat = 128
+# output_ndat = 0
+# overlap_pos = 16
+# overlap_neg = 16
+#
+# [[InverseFilterbank.test_shapes]]
+# npart = 10
+# input_nchan = 256
+# output_nchan = 16
+# input_npol = 2
+# output_npol = 2
+# input_ndat = 128
+# output_ndat = 0
+# overlap_pos = 16
+# overlap_neg = 16
 
 [[InverseFilterbank.test_shapes]]
-npart = 2
-input_nchan = 256
-output_nchan = 1
-input_npol = 1
-output_npol = 1
-input_ndat = 128
-output_ndat = 0
-overlap_pos = 16
-overlap_neg = 16
-
-[[InverseFilterbank.test_shapes]]
-npart = 10
-input_nchan = 256
-output_nchan = 1
+npart = 5
+input_nchan = 32768
+output_nchan = 128
 input_npol = 2
 output_npol = 2
-input_ndat = 128
+input_ndat = 1024
 output_ndat = 0
 overlap_pos = 16
 overlap_neg = 16
-
-[[InverseFilterbank.test_shapes]]
-npart = 10
-input_nchan = 256
-output_nchan = 16
-input_npol = 1
-output_npol = 1
-input_ndat = 128
-output_ndat = 0
-overlap_pos = 16
-overlap_neg = 16
-
-[[InverseFilterbank.test_shapes]]
-npart = 10
-input_nchan = 256
-output_nchan = 16
-input_npol = 2
-output_npol = 2
-input_ndat = 128
-output_ndat = 0
-overlap_pos = 16
-overlap_neg = 16
-
-[[InverseFilterbank.test_shapes]]
-npart = 2
-input_nchan = 512
-output_nchan = 256
-input_npol = 2
-output_npol = 2
-input_ndat = 4096
-output_ndat = 0
-overlap_pos = 16
-overlap_neg = 16
-
-[[InverseFilterbank.test_shapes]]
-npart = 2
-input_nchan = 256
-output_nchan = 1
-input_npol = 1
-output_npol = 1
-input_ndat = 128
-output_ndat = 0
-overlap_pos = 8
-overlap_neg = 8

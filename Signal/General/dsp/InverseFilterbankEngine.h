@@ -42,6 +42,10 @@ public:
   //! get the amount of scratch space the engine has calculated that it needs
   unsigned get_total_scratch_needed () const { return total_scratch_needed; }
 
+  bool get_report () const { return report; }
+
+  void set_report (bool _report) { report = _report; }
+
   class Reporter {
   public:
     virtual void operator() (float*, unsigned, unsigned, unsigned, unsigned) {};
@@ -51,6 +55,7 @@ public:
   // associated with the data array
   EventEmitter<Reporter> reporter;
 
+
 protected:
 
   float* scratch;
@@ -59,6 +64,10 @@ protected:
   unsigned output_span;
 
   unsigned total_scratch_needed;
+
+  //! Flag indicating whether to report intermediate data products
+  bool report;
+
 
 };
 

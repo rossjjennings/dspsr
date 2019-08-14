@@ -118,6 +118,9 @@ TEST_CASE (
   CUDA::InverseFilterbankEngineCUDA engine_cuda(cuda_stream);
   dsp::InverseFilterbankEngineCPU engine_cpu;
 
+  engine_cuda.set_report(true);
+  engine_cpu.set_report(true);
+
   Reporter reporter_cpu_fft_window;
   Reporter reporter_cuda_fft_window(cuda_stream);
   engine_cpu.reporter.on("fft_window", &reporter_cpu_fft_window);

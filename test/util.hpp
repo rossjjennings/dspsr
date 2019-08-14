@@ -101,7 +101,9 @@ namespace util {
   template<typename unit>
   using delta = std::chrono::duration<double, unit>;
 
-  std::chrono::time_point<std::chrono::high_resolution_clock> now ();
+  typedef std::chrono::time_point<std::chrono::high_resolution_clock> time_point;
+
+  time_point now ();
 
   template<typename T>
   bool isclose (T a, T b, float atol=1e-7, float rtol=1e-5);
