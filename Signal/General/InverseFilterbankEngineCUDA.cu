@@ -1332,9 +1332,14 @@ void CUDA::InverseFilterbankEngineCUDA::perform (
       check_error("CUDA::InverseFilterbankEngineCUDA::perform: k_overlap_save_one_to_many");
     }
   }
-  if (dsp::Operation::record_time || dsp::Operation::verbose) {
+  if (dsp::Operation::record_time || dsp::Operation::verbose || record_time ) {
+    if (verbose) {
+      std::cerr << "CUDA::InverseFilterbankEngineCUDA::perform: recording timing" << std::endl;
+    }
     if (stream) {
       check_error_stream("CUDA::InverseFilterbankEngineCUDA::perform", stream);
+    } else {
+      check_error("CUDA::InverseFilterbankEngineCUDA::perform");
     }
   }
 }

@@ -19,7 +19,7 @@ public:
   bool cuda_only = false;
   bool cpu_only = false;
   bool report = false;
-
+  bool output_toml = false;
   // npart, input_nchan, output_nchan, input_npol, output_npol, input_ndat, output_ndat, overlap_pos, overlap_neg
   util::TestShape test_shape{10, 256, 1, 2, 2, 128, 0, 16, 16};
 
@@ -44,6 +44,10 @@ public:
     report = true;
   }
 
+  void set_output_toml () {
+    output_toml = true;
+  }
+
 };
 
 void check_error (const char*);
@@ -54,9 +58,6 @@ void parse_options (BenchmarkOptions* options, int argc, char** argv)
   CommandLine::Argument* arg;
 
   menu.set_help_header ("benchmark InverseFilterbank CUDA and CPU engines");
-
-  arg = menu.add (options->niter, "n", "niter");
-  arg->set_help ("Specify the number of iterations to run [default:10]");
 
   arg = menu.add (options->niter, "n", "niter");
   arg->set_help ("Specify the number of iterations to run [default:10]");
@@ -91,13 +92,8 @@ void parse_options (BenchmarkOptions* options, int argc, char** argv)
   arg = menu.add (options, &BenchmarkOptions::set_report, "r");
   arg->set_help ("run CUDA kernels in verbose mode");
 
-
-  // arg = menu.add (options, &BenchmarkOptions::set_cpu_only, "cpu-only");
-  // arg->set_help ("cpu only");
-
-  //
-  // arg = menu.add (&options, &BenchmarkOptions::set_very_verbose, 'V');
-  // arg->set_help ("very verbose mode");
+  arg = menu.add (options, &BenchmarkOptions::set_output_toml, "toml");
+  arg->set_help ("output TOML report");
 
   menu.parse (argc, argv);
 
@@ -115,6 +111,9 @@ void parse_options (BenchmarkOptions* options, int argc, char** argv)
 int main (int argc, char** argv)
 {
   util::time_point t0;
+  util::time_point t1;
+
+  // dsp::Operation::record_time = true;
 
   Reference::To<BenchmarkOptions> options = new BenchmarkOptions;
 
@@ -126,6 +125,7 @@ int main (int argc, char** argv)
   CUDA::InverseFilterbankEngineCUDA engine_cuda(cuda_stream);
   dsp::InverseFilterbankEngineCPU engine_cpu;
 
+  engine_cuda.set_record_time(true);
   engine_cuda.set_report(options->report);
   engine_cpu.set_report(options->report);
 
@@ -137,6 +137,14 @@ int main (int argc, char** argv)
   Rational os_factor (4, 3);
   unsigned npart = options->test_shape.npart;
   unsigned npol = options->test_shape.input_npol;
+
+  uint64_t nsamples = 2 * options->test_shape.input_nchan *
+                      options->test_shape.input_npol *
+                      options->test_shape.input_ndat *
+                      options->test_shape.npart;
+  uint64_t nbytes = sizeof(float) * nsamples;
+  uint64_t ngigabits = 8 * nbytes / std::giga::num;
+  std::cerr << "Processing " << ngigabits << " Gbits of data" << std::endl;
 
   util::InverseFilterbank::InverseFilterbankProxy proxy(
     os_factor, npart, npol,
@@ -166,9 +174,7 @@ int main (int argc, char** argv)
   //     << std::endl;
   // }
 
-  unsigned nsamples = in->get_nchan() * in->get_ndat() * in->get_ndim() * in->get_npol();
-  unsigned nbytes = sizeof(float) * nsamples;
-  unsigned nmegabytes = nbytes / std::mega::num;
+
 
   util::delta<std::ratio<1>> delta_cpu;
 
@@ -178,20 +184,25 @@ int main (int argc, char** argv)
     float* scratch_cpu = proxy.allocate_scratch(engine_cpu.get_total_scratch_needed());
     engine_cpu.set_scratch(scratch_cpu);
 
+    util::delta<std::ratio<1>> delta;
     t0 = util::now();
-
     for (unsigned iiter=0; iiter<options->niter; iiter++) {
+      t1 = util::now();
       engine_cpu.perform(
         in, out, npart
       );
       engine_cpu.finish();
+      delta = util::now() - t1;
+      if (util::config::verbose) {
+        std::cerr << "CPU engine loop " << iiter << " took " << delta.count() << "s" << std::endl;
+      }
     }
 
     delta_cpu = util::now() - t0;
 
-    std::cerr << "CPU engine " << delta_cpu.count() / options->niter << " s per loop"
+    std::cerr << "CPU engine took " << delta_cpu.count() / options->niter << " s per loop"
       << std::endl;
-    std::cerr << "CPU engine processing " << nmegabytes / delta_cpu.count() / options->niter << " megabytes/s"
+    std::cerr << "CPU engine processing @ " << ngigabits / delta_cpu.count() / options->niter << " Gbits/s"
       << std::endl;
 
   }
@@ -213,30 +224,72 @@ int main (int argc, char** argv)
 
   std::cerr << "setting up CUDA engine took " << delta_setup.count() << " s" << std::endl;
 
-  t0 = util::now();
+  // t0 = util::now();
+  float delta_cuda_i = 0;
+  float delta_cuda = 0;
+  cudaEvent_t start, stop;
+  cudaEventCreate(&start);
+  cudaEventCreate(&stop);
+
 
   for (unsigned iiter=0; iiter<options->niter; iiter++) {
+    // t1 = util::now();
+    cudaEventRecord(start);
     engine_cuda.perform(
       in_gpu, out_gpu, npart
     );
     engine_cuda.finish();
+    // util::delta<std::ratio<1>> delta = util::now() - t1;
+    cudaEventRecord(stop);
+
+    cudaEventSynchronize(stop);
+    cudaEventElapsedTime(&delta_cuda_i, start, stop);
+    delta_cuda += delta_cuda_i;
+    // cudaDeviceSynchronize();
+    // util::delta<std::ratio<1>> delta = util::now() - t0;
+    if (util::config::verbose) {
+      std::cerr << "CUDA engine loop " << iiter << " took " << delta_cuda_i/1000 << "s" << std::endl;
+      // std::cerr << "CUDA engine (CPU timer) loop " << iiter << " took " << delta.count() << "s" << std::endl;
+    }
   }
 
-  util::delta<std::ratio<1>> delta_cuda = util::now() - t0;
+  cudaEventDestroy(start);
+  cudaEventDestroy(stop);
 
-  std::cerr << "CUDA engine " << delta_cuda.count() / options->niter << " s per loop"
+  // util::delta<std::ratio<1>> delta_cuda = util::now() - t0;
+  float delta_cuda_s = delta_cuda / 1000;
+  float delta_cuda_s_per_loop = delta_cuda_s / options->niter;
+  std::cerr << "CUDA engine took " << delta_cuda_s_per_loop << " s per loop"
     << std::endl;
-  std::cerr << "CUDA engine processing " << nmegabytes / delta_cuda.count() / options->niter << " megabytes/s"
+  std::cerr << "CUDA engine processing @ " << ngigabits / delta_cuda_s_per_loop << " Gbits/s"
     << std::endl;
 
+  // std::cerr << "CUDA engine " << delta_cuda.count() / options->niter << " s per loop"
+  //   << std::endl;
+  // std::cerr << "CUDA engine processing " << ngigabits / delta_cuda.count() / options->niter << " Gbits/s"
+  //   << std::endl;
+
+  float delta_cpu_s = (float) delta_cpu.count();
 
   if (! options->cuda_only) {
-    if (delta_cpu > delta_cuda) {
-      std::cerr << "CUDA engine " << delta_cpu.count() / delta_cuda.count()
+    if (delta_cpu_s > delta_cuda_s) {
+      std::cerr << "CUDA engine " << delta_cpu_s / delta_cuda_s
         << " times faster" << std::endl;
     } else {
-      std::cerr << "CPU engine " << delta_cuda.count() / delta_cpu.count()
+      std::cerr << "CPU engine " << delta_cuda_s / delta_cpu_s
         << " times faster" << std::endl;
     }
   }
+
+  if (options->output_toml) {
+    toml::Value shape_val;
+    util::to_toml(shape_val, options->test_shape);
+
+    toml::Value output_val;
+
+    output_val.set("shape", shape_val);
+    std::cout << output_val << std::endl;
+  }
+
+
 }

@@ -92,6 +92,10 @@ namespace CUDA
     //! Do any actions to clean up after `perform`.
     void finish ();
 
+    void set_record_time (bool _record_time) { record_time  = _record_time; }
+
+    bool get_record_time () const { return record_time; }
+
     //! setup backward fft plans. This is public so we can test it.
     std::vector<cufftResult> setup_backward_fft_plan (
       unsigned _output_fft_length,
@@ -247,6 +251,8 @@ namespace CUDA
 
     //! Scratch space, in samples, needed for the d_stitching space
     unsigned d_stitching_samples;
+
+    bool record_time;
 
   };
 

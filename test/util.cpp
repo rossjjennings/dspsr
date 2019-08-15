@@ -234,3 +234,16 @@ void util::from_toml (const toml::Value& val, util::TestShape& sh)
   sh.overlap_pos = (unsigned) val.get<int>("overlap_pos");
   sh.overlap_neg = (unsigned) val.get<int>("overlap_neg");
 }
+
+void util::to_toml (toml::Value& val, const util::TestShape& sh)
+{
+  val.set("npart", (int) sh.npart);
+  val.set("input_nchan", (int) sh.input_nchan);
+  val.set("output_nchan", (int) sh.output_nchan);
+  val.set("input_npol", (int) sh.input_npol);
+  val.set("output_npol", (int) sh.output_npol);
+  val.set("input_ndat", (int) sh.input_ndat);
+  val.set("output_ndat", (int) sh.output_ndat);
+  val.set("overlap_pos", (int) sh.overlap_pos);
+  val.set("overlap_neg", (int) sh.overlap_neg);
+}

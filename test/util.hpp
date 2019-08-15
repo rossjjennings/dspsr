@@ -47,6 +47,8 @@ namespace util {
 
   void from_toml (const toml::Value& val, TestShape& sh);
 
+  void to_toml (toml::Value& val, const TestShape& sh);
+
   // void to_json(json& j, const TestShape& sh);
   //
   // void from_json(const json& j, TestShape& sh);
