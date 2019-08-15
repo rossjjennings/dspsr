@@ -18,6 +18,7 @@ public:
   unsigned niter = 10;
   bool cuda_only = false;
   bool cpu_only = false;
+  bool report = false;
 
   // npart, input_nchan, output_nchan, input_npol, output_npol, input_ndat, output_ndat, overlap_pos, overlap_neg
   util::TestShape test_shape{10, 256, 1, 2, 2, 128, 0, 16, 16};
@@ -39,6 +40,9 @@ public:
     cpu_only = true;
   }
 
+  void set_report () {
+    report = true;
+  }
 
 };
 
@@ -84,6 +88,10 @@ void parse_options (BenchmarkOptions* options, int argc, char** argv)
   arg = menu.add (options, &BenchmarkOptions::set_cuda_only, "cuda-only");
   arg->set_help ("cuda only");
 
+  arg = menu.add (options, &BenchmarkOptions::set_report, "r");
+  arg->set_help ("run CUDA kernels in verbose mode");
+
+
   // arg = menu.add (options, &BenchmarkOptions::set_cpu_only, "cpu-only");
   // arg->set_help ("cpu only");
 
@@ -106,6 +114,8 @@ void parse_options (BenchmarkOptions* options, int argc, char** argv)
 
 int main (int argc, char** argv)
 {
+  util::time_point t0;
+
   Reference::To<BenchmarkOptions> options = new BenchmarkOptions;
 
   parse_options (options, argc, argv);
@@ -116,8 +126,8 @@ int main (int argc, char** argv)
   CUDA::InverseFilterbankEngineCUDA engine_cuda(cuda_stream);
   dsp::InverseFilterbankEngineCPU engine_cpu;
 
-  engine_cuda.set_report(true);
-  engine_cpu.set_report(true);
+  engine_cuda.set_report(options->report);
+  engine_cpu.set_report(options->report);
 
   Reference::To<dsp::TimeSeries> in = new dsp::TimeSeries;
   Reference::To<dsp::TimeSeries> out = new dsp::TimeSeries;
@@ -140,8 +150,12 @@ int main (int argc, char** argv)
 
   bool do_fft_window = true;
   bool do_response = true;
-
+  t0 = util::now();
   proxy.setup(in, out, do_fft_window, do_response);
+  util::delta<std::ratio<1>> delta_setup_initial = util::now() - t0;
+
+  std::cerr << "initial setup took " << delta_setup_initial.count() << " s" << std::endl;
+
 
   // if (util::config::verbose) {
   //   std::cerr << "in shape=("
@@ -156,15 +170,14 @@ int main (int argc, char** argv)
   unsigned nbytes = sizeof(float) * nsamples;
   unsigned nmegabytes = nbytes / std::mega::num;
 
-  engine_cpu.setup(proxy.filterbank);
-  float* scratch_cpu = proxy.allocate_scratch(engine_cpu.get_total_scratch_needed());
-  engine_cpu.set_scratch(scratch_cpu);
-
-  util::time_point t0;
   util::delta<std::ratio<1>> delta_cpu;
 
   if (! options->cuda_only)
   {
+    engine_cpu.setup(proxy.filterbank);
+    float* scratch_cpu = proxy.allocate_scratch(engine_cpu.get_total_scratch_needed());
+    engine_cpu.set_scratch(scratch_cpu);
+
     t0 = util::now();
 
     for (unsigned iiter=0; iiter<options->niter; iiter++) {
@@ -184,14 +197,21 @@ int main (int argc, char** argv)
   }
 
   auto transfer = util::transferTimeSeries(cuda_stream, device_memory);
-
+  t0 = util::now();
   transfer(in, in_gpu, cudaMemcpyHostToDevice);
   transfer(out, out_gpu, cudaMemcpyHostToDevice);
+  util::delta<std::ratio<1>> delta_transfer = util::now() - t0;
 
+  std::cerr << "transfering from CPU to GPU took " << delta_transfer.count() << " s" << std::endl;
+
+  t0 = util::now();
   engine_cuda.setup(proxy.filterbank);
   proxy.set_memory<CUDA::DeviceMemory>(device_memory);
   float* scratch_cuda = proxy.allocate_scratch(engine_cuda.get_total_scratch_needed());
   engine_cuda.set_scratch(scratch_cuda);
+  util::delta<std::ratio<1>> delta_setup = util::now() - t0;
+
+  std::cerr << "setting up CUDA engine took " << delta_setup.count() << " s" << std::endl;
 
   t0 = util::now();
 

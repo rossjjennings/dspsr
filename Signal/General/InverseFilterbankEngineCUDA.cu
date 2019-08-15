@@ -255,8 +255,8 @@ __global__ void k_overlap_discard (
 
 
 __global__ void k_overlap_discard_single_part (
-  float2* t_in,
-  float2* resp,
+  const  float2* t_in,
+  const  float2* resp,
   float2* t_out,
   int discard_pos,
   int discard_neg,
@@ -268,28 +268,29 @@ __global__ void k_overlap_discard_single_part (
   int out_ndat
 )
 {
-  int total_size_x = blockDim.x * gridDim.x; // for ndat
-  int total_size_y = blockDim.y * gridDim.y; // for nchan
-  int total_size_z = blockDim.z * gridDim.z; // for npart and npol
+  const int total_size_ndat = blockDim.x;
+  const int total_size_nchan = gridDim.x;
+  const int total_size_npol = gridDim.y;
 
-  int idx = blockIdx.x*blockDim.x + threadIdx.x;
-  int idy = blockIdx.y*blockDim.y + threadIdx.y;
-  int idz = blockIdx.z*blockDim.z + threadIdx.z;
+  const int dat_idx = threadIdx.x;
+  const int chan_idx = blockIdx.x;
+  const int pol_idx = blockIdx.y;
 
-  int step = samples_per_part - (discard_pos + discard_neg);
+  const int step = samples_per_part - (discard_pos + discard_neg);
+
   // make sure we're not trying to access data that are out of bounds
-  if (idx > samples_per_part || idy > nchan || idz > npol) {
+  if (dat_idx > samples_per_part || chan_idx > nchan || pol_idx > npol) {
     return;
   }
 
   int in_offset;
   int out_offset;
 
-  for (int ichan=idy; ichan<nchan; ichan += total_size_y) {
-    for (int ipol=idz; ipol<npol; ipol+=total_size_z) {
+  for (int ichan=chan_idx; ichan<nchan; ichan += total_size_nchan) {
+    for (int ipol=pol_idx; ipol<npol; ipol+=total_size_npol) {
       in_offset = ichan*npol*in_ndat + ipol*in_ndat + ipart*step;
       out_offset = ichan*npol*out_ndat + ipol*out_ndat;
-      for (int idat=idx; idat<samples_per_part; idat += total_size_x) {
+      for (int idat=dat_idx; idat<samples_per_part; idat += total_size_ndat) {
         if (resp == nullptr) {
           t_out[out_offset + idat] = t_in[in_offset + idat];
         } else {
@@ -524,8 +525,8 @@ __global__ void k_response_stitch (
  *    are present.
  */
 __global__ void k_response_stitch_single_part (
-  float2* f_in,
-  float2* response,
+  const float2* f_in,
+  const float2* response,
   float2* f_out,
   int os_discard,
   int npol,
@@ -538,19 +539,19 @@ __global__ void k_response_stitch_single_part (
   bool pfb_all_chan
 )
 {
-  int total_size_x = blockDim.x * gridDim.x; // for idat
-  int total_size_y = blockDim.y * gridDim.y; // for ichan
-  int total_size_z = blockDim.z * gridDim.z; // for ipol
+  const int total_size_ndat = blockDim.x;
+  const int total_size_nchan = gridDim.x;
+  const int total_size_npol = gridDim.y;
 
-  int idx = blockIdx.x*blockDim.x + threadIdx.x;
-  int idy = blockIdx.y*blockDim.y + threadIdx.y;
-  int idz = blockIdx.z*blockDim.z + threadIdx.z;
+  const int dat_idx = threadIdx.x;
+  const int chan_idx = blockIdx.x;
+  const int pol_idx = blockIdx.y;
 
-  int in_ndat_keep = in_samples_per_part - 2*os_discard;
-  int in_ndat_keep_2 = in_ndat_keep / 2;
+  const int in_ndat_keep = in_samples_per_part - 2*os_discard;
+  const int in_ndat_keep_2 = in_ndat_keep / 2;
 
   // don't overstep the data
-  if (idx > in_ndat_keep_2 || idy > in_nchan || idz > npol) {
+  if (dat_idx > in_ndat_keep_2 || chan_idx > in_nchan || pol_idx > npol) {
     return;
   }
 
@@ -568,8 +569,8 @@ __global__ void k_response_stitch_single_part (
   // int out_total_size = npol * out_ndat;
   // int resp_total_size = out_samples_per_part;
 
-  for (int ichan=idy; ichan < in_nchan; ichan += total_size_y) {
-    for (int ipol=idz; ipol < npol; ipol += total_size_z) {
+  for (int ichan=chan_idx; ichan<in_nchan; ichan += total_size_nchan) {
+    for (int ipol=pol_idx; ipol<npol; ipol += total_size_npol) {
       in_offset = ichan*npol*in_ndat + ipol*in_ndat;
       out_offset = ipol*out_ndat;
 
@@ -577,7 +578,7 @@ __global__ void k_response_stitch_single_part (
       // out_offset = ipart*npol*out_ndat + ipol*out_ndat;
       // std::cerr << "in_offset=" << in_offset << ", out_offset=" << out_offset << std::endl;
 
-      for (int idat=idx; idat<in_ndat_keep_2; idat += total_size_x) {
+      for (int idat=dat_idx; idat<in_ndat_keep_2; idat += total_size_ndat) {
         in_idx_top = idat;
         in_idx_bot = in_idx_top + (in_samples_per_part - in_ndat_keep_2);
 
@@ -611,6 +612,93 @@ __global__ void k_response_stitch_single_part (
   }
 }
 
+
+// __global__ void k_response_stitch_single_part_op (
+//   const float2* f_in,
+//   const float2* response,
+//   float2* f_out,
+//   int os_discard,
+//   // int npol,
+//   // int in_nchan,
+//   int in_ndat,
+//   int out_ndat,
+//   int in_samples_per_part,
+//   int out_samples_per_part,
+//   bool pfb_dc_chan,
+//   bool pfb_all_chan
+// )
+// {
+//   const int total_size_x = blockDim.x * gridDim.x; // for idat
+//   // const int in_nchan = blockDim.y; // for ichan
+//   const int npol = blockDim.z; // for ipol
+//
+//   const int idx = blockIdx.x*blockDim.x + threadIdx.x;
+//   // int idy = blockIdx.y*blockDim.y + threadIdx.y;
+//   // int idz = blockIdx.z*blockDim.z + threadIdx.z;
+//
+//   // int idy = blockIdx.y;
+//   // int idz = blockIdx.z;
+//
+//
+//   const int in_ndat_keep = in_samples_per_part - 2*os_discard;
+//   const int in_ndat_keep_2 = in_ndat_keep / 2;
+//
+//   // don't overstep the data
+//   if (idx > in_ndat_keep_2) { // || blockIdx.y > blockDim.y || blockIdx.z > npol) {
+//     return;
+//   }
+//
+//   int in_idx_bot;
+//   int in_idx_top;
+//
+//   int out_idx_bot;
+//   int out_idx_top;
+//
+//   // diagnostic
+//   // int in_total_size = in_nchan * npol * in_ndat;
+//   // int out_total_size = npol * out_ndat;
+//   // int resp_total_size = out_samples_per_part;
+//
+//   // for (int ichan=idy; ichan < in_nchan; ichan += total_size_y) {
+//   //   for (int ipol=idz; ipol < npol; ipol += total_size_z) {
+//   int in_offset = blockIdx.y*npol*in_ndat + blockIdx.z*in_ndat;
+//   int out_offset = blockIdx.z*out_ndat;
+//
+//   // in_offset = ipart*npol*in_ndat*in_nchan + blockIdx.z*in_ndat*in_nchan + blockIdx.y*in_ndat;
+//   // out_offset = ipart*npol*out_ndat + blockIdx.z*out_ndat;
+//   // std::cerr << "in_offset=" << in_offset << ", out_offset=" << out_offset << std::endl;
+//
+//   for (int idat=idx; idat<in_ndat_keep_2; idat += total_size_x) {
+//     in_idx_top = idat;
+//     in_idx_bot = in_idx_top + (in_samples_per_part - in_ndat_keep_2);
+//
+//     out_idx_bot = idat + in_ndat_keep*blockIdx.y;
+//     out_idx_top = out_idx_bot + in_ndat_keep_2;
+//
+//     if (pfb_dc_chan) {
+//       if (blockIdx.y == 0) {
+//         out_idx_top = idat;
+//         out_idx_bot = idat + (out_samples_per_part - in_ndat_keep_2);
+//       } else {
+//         out_idx_bot = idat + in_ndat_keep*(blockIdx.y-1) + in_ndat_keep_2;
+//         out_idx_top = out_idx_bot + in_ndat_keep_2;
+//       }
+//     }
+//
+//     if (response != nullptr) {
+//       f_out[out_offset + out_idx_bot] = cuCmulf(response[out_idx_bot], f_in[in_offset + in_idx_bot]);
+//       f_out[out_offset + out_idx_top] = cuCmulf(response[out_idx_top], f_in[in_offset + in_idx_top]);
+//     } else {
+//       f_out[out_offset + out_idx_bot] = f_in[in_offset + in_idx_bot];
+//       f_out[out_offset + out_idx_top] = f_in[in_offset + in_idx_top];
+//     }
+//
+//     if (! pfb_all_chan && pfb_dc_chan && blockIdx.y == 0) {
+//       f_out[out_offset + out_idx_bot].x = 0.0;
+//       f_out[out_offset + out_idx_bot].y = 0.0;
+//     }
+//   }
+// }
 
 
 
@@ -1040,10 +1128,15 @@ void CUDA::InverseFilterbankEngineCUDA::perform (
   const float* in_ptr = in->get_datptr(0, 0);
   float* out_ptr = out->get_datptr(0, 0);
 
-  int nthreads = (input_fft_length <= 1024) ? input_fft_length: 1024;
+  int nthreads_k_overlap_discard = (input_fft_length <= 1024) ? input_fft_length: 1024;
 
-  dim3 grid (1, input_nchan, input_npol);
-  dim3 threads (nthreads, 1, 1);
+  int nthreads_k_response_stitch = (input_fft_length - input_os_discard) / 2;
+  nthreads_k_response_stitch = (nthreads_k_response_stitch <= 1024) ? nthreads_k_response_stitch: 1024;
+
+  int nthreads_k_overlap_save = (output_fft_length <= 1024) ? output_fft_length: 1024;
+
+  dim3 grid (input_nchan, input_npol, 1);
+  dim3 threads (nthreads_k_overlap_discard, 1, 1);
 
   int k_response_stitch_in_samples_per_part = input_fft_length;
   int k_response_stitch_out_samples_per_part = output_nchan * output_fft_length;
@@ -1077,9 +1170,11 @@ void CUDA::InverseFilterbankEngineCUDA::perform (
         std::cerr << "CUDA::InverseFilterbankEngineCUDA::perform: applying overlap discard kernel" << std::endl;
       }
 
-      grid.x = 1;
-      grid.y = input_nchan;
-      grid.z = input_npol;
+      grid.x = input_nchan;
+      grid.y = input_npol;
+      grid.z = 1;
+
+      threads.x = nthreads_k_overlap_discard;
 
       // k_overlap_discard<<<grid, threads, 0, stream>>> (
       //   (cufftComplex*) in_ptr,
@@ -1140,9 +1235,11 @@ void CUDA::InverseFilterbankEngineCUDA::perform (
       std::cerr << "CUDA::InverseFilterbankEngineCUDA::perform: applying response stitch kernel" << std::endl;
     }
 
-    grid.x = 1;
-    grid.y = input_nchan;
-    grid.z = input_npol;
+    grid.x = input_nchan;
+    grid.y = input_npol;
+    grid.z = 1;
+
+    threads.x = nthreads_k_response_stitch;
 
     // k_response_stitch<<<grid, threads, 0, stream>>>(
     //   (float2*) d_input_overlap_discard,
@@ -1157,7 +1254,6 @@ void CUDA::InverseFilterbankEngineCUDA::perform (
     //   k_response_stitch_out_samples_per_part,
     //   pfb_dc_chan, pfb_all_chan
     // );
-
     k_response_stitch_single_part<<<grid, threads, 0, stream>>>(
       (float2*) d_input_overlap_discard,
       d_response,
@@ -1203,7 +1299,7 @@ void CUDA::InverseFilterbankEngineCUDA::perform (
     grid.y = output_nchan;
     grid.z = input_npol;
 
-    threads.x = (output_fft_length <= 1024) ? output_fft_length: 1024;
+    threads.x = nthreads_k_overlap_save;
 
     // k_overlap_save_one_to_many<<<grid, threads, 0, stream>>>(
     // // k_overlap_save_one_to_many<<<1, 1, 0, stream>>>(
