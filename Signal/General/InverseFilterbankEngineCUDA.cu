@@ -1144,12 +1144,12 @@ void CUDA::InverseFilterbankEngineCUDA::perform (
   int k_response_stitch_in_ndat = input_fft_length;
   int k_response_stitch_out_ndat = output_nchan * output_fft_length;
 
-  if (verbose) {
-    std::cerr << "CUDA::InverseFilterbankEngineCUDA::perform: grid=("
-      << grid.x << ", " << grid.y << ", " << grid.z << ")" << std::endl;
-    std::cerr << "CUDA::InverseFilterbankEngineCUDA::perform: threads=("
-      << threads.x << ", " << threads.y << ", " << threads.z << ")" << std::endl;
-  }
+  // if (verbose) {
+  //   std::cerr << "CUDA::InverseFilterbankEngineCUDA::perform: grid=("
+  //     << grid.x << ", " << grid.y << ", " << grid.z << ")" << std::endl;
+  //   std::cerr << "CUDA::InverseFilterbankEngineCUDA::perform: threads=("
+  //     << threads.x << ", " << threads.y << ", " << threads.z << ")" << std::endl;
+  // }
   for (unsigned ipart=0; ipart<npart; ipart++)
   {
     if (verbose)
@@ -1295,7 +1295,7 @@ void CUDA::InverseFilterbankEngineCUDA::perform (
       std::cerr << "CUDA::InverseFilterbankEngineCUDA::perform: applying overlap save kernel" << std::endl;
     }
 
-    grid.x = output_fft_length / 1024;
+    grid.x = (output_fft_length <= 1024) ? 1: output_fft_length/1024;
     grid.y = output_nchan;
     grid.z = input_npol;
 

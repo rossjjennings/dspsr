@@ -143,7 +143,7 @@ int main (int argc, char** argv)
                       options->test_shape.input_ndat *
                       options->test_shape.npart;
   uint64_t nbytes = sizeof(float) * nsamples;
-  uint64_t ngigabits = 8 * nbytes / std::giga::num;
+  float ngigabits = (float) (8 * nbytes) / std::giga::num;
   std::cerr << "Processing " << ngigabits << " Gbits of data" << std::endl;
 
   util::InverseFilterbank::InverseFilterbankProxy proxy(
@@ -199,10 +199,11 @@ int main (int argc, char** argv)
     }
 
     delta_cpu = util::now() - t0;
+    float delta_cpu_s_per_loop = (float) delta_cpu.count() / options->niter;
 
-    std::cerr << "CPU engine took " << delta_cpu.count() / options->niter << " s per loop"
+    std::cerr << "CPU engine took " << delta_cpu_s_per_loop << " s per loop"
       << std::endl;
-    std::cerr << "CPU engine processing @ " << ngigabits / delta_cpu.count() / options->niter << " Gbits/s"
+    std::cerr << "CPU engine processing @ " << ngigabits / delta_cpu_s_per_loop << " Gbits/s"
       << std::endl;
 
   }
@@ -259,9 +260,10 @@ int main (int argc, char** argv)
   // util::delta<std::ratio<1>> delta_cuda = util::now() - t0;
   float delta_cuda_s = delta_cuda / 1000;
   float delta_cuda_s_per_loop = delta_cuda_s / options->niter;
+  float rate_cuda = ngigabits / delta_cuda_s_per_loop;
   std::cerr << "CUDA engine took " << delta_cuda_s_per_loop << " s per loop"
     << std::endl;
-  std::cerr << "CUDA engine processing @ " << ngigabits / delta_cuda_s_per_loop << " Gbits/s"
+  std::cerr << "CUDA engine processing @ " << rate_cuda << " Gbits/s"
     << std::endl;
 
   // std::cerr << "CUDA engine " << delta_cuda.count() / options->niter << " s per loop"
@@ -282,12 +284,19 @@ int main (int argc, char** argv)
   }
 
   if (options->output_toml) {
-    toml::Value shape_val;
-    util::to_toml(shape_val, options->test_shape);
+    toml::Value output_val ((toml::Table()));
+    toml::Value* root = &output_val;
+    auto output_array = root->setChild("benchmark", toml::Array());
+    auto inner_val = output_array->push((toml::Table()));
 
-    toml::Value output_val;
+    util::to_toml(*inner_val, options->test_shape);
+    inner_val->setChild("nbytes", (int64_t) nbytes);
 
-    output_val.set("shape", shape_val);
+    inner_val->setChild("niter", (int) options->niter);
+    inner_val->setChild("CUDA_total_time", (double) delta_cuda_s);
+    if (! options->cuda_only) {
+      inner_val->setChild("CPU_total_time", (double) delta_cpu_s);
+    }
     std::cout << output_val << std::endl;
   }
 
