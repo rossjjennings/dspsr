@@ -26,7 +26,7 @@
 //!   emitter.on("event0", lam);
 //!   emitter.on("event0", lam_auto);
 //!   emitter.on("event0", [] (int a) { std::cerr << a << std::endl; });
-//! 
+//!
 //!   emitter.emit("event0");
 //!
 template<typename FuncType>
@@ -102,7 +102,7 @@ void EventEmitter<FuncType>::on(const std::string& event_name, FuncType* _func)
 { }
 
 template<typename FuncType>
-void EventEmitter<FuncType>::emit (...)
+void EventEmitter<FuncType>::emit (const std::string& event_name, ...)
 { }
 
 #endif
