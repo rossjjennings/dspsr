@@ -1,8 +1,10 @@
 
 SUBDIRS	= config Kernel Signal Management
 
-if HAVE_CUDA
-SUBDIRS += test
+if HAVE_CXX11
+	if HAVE_CUDA
+		SUBDIRS += test
+	endif
 endif
 
 if HAVE_PYTHON

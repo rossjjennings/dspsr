@@ -14,7 +14,21 @@
 #include <map>
 #include <iostream>
 
-
+//! Implements a simple event emitter class. This is C++11 only. A pre C++11
+//! mock implementation is present for compilers that do not support C++11.
+//!
+//! Example Usage:
+//!
+//!   EventEmitter<std::function<void(int)> emitter;
+//!
+//!   auto lam_auto = [] (int a) { std::cerr << a << std::endl; };
+//!   std::function<void(int)> lam = [] (int a) { std::cerr << a << std::endl; };
+//!   emitter.on("event0", lam);
+//!   emitter.on("event0", lam_auto);
+//!   emitter.on("event0", [] (int a) { std::cerr << a << std::endl; });
+//! 
+//!   emitter.emit("event0");
+//!
 template<typename FuncType>
 class EventEmitter {
 
@@ -26,9 +40,12 @@ public:
 
   void on (const std::string& event_name, FuncType* func);
 
+  #if HAVE_CXX11
   template<class ... Types>
   void emit (const std::string& event_name, Types ... args);
-
+  #else
+  void emit (const std::string& event_name, ...);
+  #endif
 private:
 
   std::map<std::string, std::vector<FuncType*>> event_map;
@@ -39,6 +56,8 @@ private:
 template<typename FuncType>
 EventEmitter<FuncType>::EventEmitter ()
 { }
+
+#if HAVE_CXX11
 
 template<typename FuncType>
 void EventEmitter<FuncType>::on(const std::string& event_name, FuncType _func)
@@ -71,5 +90,21 @@ void EventEmitter<FuncType>::emit (const std::string& event_name, Types ... args
     }
   }
 }
+
+#else
+
+template<typename FuncType>
+void EventEmitter<FuncType>::on(const std::string& event_name, FuncType _func)
+{ }
+
+template<typename FuncType>
+void EventEmitter<FuncType>::on(const std::string& event_name, FuncType* _func)
+{ }
+
+template<typename FuncType>
+void EventEmitter<FuncType>::emit (...)
+{ }
+
+#endif
 
 #endif
