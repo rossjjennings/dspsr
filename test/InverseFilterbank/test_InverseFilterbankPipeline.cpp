@@ -15,7 +15,6 @@
 #include "dsp/Unpacker.h"
 #include "dsp/LoadToFold1.h"
 #include "dsp/LoadToFoldConfig.h"
-#include "dsp/ConvolutionConfig.h"
 #include "dsp/InverseFilterbankConfig.h"
 
 #include "util.hpp"
@@ -98,7 +97,7 @@ TEST_CASE("InverseFilterbank works in larger LoadToFold context", "[.]")
 
     pipeline_config.change_inverse_filterbank_config("1:1024:128");
 
-    REQUIRE(pipeline_config.config->inverse_filterbank.get_convolve_when() == dsp::Convolution::Config::After);
+    REQUIRE(pipeline_config.config->inverse_filterbank.get_convolve_when() == dsp::Filterbank::Config::After);
     REQUIRE(pipeline_config.config->inverse_filterbank.get_freq_res() == 1024);
 
     pipeline_config.config->coherent_dedispersion = false;
@@ -123,7 +122,7 @@ TEST_CASE("InverseFilterbank works in larger LoadToFold context", "[.]")
 
     pipeline_config.change_inverse_filterbank_config("1:D:128");
 
-    REQUIRE(pipeline_config.config->inverse_filterbank.get_convolve_when() == dsp::Convolution::Config::During);
+    REQUIRE(pipeline_config.config->inverse_filterbank.get_convolve_when() == dsp::Filterbank::Config::During);
     REQUIRE(pipeline_config.config->inverse_filterbank.get_freq_res() == 0);
 
     pipeline_config.config->coherent_dedispersion = true;
@@ -147,7 +146,7 @@ TEST_CASE("InverseFilterbank works in larger LoadToFold context", "[.]")
 
     pipeline_config.change_inverse_filterbank_config("1:1024:128");
 
-    REQUIRE(pipeline_config.config->inverse_filterbank.get_convolve_when() == dsp::Convolution::Config::After);
+    REQUIRE(pipeline_config.config->inverse_filterbank.get_convolve_when() == dsp::Filterbank::Config::After);
     REQUIRE(pipeline_config.config->inverse_filterbank.get_freq_res() == 1024);
 
     pipeline_config.config->coherent_dedispersion = true;

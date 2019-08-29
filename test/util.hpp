@@ -10,8 +10,11 @@
 #include <time.h>
 #include <cstdlib>
 
-#include "json.hpp"
+// #include "json.hpp"
+#include "toml.h"
 
+#include "dsp/Apodization.h"
+#include "dsp/Response.h"
 #include "dsp/MemoryCUDA.h"
 #include "dsp/TransferCUDA.h"
 #include "dsp/Scratch.h"
@@ -20,7 +23,7 @@
 #include "dsp/TimeSeries.h"
 #include "Rational.h"
 
-using json = nlohmann::json;
+// using json = nlohmann::json;
 
 void check_error (const char*);
 
@@ -42,9 +45,13 @@ namespace util {
     unsigned overlap_neg;
   };
 
-  void to_json(json& j, const TestShape& sh);
+  void from_toml (const toml::Value& val, TestShape& sh);
 
-  void from_json(const json& j, TestShape& sh);
+  void to_toml (toml::Value& val, const TestShape& sh);
+
+  // void to_json(json& j, const TestShape& sh);
+  //
+  // void from_json(const json& j, TestShape& sh);
 
   struct config {
     static bool verbose;
@@ -65,21 +72,81 @@ namespace util {
     static const unsigned ndim = 2;
   };
 
+  template<typename T>
+  struct tomltype;
+
+  template<>
+  struct tomltype<float> {
+    typedef double type;
+  };
+
+  template<>
+  struct tomltype<double> {
+    typedef double type;
+  };
+
+  template<>
+  struct tomltype<unsigned> {
+    typedef int type;
+  };
+
+  template<>
+  struct tomltype<int> {
+    typedef int type;
+  };
+
+  template<>
+  struct tomltype<bool> {
+    typedef bool type;
+  };
+
   template<typename unit>
   using delta = std::chrono::duration<double, unit>;
 
-  std::chrono::time_point<std::chrono::high_resolution_clock> now ();
+  typedef std::chrono::time_point<std::chrono::high_resolution_clock> time_point;
+
+  time_point now ();
 
   template<typename T>
   bool isclose (T a, T b, float atol=1e-7, float rtol=1e-5);
 
   template<typename T>
-  bool allclose (T* a, T* b, unsigned size, float atol=1e-7, float rtol=1e-5);
+  bool allclose (const T* a, const T* b, unsigned size, float atol=1e-7, float rtol=1e-5);
 
   template<typename T>
-  bool allclose (std::vector<T> a, std::vector<T> b, float atol=1e-7, float rtol=1e-5);
+  bool allclose (const std::vector<T>& a, const std::vector<T>& b, float atol=1e-7, float rtol=1e-5);
 
   bool allclose (dsp::TimeSeries* a, dsp::TimeSeries* b, float atol=1e-7, float rtol=1e-5);
+
+  template<typename T>
+  unsigned nclose (const T* a, const T* b, unsigned size, float atol=1e-7, float rtol=1e-5);
+
+  template<typename T>
+  unsigned nclose (const std::vector<T>& a, const std::vector<T>& b, float atol=1e-7, float rtol=1e-5);
+
+  template<typename T>
+  T max (const T* a, unsigned size);
+
+  template<typename T>
+  T max (const std::vector<T>& a);
+
+  template<typename T>
+  T min (const T* a, unsigned size);
+
+  template<typename T>
+  T min (const std::vector<T>& a);
+
+  template<typename T>
+  std::vector<T> subtract (const std::vector<T>& a, const std::vector<T>& b);
+
+  template<typename T>
+  void subtract (T* a, T* b, T* res, unsigned size);
+
+  template<typename T>
+  std::vector<T> abs (const std::vector<T>& a);
+
+  template<typename T>
+  void abs (T* a, unsigned size);
 
   template<typename T>
   void load_binary_data (std::string file_path, std::vector<T>& test_data);
@@ -90,7 +157,8 @@ namespace util {
   template<typename T>
   void write_binary_data (std::string file_path, T* buffer, unsigned len);
 
-  json load_json (std::string file_path);
+  // json load_json (std::string file_path);
+  const toml::Value load_toml (const std::string& file_path);
 
   template<typename T>
   void print_array (const std::vector<T>& arr, std::vector<unsigned>& dim);
@@ -127,59 +195,6 @@ namespace util {
   std::function<void(dsp::TimeSeries*, dsp::TimeSeries*, cudaMemcpyKind)> transferTimeSeries (
     cudaStream_t stream, CUDA::DeviceMemory* memory);
 
-  template<class FilterbankType>
-  class IntegrationTestConfiguration {
-
-  public:
-
-    IntegrationTestConfiguration (
-      const Rational& _os_factor,
-      unsigned _npart,
-      unsigned _npol,
-      unsigned _input_nchan,
-      unsigned _output_nchan,
-      unsigned _input_ndat,
-      unsigned _input_overlap
-    ) : os_factor(_os_factor),
-        npart(_npart),
-        npol(_npol),
-        input_nchan(_input_nchan),
-        output_nchan(_output_nchan),
-        input_ndat(_input_ndat),
-        input_overlap(_input_overlap)
-    {
-      scratch = new dsp::Scratch;
-      filterbank = new FilterbankType;
-    }
-
-    void setup (
-      dsp::TimeSeries* in,
-      dsp::TimeSeries* out
-    );
-
-    template<class MemoryType>
-    std::vector<float*> allocate_scratch(
-      MemoryType* _memory=nullptr
-    );
-
-    Reference::To<dsp::Scratch> scratch;
-    Reference::To<FilterbankType> filterbank;
-
-  private:
-
-    unsigned total_scratch_needed;
-    unsigned stitching_scratch_space;
-    unsigned overlap_discard_scratch_space;
-
-    const Rational& os_factor;
-    unsigned npart;
-    unsigned npol;
-    unsigned input_nchan;
-    unsigned output_nchan;
-    unsigned input_ndat;
-    unsigned input_overlap;
-
-  };
 }
 
 template<typename T>
@@ -227,29 +242,118 @@ void util::write_binary_data (std::string file_path, T* buffer, unsigned len)
 
 
 template<typename T>
-bool util::allclose (std::vector<T> a, std::vector<T> b, float atol, float rtol) {
+unsigned util::nclose (const std::vector<T>& a, const std::vector<T>& b, float atol, float rtol) {
+
   if (a.size() != b.size()) {
-     return false;
+    std::string msg ("util::nclose: vectors not the same size");
+    if (util::config::verbose) {
+     std::cerr << msg << std::endl;
+    }
+    throw msg;
   }
-  return util::allclose(a.data(), b.data(), (unsigned) a.size(), atol, rtol);
+  if (util::config::verbose) {
+    std::cerr << "util::nclose size=" << a.size() << std::endl;
+  }
+  return util::nclose(a.data(), b.data(), (unsigned) a.size(), atol, rtol);
 }
 
 
 template<typename T>
-bool util::allclose (T* a, T* b, unsigned size, float atol, float rtol)
+unsigned util::nclose (const T* a, const T* b, unsigned size, float atol, float rtol)
 {
-  bool ret = true;
+  unsigned nclose=0;
+  bool close;
   for (unsigned i=0; i<size; i++) {
-    ret = util::isclose<T>(a[i], b[i], atol, rtol);
+    close = util::isclose<T>(a[i], b[i], atol, rtol);
+    if (close) {
+      nclose++;
+    }
   }
-  return ret;
+  return nclose;
+}
+
+
+template<typename T>
+bool util::allclose (const std::vector<T>& a, const std::vector<T>& b, float atol, float rtol) {
+
+  return util::nclose<T> (a, b, atol, rtol) == a.size();
+}
+
+
+template<typename T>
+bool util::allclose (const T* a, const T* b, unsigned size, float atol, float rtol)
+{
+  return util::nclose<T> (a, b, size, atol, rtol) == size;
 }
 
 template<typename T>
 bool util::isclose (T a, T b, float atol, float rtol)
 {
-  return abs(a - b) <= (atol + rtol*abs(b));
+  return std::abs(a - b) <= (atol + rtol*std::abs(b));
 }
+
+template<typename T>
+T util::max (const T* a, unsigned size)
+{
+  T max_val = a[0];
+  for (unsigned idx=1; idx<size; idx++)
+  {
+    if (a[idx] > max_val) {
+      max_val = a[idx];
+    }
+  }
+  return max_val;
+}
+
+template<typename T>
+T util::max (const std::vector<T>& a)
+{
+  return util::max<T>(a.data(), a.size());
+}
+
+template<typename T>
+T util::min (const T* a, unsigned size)
+{
+  T min_val = a[0];
+  for (unsigned idx=1; idx<size; idx++)
+  {
+    if (a[idx] < min_val) {
+      min_val = a[idx];
+    }
+  }
+  return min_val;
+}
+
+template<typename T>
+T util::min (const std::vector<T>& a)
+{
+  return util::min<T>(a.data(), a.size());
+}
+
+
+template<typename T>
+std::vector<T> util::subtract (const std::vector<T>& a, const std::vector<T>& b)
+{
+}
+
+template<typename T>
+void util::subtract (const T* a, const T* b, T* res, unsigned size)
+{
+}
+
+template<typename T>
+std::vector<T> util::abs (const std::vector<T>& a)
+{
+  std::vector<T> res(a.size());
+  util::abs (a.data(), res.data(), a.size());
+}
+
+template<typename T>
+void util::abs (const T* a, T* res, unsigned size)
+{
+}
+
+
 
 template<typename T>
 void util::print_array (const std::vector<T>& arr, std::vector<unsigned>& dim)
@@ -351,91 +455,6 @@ void util::loadTimeSeries (
     }
   }
 }
-
-
-
-template<typename FilterbankType>
-void util::IntegrationTestConfiguration<FilterbankType>::setup (
-  dsp::TimeSeries* in,
-  dsp::TimeSeries* out
-)
-{
-  if (util::config::verbose) {
-    std::cerr << "util::IntegrationTestConfiguration::setup: input_ndat=" << input_ndat << std::endl;
-    std::cerr << "util::IntegrationTestConfiguration::setup: input_overlap=" << input_overlap << std::endl;
-  }
-
-  auto os_in2out = [this] (unsigned n) -> unsigned {
-    return this->os_factor.normalize(n) * this->input_nchan / this->output_nchan;
-  };
-  unsigned input_fft_length = input_ndat;
-  unsigned output_fft_length = os_in2out(input_fft_length);
-  unsigned output_overlap = os_in2out(input_overlap);
-
-  std::vector<unsigned> in_dim = {
-    input_nchan, npol, input_fft_length*npart};
-  std::vector<unsigned> out_dim = {
-    output_nchan, npol, output_fft_length*npart};
-
-  unsigned in_size = util::product(in_dim);
-  unsigned out_size = util::product(out_dim);
-
-  std::vector<std::complex<float>> in_vec(in_size);
-  std::vector<std::complex<float>> out_vec(out_size);
-
-  auto random_gen = util::random<float>();
-
-  for (unsigned idx=0; idx<in_size; idx++) {
-    in_vec[idx] = std::complex<float>((float) idx, (float) idx);
-    // in_vec[idx] = std::complex<float>(random_gen(), random_gen());
-  }
-
-  util::loadTimeSeries<std::complex<float>>(in_vec, in, in_dim);
-  util::loadTimeSeries<std::complex<float>>(out_vec, out, out_dim);
-
-  filterbank->set_input(in);
-	filterbank->set_output(out);
-
-  filterbank->set_oversampling_factor(os_factor);
-  filterbank->set_input_fft_length(input_fft_length);
-  filterbank->set_output_fft_length(output_fft_length);
-  filterbank->set_input_discard_pos(input_overlap);
-  filterbank->set_input_discard_neg(input_overlap);
-  filterbank->set_output_discard_pos(output_overlap);
-  filterbank->set_output_discard_neg(output_overlap);
-
-  overlap_discard_scratch_space = 2*npol*input_nchan*input_fft_length;
-  stitching_scratch_space = 2*npol*output_nchan*output_fft_length;
-
-  total_scratch_needed = overlap_discard_scratch_space + stitching_scratch_space;
-}
-
-
-template<typename FilterbankType>
-template<typename MemoryType>
-std::vector<float*> util::IntegrationTestConfiguration<FilterbankType>::allocate_scratch (
-  MemoryType* _memory
-)
-{
-  // if (util::config::verbose) {
-  // std::cerr << "util::IntegrationTestConfiguration::allocate_scratch(" << _memory << ")" << std::endl;
-  // }
-
-  if (_memory != nullptr) {
-    // std::cerr << "util::IntegrationTestConfiguration::allocate_scratch: creating new scratch" << std::endl;
-    Reference::To<dsp::Scratch> new_scratch = new dsp::Scratch;
-    new_scratch->set_memory(_memory);
-    scratch = new_scratch;
-  }
-
-  float* space = scratch->space<float> (total_scratch_needed);
-  std::vector<float*> space_vector = {space, space + overlap_discard_scratch_space};
-  return space_vector;
-}
-
-
-
-
 
 
 #endif

@@ -207,7 +207,8 @@ TEST_CASE (
 
   // generate some data.
   std::vector< std::complex<float> > in(in_size, std::complex<float>(0.0, 0.0));
-  std::vector< std::complex<float> > apod(apod_size, std::complex<float>(0.0, 0.0));
+  std::vector< std::complex<float> > apod_cpu(apod_size, std::complex<float>(0.0, 0.0));
+  std::vector< std::complex<float> > apod_gpu(apod_size, std::complex<float>(0.0, 0.0));
   std::vector< std::complex<float> > out_cpu(out_size, std::complex<float>(0.0, 0.0));
   std::vector< std::complex<float> > out_gpu(out_size, std::complex<float>(0.0, 0.0));
 
@@ -233,13 +234,15 @@ TEST_CASE (
   std::vector<unsigned> out_dim = {nchan, npol, out_total_ndat};
 
   // apodization filter is just multiplying by 2.
+  auto random_gen = util::random<float>();
   for (unsigned i=0; i<apod_size; i++) {
-    apod[i] = std::complex<float>(1.0, 0.0);
+    apod_cpu[i] = std::complex<float>(random_gen(), 0.0);
+    apod_gpu[i] = std::complex<float>(apod_cpu[i].real(), apod_cpu[i].real());
   }
 
   auto t = util::now();
   util::InverseFilterbank::apodization_overlap_cpu_FPT< std::complex<float> >(
-    in, apod, out_cpu, overlap, npart, npol, nchan, ndat, in_total_ndat, out_total_ndat
+    in, apod_cpu, out_cpu, overlap, npart, npol, nchan, ndat, in_total_ndat, out_total_ndat
   );
 
 
@@ -247,7 +250,7 @@ TEST_CASE (
 
   t = util::now();
   CUDA::InverseFilterbankEngineCUDA::apply_k_apodization_overlap(
-    in, apod, out_gpu, overlap, npart, npol, nchan, ndat
+    in, apod_gpu, out_gpu, overlap, npart, npol, nchan, ndat
   );
   util::delta<std::milli> delta_gpu = util::now() - t;
 

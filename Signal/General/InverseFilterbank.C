@@ -41,6 +41,11 @@ dsp::InverseFilterbank::InverseFilterbank (const char* name, Behaviour behaviour
 
 void dsp::InverseFilterbank::set_input (const dsp::TimeSeries* input)
 {
+  if (verbose) {
+    std::cerr << "dsp::InverseFilterbank::set_input(" << input << ")" << std::endl;
+    std::cerr << "dsp::InverseFilterbank::set_input: input->get_oversampling_factor()="
+      << input->get_oversampling_factor() << std::endl;
+  }
   dsp::Convolution::set_input(input);
   oversampling_factor = input->get_oversampling_factor();
 }
@@ -153,11 +158,16 @@ void dsp::InverseFilterbank::make_preparations ()
   if (verbose) {
     std::cerr << "dsp::InverseFilterbank::make_preparations:"
       << " oversampling_factor=" << get_oversampling_factor()
+      << " input->get_oversampling_factor()=" << input->get_oversampling_factor()
       << " pfb_dc_chan=" << get_pfb_dc_chan()
       << " pfb_all_chan=" << get_pfb_all_chan()
       << " fft_window_str=" << get_fft_window_str()
       << std::endl;
   }
+  if (oversampling_factor != input->get_oversampling_factor()) {
+    oversampling_factor = input->get_oversampling_factor();
+  }
+
   bool real_to_complex = (input->get_state() == Signal::Nyquist);
   unsigned n_per_sample = real_to_complex ? 2: 1;
   Rational osf = get_oversampling_factor();
@@ -283,6 +293,15 @@ void dsp::InverseFilterbank::make_preparations ()
          << " scalefac=" << scalefac
          << endl;
   }
+
+  if (verbose) {
+    std::cerr << "dsp::InverseFilterbank::make_preparations: allocating "
+      << engine->get_total_scratch_needed() << " floats for engine scratch space"
+      << std::endl;
+  }
+
+  float* scratch_space = scratch->space<float>(engine->get_total_scratch_needed());
+  engine->set_scratch(scratch_space);
 
 }
 
@@ -463,7 +482,7 @@ void dsp::InverseFilterbank::resize_output (bool reserve_extra)
                  "input_sample_step == 0 ... not properly prepared");
   }
 
-  if (ndat > input_discard_total) {
+  if (ndat > (unsigned) input_discard_total) {
     npart = (ndat-input_discard_total)/input_sample_step;
   }
 

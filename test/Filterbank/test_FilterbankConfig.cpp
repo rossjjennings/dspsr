@@ -29,7 +29,7 @@ TEST_CASE("FilterbankConfig can intake arguments", "[FilterbankConfig]")
   }
 }
 
-TEST_CASE("Filterbank can stream correct internal representation", "[FilterbankConfig]")
+TEST_CASE("FilterbankConfig can stream correct internal representation", "[FilterbankConfig]")
 {
   dsp::Filterbank::Config config;
   // std::string stringvalues = "1:D";

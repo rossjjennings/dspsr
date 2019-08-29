@@ -1,41 +1,34 @@
-bin_PROGRAMS = test_main
+bin_PROGRAMS = test_main bench_InverseFilterbank
 
 test_main_SOURCES = test_main.cpp \
                     test_Apodization.cpp \
+                    test_EventEmitter.cpp \
                     test_FIRFilter.cpp \
                     Filterbank/test_FilterbankEngineCPU.cpp \
                     Filterbank/test_FilterbankConfig.cpp \
+                    InverseFilterbank/test_InverseFilterbankEngineCPU.cpp \
                     InverseFilterbank/test_InverseFilterbankConfig.cpp \
+                    InverseFilterbank/test_InverseFilterbankResponse.cpp \
+                    InverseFilterbank/test_InverseFilterbank.cpp \
+                    InverseFilterbank/test_InverseFilterbankPipeline.cpp \
                     util.cpp \
+                    TestConfig.cpp \
                     InverseFilterbankTestConfig.cpp
-
-                    # InverseFilterbank/test_InverseFilterbankResponse.cpp \
-                    # InverseFilterbank/test_InverseFilterbankConfig.cpp \
-                    # InverseFilterbank/test_InverseFilterbank.cpp \
-                    # InverseFilterbank/test_InverseFilterbankPipeline.cpp \
-                    # InverseFilterbankTestConfig.cpp \
-                    # util.cpp
-
-                    # InverseFilterbank/test_InverseFilterbankEngineCPU.cpp
-
-# test_main_SOURCES = test_main.cpp \
-#                     InverseFilterbank/test_InverseFilterbankEngineCPU.cpp \
-#                     util.cpp
 
 
 if HAVE_CUFFT
-  test_main_SOURCES += Filterbank/test_FilterbankEngineCUDA.cu
-  # bin_PROGRAMS += bench_InverseFilterbankEngineCUDA
-  # bench_InverseFilterbankEngineCUDA_SOURCES = InverseFilterbank/bench_InverseFilterbankEngineCUDA.cu
+  test_main_SOURCES += Filterbank/test_FilterbankEngineCUDA.cpp
 
-  # test_main_SOURCES += InverseFilterbank/test_InverseFilterbankEngineCUDA_kernels.cu
+  test_main_SOURCES += InverseFilterbank/test_InverseFilterbankEngineCUDA_kernels.cpp \
+                       InverseFilterbank/test_InverseFilterbankEngineCUDA.cpp \
+                       InverseFilterbank/test_InverseFilterbankEngine_integration.cpp
 
-  # test_main_SOURCES += InverseFilterbank/test_InverseFilterbankEngineCUDA_kernels.cu \
-  #                      InverseFilterbank/test_InverseFilterbankEngineCUDA.cu
+  test_main_SOURCES += test_FTransform_cufft_precision.cpp
 
-  test_main_SOURCES += InverseFilterbank/test_InverseFilterbankEngineCUDA_kernels.cu \
-                       InverseFilterbank/test_InverseFilterbankEngineCUDA.cu \
-                       InverseFilterbank/test_InverseFilterbankEngine_integration.cu
+  bench_InverseFilterbank_SOURCES = util.cpp \
+                                    TestConfig.cpp \
+                                    InverseFilterbankTestConfig.cpp \
+                                    InverseFilterbank/bench_InverseFilterbank.cpp
 
 endif
 

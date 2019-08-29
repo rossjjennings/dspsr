@@ -130,11 +130,11 @@ bool util::allclose (dsp::TimeSeries* a, dsp::TimeSeries* b, float atol, float r
 
   for (unsigned ichan=0; ichan<a->get_nchan(); ichan++) {
     for (unsigned ipol=0; ipol<a->get_npol(); ipol++) {
-      std::cerr << ichan << ", " << ipol << std::endl;
+      // std::cerr << ichan << ", " << ipol << std::endl;
       a_ptr = reinterpret_cast<std::complex<float>*> (a->get_datptr(ichan, ipol));
       b_ptr = reinterpret_cast<std::complex<float>*> (b->get_datptr(ichan, ipol));
       for (unsigned idat=0; idat<a->get_ndat(); idat++) {
-        std::cerr << "[" << *a_ptr << ", " << *b_ptr << "] ";
+        // std::cerr << "[" << *a_ptr << ", " << *b_ptr << "] ";
         if (! util::isclose(*a_ptr, *b_ptr, atol, rtol)) {
           // if (util::config::verbose) {
           //   std::cerr << "[(" << ichan << ", " << ipol << ", " << idat << ")="
@@ -149,60 +149,101 @@ bool util::allclose (dsp::TimeSeries* a, dsp::TimeSeries* b, float atol, float r
       }
       // if (util::config::verbose)
       // {
-        std::cerr << std::endl;
+        // std::cerr << std::endl;
       // }
     }
   }
   return allclose;
 }
 
+// void util::to_json(json& j, const util::TestShape& sh) {
+//   j = json{
+//       {"npart", sh.npart},
+//       {"input_nchan", sh.input_nchan},
+//       {"output_nchan", sh.output_nchan},
+//       {"input_npol", sh.input_npol},
+//       {"output_npol", sh.output_npol},
+//       {"input_ndat", sh.input_ndat},
+//       {"input_ndat", sh.input_ndat},
+//       {"overlap_pos", sh.overlap_pos},
+//       {"overlap_neg", sh.overlap_neg}
+//   };
+// }
+//
+// void util::from_json(const json& j, util::TestShape& sh) {
+//   sh.npart = j["npart"].get<unsigned>();
+//   sh.input_nchan = j["input_nchan"].get<unsigned>();
+//   sh.output_nchan = j["output_nchan"].get<unsigned>();
+//   sh.input_npol = j["input_npol"].get<unsigned>();
+//   sh.output_npol = j["output_npol"].get<unsigned>();
+//   sh.input_ndat = j["input_ndat"].get<unsigned>();
+//   sh.output_ndat = j["output_ndat"].get<unsigned>();
+//   sh.overlap_pos = j["overlap_pos"].get<unsigned>();
+//   sh.overlap_neg = j["overlap_neg"].get<unsigned>();
+//   // j.at("npart").get_to(sh.npart);
+//   // j.at("input_nchan").get_to(sh.input_nchan);
+//   // j.at("output_nchan").get_to(sh.output_nchan);
+//   // j.at("input_npol").get_to(sh.input_npol);
+//   // j.at("output_npol").get_to(sh.output_npol);
+//   // j.at("input_ndat").get_to(sh.input_ndat);
+//   // j.at("output_ndat").get_to(sh.output_ndat);
+//   // j.at("overlap_pos").get_to(sh.overlap_pos);
+//   // j.at("overlap_neg").get_to(sh.overlap_neg);
+// }
+//
+// json util::load_json (std::string file_path)
+// {
+//
+//   std::ifstream in_stream(file_path);
+//   if (! in_stream.good()) {
+//     throw "util::load_json: file_path is either nonexistent or locked";
+//   }
+//   json j;
+//   in_stream >> j;
+//   in_stream.close();
+//   return j;
+// }
 
-
-
-void util::to_json(json& j, const util::TestShape& sh) {
-  j = json{
-      {"npart", sh.npart},
-      {"input_nchan", sh.input_nchan},
-      {"output_nchan", sh.output_nchan},
-      {"input_npol", sh.input_npol},
-      {"output_npol", sh.output_npol},
-      {"input_ndat", sh.input_ndat},
-      {"input_ndat", sh.input_ndat},
-      {"overlap_pos", sh.overlap_pos},
-      {"overlap_neg", sh.overlap_neg}
-  };
-}
-
-void util::from_json(const json& j, util::TestShape& sh) {
-  sh.npart = j["npart"].get<unsigned>();
-  sh.input_nchan = j["input_nchan"].get<unsigned>();
-  sh.output_nchan = j["output_nchan"].get<unsigned>();
-  sh.input_npol = j["input_npol"].get<unsigned>();
-  sh.output_npol = j["output_npol"].get<unsigned>();
-  sh.input_ndat = j["input_ndat"].get<unsigned>();
-  sh.output_ndat = j["output_ndat"].get<unsigned>();
-  sh.overlap_pos = j["overlap_pos"].get<unsigned>();
-  sh.overlap_neg = j["overlap_neg"].get<unsigned>();
-  // j.at("npart").get_to(sh.npart);
-  // j.at("input_nchan").get_to(sh.input_nchan);
-  // j.at("output_nchan").get_to(sh.output_nchan);
-  // j.at("input_npol").get_to(sh.input_npol);
-  // j.at("output_npol").get_to(sh.output_npol);
-  // j.at("input_ndat").get_to(sh.input_ndat);
-  // j.at("output_ndat").get_to(sh.output_ndat);
-  // j.at("overlap_pos").get_to(sh.overlap_pos);
-  // j.at("overlap_neg").get_to(sh.overlap_neg);
-}
-
-json util::load_json (std::string file_path)
+const toml::Value util::load_toml (const std::string& file_path)
 {
-
-  std::ifstream in_stream(file_path);
-  if (! in_stream.good()) {
-    throw "util::load_json: file_path is either nonexistent or locked";
+  std::ifstream ifs(file_path);
+  if (! ifs.good()) {
+    throw "util::load_toml: file_path is either nonexistent or locked";
   }
-  json j;
-  in_stream >> j;
-  in_stream.close();
-  return j;
+  toml::ParseResult pr = toml::parse(ifs);
+  ifs.close();
+
+  if (! pr.valid())
+  {
+    throw "util::load_toml: invalid TOML file";
+  }
+  const toml::Value result = pr.value;
+  return result;
+}
+
+
+void util::from_toml (const toml::Value& val, util::TestShape& sh)
+{
+  sh.npart = (unsigned) val.get<int>("npart");
+  sh.input_nchan = (unsigned) val.get<int>("input_nchan");
+  sh.output_nchan = (unsigned) val.get<int>("output_nchan");
+  sh.input_npol = (unsigned) val.get<int>("input_npol");
+  sh.output_npol = (unsigned) val.get<int>("output_npol");
+  sh.input_ndat = (unsigned) val.get<int>("input_ndat");
+  sh.output_ndat = (unsigned) val.get<int>("output_ndat");
+  sh.overlap_pos = (unsigned) val.get<int>("overlap_pos");
+  sh.overlap_neg = (unsigned) val.get<int>("overlap_neg");
+}
+
+void util::to_toml (toml::Value& val, const util::TestShape& sh)
+{
+  val.set("npart", (int) sh.npart);
+  val.set("input_nchan", (int) sh.input_nchan);
+  val.set("output_nchan", (int) sh.output_nchan);
+  val.set("input_npol", (int) sh.input_npol);
+  val.set("output_npol", (int) sh.output_npol);
+  val.set("input_ndat", (int) sh.input_ndat);
+  val.set("output_ndat", (int) sh.output_ndat);
+  val.set("overlap_pos", (int) sh.overlap_pos);
+  val.set("overlap_neg", (int) sh.overlap_neg);
 }

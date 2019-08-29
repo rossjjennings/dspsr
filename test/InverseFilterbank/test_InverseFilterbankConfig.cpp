@@ -39,7 +39,7 @@ TEST_CASE("InverseFilterbankConfig can intake arguments", "[InverseFilterbankCon
   }
 }
 
-TEST_CASE("InverseFilterbank can stream correct internal representation", "[InverseFilterbankConfig]")
+TEST_CASE("InverseFilterbankConfig can stream correct internal representation", "[InverseFilterbankConfig]")
 {
   dsp::InverseFilterbank::Config config;
   // std::string stringvalues = "1:D";

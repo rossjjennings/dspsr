@@ -80,8 +80,8 @@ AC_PROG_INSTALL
 AC_PROG_LIBTOOL
 
 # check for C++11 compatibility
-AX_CXX_COMPILE_STDCXX_11
-AM_CONDITIONAL([HAVE_CXX11], [test x"$HAVE_CXX11" -eq x1])
+AX_CXX_COMPILE_STDCXX_11([noext], [optional])
+AM_CONDITIONAL([HAVE_CXX11], [test x"$HAVE_CXX11" == x1])
 
 # Create static libraries by default
 if test x"$enable_shared" == xyes; then
@@ -188,6 +188,9 @@ else
 fi
 
 AM_CONDITIONAL([HAVE_PYTHON], [test "$PYTHON" != :])
+# echo "HAVE_PYTHON=$HAVE_PYTHON"
+# echo "HAVE_CUDA=$HAVE_CUDA"
+#
 #
 # Initialize variables used by Makefile.include
 #
