@@ -108,7 +108,12 @@ TEST_CASE (
   std::vector<util::TestShape> test_shapes = test_config.get_test_vector_shapes();
   bool do_fft_window = test_config.get_field<bool>("InverseFilterbank.do_fft_window");
   bool do_response = test_config.get_field<bool>("InverseFilterbank.do_response");
+
   auto idx = GENERATE_COPY(range(0, (int) test_shapes.size()));
+  if (util::config::verbose) {
+    std::cerr << "test_InverseFilterbankEngine_integration: idx=" << idx << std::endl;
+  }
+
   util::TestShape test_shape = test_shapes[idx];
 
 
@@ -184,87 +189,87 @@ TEST_CASE (
   // now lets compare the two time series
   transfer(out_gpu, out_cuda, cudaMemcpyDeviceToHost);
 
-  std::vector<Reporter> reporters = {
-    reporter_cpu_fft_window,
-    reporter_cuda_fft_window,
-    reporter_cpu_fft,
-    reporter_cuda_fft,
-    reporter_cpu_response_stitch,
-    reporter_cuda_response_stitch,
-    reporter_cpu_ifft,
-    reporter_cuda_ifft
-  };
-
-  std::vector<std::string> reporter_names = {
-    "fft_window",
-    "fft",
-    "response_stitch",
-    "ifft"
-  };
-
-  if (npol == 2) {
-    reporters = {
-      reporter_cpu_response_stitch,
-      reporter_cuda_response_stitch,
-      reporter_cpu_ifft,
-      reporter_cuda_ifft
-    };
-
-    reporter_names = {
-      "response_stitch",
-      "ifft"
-    };
-  }
-
-  unsigned nclose;
-  unsigned size;
-  std::vector<float> cpu_vector;
-  std::vector<float> cuda_vector;
-
-  for (unsigned r_idx=0; r_idx<reporter_names.size(); r_idx++)
-  {
-    reporters[r_idx*2].concatenate_data_vectors(cpu_vector);
-    reporters[r_idx*2 + 1].concatenate_data_vectors(cuda_vector);
-
-    size = cpu_vector.size();
-
-    nclose = util::nclose(
-      cpu_vector,
-      cuda_vector,
-      thresh[0], thresh[1]
-    );
-    std::ofstream cpu_file(
-      reporter_names[r_idx] + ".cpu.dat", std::ios::out | std::ios::binary);
-    std::ofstream cuda_file(
-      reporter_names[r_idx] + ".cuda.dat", std::ios::out | std::ios::binary);
-
-    cpu_file.write(
-      reinterpret_cast<const char*>(cpu_vector.data()),
-      size * sizeof(float)
-    );
-    cpu_file.close();
-
-    cuda_file.write(
-      reinterpret_cast<const char*>(cuda_vector.data()),
-      size * sizeof(float)
-    );
-    cuda_file.close();
-
-    if (util::config::verbose)
-    {
-      std::cerr << "test_InverseFilterbankEngine_integration: "
-        << reporter_names[r_idx] << " " << nclose << "/" << size
-        << " (" << 100 * (float) nclose / size << "%)" << std::endl;
-      std::cerr << "test_InverseFilterbankEngine_integration: "
-        << reporter_names[r_idx]
-        << " max cpu=" << util::max(cpu_vector)
-        << ", max gpu=" << util::max(cuda_vector)
-        << std::endl;
-    }
-
-    CHECK (nclose == size);
-
-  }
+  // std::vector<Reporter> reporters = {
+  //   reporter_cpu_fft_window,
+  //   reporter_cuda_fft_window,
+  //   reporter_cpu_fft,
+  //   reporter_cuda_fft,
+  //   reporter_cpu_response_stitch,
+  //   reporter_cuda_response_stitch,
+  //   reporter_cpu_ifft,
+  //   reporter_cuda_ifft
+  // };
+  //
+  // std::vector<std::string> reporter_names = {
+  //   "fft_window",
+  //   "fft",
+  //   "response_stitch",
+  //   "ifft"
+  // };
+  //
+  // if (npol == 2) {
+  //   reporters = {
+  //     reporter_cpu_response_stitch,
+  //     reporter_cuda_response_stitch,
+  //     reporter_cpu_ifft,
+  //     reporter_cuda_ifft
+  //   };
+  //
+  //   reporter_names = {
+  //     "response_stitch",
+  //     "ifft"
+  //   };
+  // }
+  //
+  // unsigned nclose;
+  // unsigned size;
+  // std::vector<float> cpu_vector;
+  // std::vector<float> cuda_vector;
+  //
+  // for (unsigned r_idx=0; r_idx<reporter_names.size(); r_idx++)
+  // {
+  //   reporters[r_idx*2].concatenate_data_vectors(cpu_vector);
+  //   reporters[r_idx*2 + 1].concatenate_data_vectors(cuda_vector);
+  //
+  //   size = cpu_vector.size();
+  //
+  //   nclose = util::nclose(
+  //     cpu_vector,
+  //     cuda_vector,
+  //     thresh[0], thresh[1]
+  //   );
+  //   // std::ofstream cpu_file(
+  //   //   reporter_names[r_idx] + ".cpu.dat", std::ios::out | std::ios::binary);
+  //   // std::ofstream cuda_file(
+  //   //   reporter_names[r_idx] + ".cuda.dat", std::ios::out | std::ios::binary);
+  //   //
+  //   // cpu_file.write(
+  //   //   reinterpret_cast<const char*>(cpu_vector.data()),
+  //   //   size * sizeof(float)
+  //   // );
+  //   // cpu_file.close();
+  //   //
+  //   // cuda_file.write(
+  //   //   reinterpret_cast<const char*>(cuda_vector.data()),
+  //   //   size * sizeof(float)
+  //   // );
+  //   // cuda_file.close();
+  //
+  //   if (util::config::verbose)
+  //   {
+  //     std::cerr << "test_InverseFilterbankEngine_integration: "
+  //       << reporter_names[r_idx] << " " << nclose << "/" << size
+  //       << " (" << 100 * (float) nclose / size << "%)" << std::endl;
+  //     std::cerr << "test_InverseFilterbankEngine_integration: "
+  //       << reporter_names[r_idx]
+  //       << " max cpu=" << util::max(cpu_vector)
+  //       << ", max gpu=" << util::max(cuda_vector)
+  //       << std::endl;
+  //   }
+  //
+  //   CHECK (nclose == size);
+  //
+  // }
 
   REQUIRE(util::allclose(out_cuda, out, thresh[0], thresh[1]));
 }

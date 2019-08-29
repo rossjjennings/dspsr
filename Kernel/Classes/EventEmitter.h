@@ -9,13 +9,18 @@
 #ifndef __EventEmitter_h
 #define __EventEmitter_h
 
+#if HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 #include <string>
 #include <vector>
 #include <map>
 #include <iostream>
 
-//! Implements a simple event emitter class. This is C++11 only. A pre C++11
-//! mock implementation is present for compilers that do not support C++11.
+
+#if HAVE_CXX11
+//! Implements a simple event emitter class. This is C++11 only.
 //!
 //! Example Usage:
 //!
@@ -40,12 +45,9 @@ public:
 
   void on (const std::string& event_name, FuncType* func);
 
-  #if HAVE_CXX11
   template<class ... Types>
   void emit (const std::string& event_name, Types ... args);
-  #else
-  void emit (const std::string& event_name, ...);
-  #endif
+
 private:
 
   std::map<std::string, std::vector<FuncType*>> event_map;
@@ -56,8 +58,6 @@ private:
 template<typename FuncType>
 EventEmitter<FuncType>::EventEmitter ()
 { }
-
-#if HAVE_CXX11
 
 template<typename FuncType>
 void EventEmitter<FuncType>::on(const std::string& event_name, FuncType _func)
@@ -75,8 +75,6 @@ void EventEmitter<FuncType>::on(const std::string& event_name, FuncType* _func)
   }
 }
 
-
-
 template<typename FuncType>
 template<class ... Types>
 void EventEmitter<FuncType>::emit (const std::string& event_name, Types ... args)
@@ -93,18 +91,63 @@ void EventEmitter<FuncType>::emit (const std::string& event_name, Types ... args
 
 #else
 
+
+//! pre C++11 mock implementation of EventEmitter class.
+//!
+//! Example Usage:
+//!
+//!   EventEmitter<std::function<void(int)> emitter;
+//!
+//!   auto lam_auto = [] (int a) { std::cerr << a << std::endl; };
+//!   std::function<void(int)> lam = [] (int a) { std::cerr << a << std::endl; };
+//!   emitter.on("event0", lam);
+//!   emitter.on("event0", lam_auto);
+//!   emitter.on("event0", [] (int a) { std::cerr << a << std::endl; });
+//!
+//!   emitter.emit("event0");
+//!
+template<typename FuncType>
+class EventEmitter {
+
+public:
+
+  EventEmitter ();
+
+  void on (const std::string& event_name, FuncType func);
+
+  void on (const std::string& event_name, FuncType* func);
+
+  void emit (const std::string& event_name, ...);
+
+private:
+
+  std::map<std::string, std::vector<FuncType*>> event_map;
+
+};
+
+
+template<typename FuncType>
+EventEmitter<FuncType>::EventEmitter ()
+{ }
+
+
 template<typename FuncType>
 void EventEmitter<FuncType>::on(const std::string& event_name, FuncType _func)
-{ }
+{
+  std::cerr << "EventEmitter::on: non C++11" << std::endl;
+}
 
 template<typename FuncType>
 void EventEmitter<FuncType>::on(const std::string& event_name, FuncType* _func)
-{ }
+{
+  std::cerr << "EventEmitter::on: non C++11" << std::endl;
+}
 
 template<typename FuncType>
 void EventEmitter<FuncType>::emit (const std::string& event_name, ...)
-{ }
-
+{
+  std::cerr << "EventEmitter::emit: non C++11" << std::endl;
+}
 #endif
 
 #endif

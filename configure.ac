@@ -81,7 +81,7 @@ AC_PROG_LIBTOOL
 
 # check for C++11 compatibility
 AX_CXX_COMPILE_STDCXX_11([noext], [optional])
-AM_CONDITIONAL([HAVE_CPP11], [test x"$HAVE_CXX11" == x1])
+AM_CONDITIONAL([HAVE_CXX11], [test x"$HAVE_CXX11" == x1])
 
 # Create static libraries by default
 if test x"$enable_shared" == xyes; then

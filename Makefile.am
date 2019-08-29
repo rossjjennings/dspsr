@@ -1,7 +1,7 @@
 
 SUBDIRS	= config Kernel Signal Management
 
-if HAVE_CPP11
+if HAVE_CXX11
 SUBDIRS += test
 endif
 

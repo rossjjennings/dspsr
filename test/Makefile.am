@@ -2,6 +2,7 @@ bin_PROGRAMS = test_main bench_InverseFilterbank
 
 test_main_SOURCES = test_main.cpp \
                     test_Apodization.cpp \
+                    test_EventEmitter.cpp \
                     test_FIRFilter.cpp \
                     Filterbank/test_FilterbankEngineCPU.cpp \
                     Filterbank/test_FilterbankConfig.cpp \
