@@ -1,23 +1,43 @@
-image: dshaff/dspsr-build:latest
+image: nexus.engageska-portugal.pt/ska-docker/dspsr-build:latest
+
+services:
+  - docker:dind
+
+variables:
+  IMAGE_NAME: dspsr
+  DOCKER_HOST: tcp://docker:2375
+  DOCKER_DRIVER: overlay2
+
 
 stages:
   - build
-  - test 
+  - test
+  - deploy
 
 build:
   stage: build
   script:
     - ./bootstrap
-    - mkdir build && cd build 
-    - echo "apsr bpsr cpsr2 caspsr mopsr sigproc dada" > backends.list && ./../configure --enable-shared 
+    - echo "apsr bpsr cpsr2 caspsr mopsr sigproc dada" > backends.list && ./configure --enable-shared
     - make
-    - make install
   artifacts:
-    paths: 
-      - build/
-
+    paths:
+      - ./
 
 test:
-  stage: test 
-  script: 
-    - ./build/test/test_main
+  stage: test
+  script:
+    - ls 
+
+deploy:
+  stage: deploy
+  image: docker:stable
+  script:
+    - docker login -u $DOCKER_REGISTRY_USERNAME -p $DOCKER_REGISTRY_PASSWORD $DOCKER_REGISTRY_HOST
+    - image=$DOCKER_REGISTRY_HOST/$DOCKER_REGISTRY_FOLDER/$IMAGE_NAME
+    - version=2.0.0
+    - docker build -t $image:$version .
+    - docker tag $image:$version $image:latest 
+    - docker push $image:$version 
+    - docker push $image:latest 
+
