@@ -46,7 +46,7 @@ void PipelineConfig::change_inverse_filterbank_config (
     const std::string& config_str)
 {
   // set up inverse filterbank configuration
-  std::istringstream iss = std::istringstream(config_str);
+  std::istringstream iss (config_str);
   iss >> config->inverse_filterbank;
 }
 

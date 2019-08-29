@@ -20,7 +20,8 @@ TEST_CASE("FilterbankConfig can intake arguments", "[FilterbankConfig]")
     REQUIRE(config.get_nchan() == 1);
 
     stringvalues = "1:16384";
-    iss = std::istringstream(stringvalues);
+    iss.clear();
+    iss.str(stringvalues);
 
     iss >> config;
     REQUIRE(config.get_convolve_when() == dsp::Filterbank::Config::After);

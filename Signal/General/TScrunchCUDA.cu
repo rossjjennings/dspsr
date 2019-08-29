@@ -22,11 +22,16 @@ CUDA::TScrunchEngine::TScrunchEngine (cudaStream_t _stream)
   stream = _stream;
 }
 
+#if (__CUDA_ARCH__ >= 300)
 // to support templated kernels below
 __inline__ __device__ float warpSum(float val)
 {
   for (int offset = warpSize/2; offset > 0; offset /= 2)
+#if (__CUDACC_VER_MAJOR__>= 9)
+    val += __shfl_down_sync(0xFFFFFFFF, val, offset);
+#else
     val += __shfl_down(val, offset);
+#endif
   return val;
 }
 
@@ -34,11 +39,17 @@ __inline__ __device__ float2 warpSum(float2 val)
 {
   for (int offset = warpSize/2; offset > 0; offset /= 2)
   {
+#if (__CUDACC_VER_MAJOR__ >= 9)
+    val.x += __shfl_down_sync(0xFFFFFFFF, val.x, offset);
+    val.y += __shfl_down_sync(0xFFFFFFFF, val.y, offset);
+#else
     val.x += __shfl_down(val.x, offset);
     val.y += __shfl_down(val.y, offset);
+#endif
   }
   return val;
 }
+#endif
 
 __inline__ __device__ float sumTwo(float v1, float v2)
 {
@@ -94,7 +105,9 @@ __global__ void fpt_warp (T* in_base, T* out_base,
     }
 
     // sum across the warp
+#if (__CUDA_ARCH__ >= 300)
     sum = warpSum(sum);
+#endif
   }
 
   // only the first thread in each warp sum writes out 

@@ -21,7 +21,8 @@ TEST_CASE("InverseFilterbankConfig can intake arguments", "[InverseFilterbankCon
     REQUIRE(config.get_nchan() == 1);
 
     stringvalues = "1:16384";
-    iss = std::istringstream(stringvalues);
+    iss.clear();
+    iss.str(stringvalues);
 
     iss >> config;
     REQUIRE(config.get_convolve_when() == dsp::Filterbank::Config::After);
@@ -29,7 +30,8 @@ TEST_CASE("InverseFilterbankConfig can intake arguments", "[InverseFilterbankCon
     REQUIRE(config.get_freq_res() == 16384);
 
     stringvalues = "1:16384:128";
-    iss = std::istringstream(stringvalues);
+    iss.clear();
+    iss.str(stringvalues);
 
     iss >> config;
     REQUIRE(config.get_convolve_when() == dsp::Filterbank::Config::After);

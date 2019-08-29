@@ -18,13 +18,7 @@
 #include <cuComplex.h>
 #include <memory>
 
-#ifdef __CUDA_ARCH__
-    #if (__CUDA_ARCH__ >= 300)
-        #define HAVE_SHFL
-    #else
-        #define NO_SHFL
-    #endif
-#endif
+#define FULLMASK 0xFFFFFFFF
 
 using namespace std;
 
@@ -305,7 +299,20 @@ __global__ void fold1bin2dim_warp (const float2* in_base,
   }
 
   // now add totals together
-#ifdef HAVE_SHFL
+#if (__CUDA_ARCH__ >= 300)
+#if (__CUDACC_VER_MAJOR__>= 9)
+  total.x += __shfl_down_sync (FULLMASK, total.x, 16);
+  total.x += __shfl_down_sync (FULLMASK, total.x, 8);
+  total.x += __shfl_down_sync (FULLMASK, total.x, 4);
+  total.x += __shfl_down_sync (FULLMASK, total.x, 2);
+  total.x += __shfl_down_sync (FULLMASK, total.x, 1);
+
+  total.y += __shfl_down_sync (FULLMASK, total.y, 16);
+  total.y += __shfl_down_sync (FULLMASK, total.y, 8);
+  total.y += __shfl_down_sync (FULLMASK, total.y, 4);
+  total.y += __shfl_down_sync (FULLMASK, total.y, 2);
+  total.y += __shfl_down_sync (FULLMASK, total.y, 1);
+#else
   total.x += __shfl_down (total.x, 16);
   total.x += __shfl_down (total.x, 8);
   total.x += __shfl_down (total.x, 4);
@@ -317,6 +324,7 @@ __global__ void fold1bin2dim_warp (const float2* in_base,
   total.y += __shfl_down (total.y, 4);
   total.y += __shfl_down (total.y, 2);
   total.y += __shfl_down (total.y, 1);
+#endif
 
   // copy to shm for warp 0 to write out to gmem
   if (warp_idx == 0)
@@ -332,8 +340,7 @@ __global__ void fold1bin2dim_warp (const float2* in_base,
     int output_ibin = binplan[ibin].ibin;
     out_base[ output_ibin ] = cuCaddf (out_base[ output_ibin ], warp_fold[warp_idx]);
   }
-#endif
-#ifdef NO_SHFL
+#else
   int last_offset = 16;
   warp_fold[threadIdx.x] = total;
   __syncthreads();
