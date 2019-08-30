@@ -63,6 +63,7 @@ deploy:
     - docker login -u $DOCKER_REGISTRY_USERNAME -p $DOCKER_REGISTRY_PASSWORD $DOCKER_REGISTRY_HOST
     - image=$DOCKER_REGISTRY_HOST/$DOCKER_REGISTRY_FOLDER/$IMAGE_NAME
     - version="2.0.0-$CI_COMMIT_SHORT_SHA"
+<<<<<<< HEAD
     - docker build -t $image:$version . --build-arg MAKE_PROC=$(nproc)
     - docker tag $image:$version $image:latest
     - docker push $image:$version
@@ -73,3 +74,10 @@ deploy:
   # tags:
   #   - ska
   #   - docker-executor
+=======
+    - docker build -t $image:$version .
+    - docker tag $image:$version $image:latest 
+    - docker push $image:$version 
+    - docker push $image:latest 
+
+>>>>>>> 1b01e9e0... added short git hash to version
