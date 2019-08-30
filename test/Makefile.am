@@ -6,6 +6,7 @@ test_main_SOURCES = test_main.cpp \
                     util/TestConfig.cpp \
                     test_Apodization.cpp \
                     test_EventEmitter.cpp \
+                    test_Response.cpp \
                     test_FIRFilter.cpp \
                     Convolution/test_Convolution.cpp \
                     Filterbank/test_FilterbankEngineCPU.cpp \

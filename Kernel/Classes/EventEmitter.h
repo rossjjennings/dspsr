@@ -134,19 +134,16 @@ EventEmitter<FuncType>::EventEmitter ()
 template<typename FuncType>
 void EventEmitter<FuncType>::on(const std::string& event_name, FuncType _func)
 {
-  std::cerr << "EventEmitter::on: non C++11" << std::endl;
 }
 
 template<typename FuncType>
 void EventEmitter<FuncType>::on(const std::string& event_name, FuncType* _func)
 {
-  std::cerr << "EventEmitter::on: non C++11" << std::endl;
 }
 
 template<typename FuncType>
 void EventEmitter<FuncType>::emit (const std::string& event_name, ...)
 {
-  std::cerr << "EventEmitter::emit: non C++11" << std::endl;
 }
 #endif
 
