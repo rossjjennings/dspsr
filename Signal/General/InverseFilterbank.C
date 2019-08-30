@@ -87,15 +87,29 @@ void dsp::InverseFilterbank::transformation ()
   resize_output ();
 
   if (has_buffering_policy()) {
+<<<<<<< HEAD
+=======
+    if (verbose) {
+      std::cerr << "dsp::InverseFilterbank::transformation: get_buffering_policy()->set_next_start("
+        << input_sample_step * npart << ")" << std::endl;
+    }
+>>>>>>> 362e0bb5... added some extra information for the inverse filterbank, fixed bug in InverseFilterbank
     get_buffering_policy()->set_next_start (input_sample_step * npart);
   }
 
   uint64_t output_ndat = output->get_ndat();
 
-  // points kept from each small fft
-  unsigned nkeep = freq_res - nfilt_tot;
+  int64_t input_sample = input->get_input_sample();
+  int64_t new_output_sample = 0;
+
+  if (input_sample >= 0) {
+    // unsigned nkeep = freq_res - nfilt_tot;
+    // new_output_sample = (input_sample / input_sample_step) * nkeep;
+    new_output_sample = output_ndat;
+  }
 
   if (verbose) {
+<<<<<<< HEAD
     cerr << "dsp::InverseFilterbank::transformation npart=" << npart
          << " freq_res=" << freq_res <<
          << " nfilt_tot=" << nfilt_tot <<
@@ -108,7 +122,13 @@ void dsp::InverseFilterbank::transformation ()
     output->set_input_sample (0);
   } else if (input_sample >= 0) {
     output->set_input_sample ((input_sample / input_sample_step) * nkeep);
+=======
+    std::cerr << "dsp::InverseFilterbank::transformation: setting input sample to "
+      << new_output_sample << std::endl;
+>>>>>>> 362e0bb5... added some extra information for the inverse filterbank, fixed bug in InverseFilterbank
   }
+
+  output->set_input_sample (new_output_sample);
 
   if (verbose) {
     cerr << "dsp::InverseFilterbank::transformation after prepare output"
@@ -204,8 +224,6 @@ void dsp::InverseFilterbank::make_preparations ()
     output_sample_step = output_fft_length - output_discard_total;
 
   } else {
-    // this means that the input_fft_length has been specified in the
-    // configuration
     output_fft_length = input_nchan*get_oversampling_factor().normalize(input_fft_length) / output_nchan;
     output_fft_length *= n_per_sample;
     input_fft_length *= n_per_sample;

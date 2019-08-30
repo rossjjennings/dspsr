@@ -273,9 +273,9 @@ void dsp::InverseFilterbankEngineCPU::perform (
         );
 
         if (fft_window) {
-          if (verbose && input_ichan == 0) {
-            std::cerr << "dsp::InverseFilterbankEngineCPU::perform: applying fft_window" << std::endl;
-          }
+          // if (verbose && input_ichan == 0) {
+          //   std::cerr << "dsp::InverseFilterbankEngineCPU::perform: applying fft_window" << std::endl;
+          // }
           fft_window->operate(input_time_scratch);
         }
 
@@ -326,9 +326,9 @@ void dsp::InverseFilterbankEngineCPU::perform (
       // If we have the zeroth PFB channel and we don't have all the PFB channels,
       // then we zero the last half channel.
       if (! pfb_all_chan && pfb_dc_chan) {
-        if (verbose) {
-          std::cerr << "dsp::InverseFilterbankEngineCPU::perform: zeroing last half channel" << std::endl;
-        }
+        // if (verbose) {
+        //   std::cerr << "dsp::InverseFilterbankEngineCPU::perform: zeroing last half channel" << std::endl;
+        // }
         int offset = n_dims*(output_nchan*output_fft_length - input_os_keep_2);
         for (unsigned i=0; i<n_dims*input_os_keep_2; i++) {
           stitch_scratch[offset + i] = 0.0;
@@ -350,14 +350,14 @@ void dsp::InverseFilterbankEngineCPU::perform (
       }
 
       if (response != nullptr) {
-        if (verbose) {
-          std::cerr << "dsp::InverseFilterbankEngineCPU::perform: applying response" << std::endl;
-        }
+        // if (verbose) {
+        //   std::cerr << "dsp::InverseFilterbankEngineCPU::perform: applying response" << std::endl;
+        // }
         response->operate(stitch_scratch, ipol, 0, output_nchan);
       } else {
-        if (verbose) {
-          std::cerr << "dsp::InverseFilterbankEngineCPU::perform: NOT applying response" << std::endl;
-        }
+        // if (verbose) {
+        //   std::cerr << "dsp::InverseFilterbankEngineCPU::perform: NOT applying response" << std::endl;
+        // }
       }
 
       if (report) {
@@ -371,9 +371,9 @@ void dsp::InverseFilterbankEngineCPU::perform (
       // std::cerr << std::endl;
 
       if (out != nullptr) {
-        if (verbose) {
-          std::cerr << "dsp::InverseFilterbankEngineCPU::perform: pol=" << ipol <<" loop=" << ipart+1 << "/" << npart << " doing inverse FFT" << std::endl; //. output_fft_length: "<< output_fft_length << std::endl;
-        }
+        // if (verbose) {
+        //   std::cerr << "dsp::InverseFilterbankEngineCPU::perform: pol=" << ipol <<" loop=" << ipart+1 << "/" << npart << " doing inverse FFT" << std::endl; //. output_fft_length: "<< output_fft_length << std::endl;
+        // }
         output_freq_dom_ptr = stitch_scratch;
         for (unsigned output_ichan=0; output_ichan<output_nchan; output_ichan++) {
           // if (verbose) {
@@ -416,9 +416,9 @@ void dsp::InverseFilterbankEngineCPU::perform (
           //   output_sample_step*sizeof_complex
           // );
         }
-        if (verbose) {
-          std::cerr << "dsp::InverseFilterbankEngineCPU::perform: backward FFTs complete." << std::endl;
-        }
+        // if (verbose) {
+        //   std::cerr << "dsp::InverseFilterbankEngineCPU::perform: backward FFTs complete." << std::endl;
+        // }
       }
     } // end of n_pol
   } // end of ipart
