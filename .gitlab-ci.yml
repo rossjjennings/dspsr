@@ -35,9 +35,10 @@ deploy:
   script:
     - docker login -u $DOCKER_REGISTRY_USERNAME -p $DOCKER_REGISTRY_PASSWORD $DOCKER_REGISTRY_HOST
     - image=$DOCKER_REGISTRY_HOST/$DOCKER_REGISTRY_FOLDER/$IMAGE_NAME
-    - version=2.0.0
+    - version="2.0.0-$CI_COMMIT_SHORT_SHA"
     - docker build -t $image:$version .
     - docker tag $image:$version $image:latest 
     - docker push $image:$version 
     - docker push $image:latest 
-
+  only:
+    - master

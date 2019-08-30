@@ -20,7 +20,7 @@ SWIG_FLAGS = -Wall -python -I$(top_builddir)/local_include @PSRCHIVE_INCLUDE@
 
 ./dspsr_wrap.cxx: $(srcdir)/dspsr.i
 	$(SWIG) $(SWIG_FLAGS) -outdir $(builddir) $(srcdir)/dspsr.i
- 
+
 CLEANFILES = dspsr.py dspsr.pyc dspsr_wrap.cxx
 
 #############################################################################
