@@ -49,6 +49,10 @@ namespace CUDA
 
     void finish ();
 
+    FTransform::Plan* get_forward ();
+
+    FTransform::Plan* get_backward ();
+
   protected:
 
     //! forward fft plan

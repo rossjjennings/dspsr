@@ -51,6 +51,22 @@ void dsp::Filterbank::prepare ()
   prepared = true;
 }
 
+FTransform::Plan* dsp::Filterbank::get_forward()
+{
+  if (!engine)
+    throw Error (InvalidState, "dsp::Filterbank::get_forward",
+                 "no engine configured");
+  return engine->get_forward();
+}
+
+FTransform::Plan* dsp::Filterbank::get_backward()
+{
+  if (!engine)
+    throw Error (InvalidState, "dsp::Filterbank::get_backward",
+                 "no engine configured");
+  return engine->get_backward();
+}
+
 /*
   These are preparations that could be performed once at the start of
   the data processing
@@ -275,6 +291,11 @@ void dsp::Filterbank::make_preparations ()
       cerr << "dsp::Filterbank::make_preparations setup engine" << endl;
     engine->setup (this);
     return;
+  }
+  else
+  {
+    throw Error (InvalidState, "dsp::Filterbank::make_preparations",
+                 "no engine configured");
   }
 }
 

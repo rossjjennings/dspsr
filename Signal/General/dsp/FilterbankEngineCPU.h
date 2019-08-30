@@ -35,6 +35,9 @@ namespace dsp
 
     void finish ();
 
+    FTransform::Plan* get_forward ();
+
+    FTransform::Plan* get_backward ();
 
   protected:
 

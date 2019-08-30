@@ -301,3 +301,13 @@ void dsp::FilterbankEngineCPU::perform (
     cerr << "dsp:FilterbankEngineCPU::finish" << endl;
   }
 }
+
+FTransform::Plan* dsp::FilterbankEngineCPU::get_forward ()
+{
+  return forward;
+}
+
+FTransform::Plan* dsp::FilterbankEngineCPU::get_backward ()
+{
+  return backward;
+}

@@ -36,6 +36,10 @@ namespace dsp {
 
     virtual void set_passband (dsp::Response* _passband) { passband = _passband; }
 
+    virtual FTransform::Plan* get_forward () = 0;
+
+    virtual FTransform::Plan* get_backward () = 0;
+
   protected:
 
     float* scratch;

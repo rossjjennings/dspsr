@@ -15,6 +15,7 @@
 #include "dsp/Unpacker.h"
 #include "dsp/ExcisionUnpacker.h"
 
+#include "dsp/FilterbankEngineCPU.h"
 #include "dsp/TFPFilterbank.h"
 #include "dsp/Filterbank.h"
 #include "dsp/Detection.h"
@@ -208,6 +209,7 @@ void dsp::LoadToFil::construct () try
         filterbank->set_nchan( config->filterbank.get_nchan() );
         filterbank->set_input( timeseries );
         filterbank->set_output( timeseries = new_TimeSeries() );
+        filterbank->set_engine (new FilterbankEngineCPU);
 
         if (kernel)
           filterbank->set_response( kernel );
@@ -226,6 +228,7 @@ void dsp::LoadToFil::construct () try
         filterbank->set_nchan( config->filterbank.get_nchan() );
         filterbank->set_input( timeseries );
         filterbank->set_output( timeseries = new_TimeSeries() );
+        filterbank->set_engine (new FilterbankEngineCPU);
 
         operations.push_back( filterbank.get() );
       }

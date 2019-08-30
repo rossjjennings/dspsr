@@ -302,3 +302,13 @@ void CUDA::FilterbankEngine::perform (const dsp::TimeSeries * in, dsp::TimeSerie
   if (verbose)
     check_error_stream ("CUDA::FilterbankEngine::perform", stream);
 }
+
+FTransform::Plan* CUDA::FilterbankEngine::get_forward ()
+{
+  throw Error (InvalidState, "CUDA::FilterbankEngine::get_forward", "not implemented");
+}
+
+FTransform::Plan* CUDA::FilterbankEngine::get_backward ()
+{
+  throw Error (InvalidState, "CUDA::FilterbankEngine::backward", "not implemented");
+}

@@ -47,16 +47,16 @@ void dsp::TFPFilterbank::filterbank ()
     for (uint64_t ipart=0; ipart < npart; ipart++)
     {
       if (input->get_state() == Signal::Nyquist)
-        forward->frc1d (nsamp_fft, outdat, indat);
+        get_forward()->frc1d (nsamp_fft, outdat, indat);
       else
-        forward->fcc1d (nsamp_fft, outdat, indat);
+        get_forward()->fcc1d (nsamp_fft, outdat, indat);
 
       for (unsigned ichan=0; ichan < nchan; ichan++)
       {
-	// Re squared
-	outdat[ichan*padding] = outdat[ichan*2] * outdat[ichan*2];
-	// plus Im squared
-	outdat[ichan*padding] += outdat[ichan*2+1] * outdat[ichan*2+1];
+        // Re squared
+        outdat[ichan*padding] = outdat[ichan*2] * outdat[ichan*2];
+        // plus Im squared
+        outdat[ichan*padding] += outdat[ichan*2+1] * outdat[ichan*2+1];
       }
 
       outdat += nchan*padding;
