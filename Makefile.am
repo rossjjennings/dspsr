@@ -1,6 +1,12 @@
 
 SUBDIRS	= config Kernel Signal Management
 
+if HAVE_CXX11
+if HAVE_CUDA
+SUBDIRS += test
+endif
+endif
+
 if HAVE_PYTHON
 SUBDIRS += python
 endif
@@ -23,4 +29,3 @@ clean-local: clean-local-include
 .PHONY: clean-local-include
 clean-local-include:
 	-rm -rf local_include
-

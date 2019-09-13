@@ -12,12 +12,15 @@
 #include "dsp/FilterbankConfig.h"
 #include "dsp/Scratch.h"
 
+#include "dsp/FilterbankEngineCPU.h"
+
 #if HAVE_CUDA
-#include "dsp/FilterbankCUDA.h"
+#include "dsp/FilterbankEngineCUDA.h"
 #include "dsp/MemoryCUDA.h"
 #endif
 
 #include <iostream>
+
 using namespace std;
 
 using dsp::Filterbank;
@@ -32,8 +35,7 @@ Filterbank::Config::Config ()
   when = After;  // not good, but the original default
 }
 
-std::ostream& dsp::operator << (std::ostream& os,
-				const Filterbank::Config& config)
+std::ostream& dsp::operator << (std::ostream& os, const Filterbank::Config& config)
 {
   os << config.get_nchan();
   if (config.get_convolve_when() == Filterbank::Config::Before)
@@ -108,9 +110,10 @@ dsp::Filterbank* dsp::Filterbank::Config::create ()
   if (freq_res)
     filterbank->set_frequency_resolution ( freq_res );
 
-#if HAVE_CUDA
 
-  CUDA::DeviceMemory* device_memory = 
+
+#if HAVE_CUDA
+  CUDA::DeviceMemory* device_memory =
     dynamic_cast< CUDA::DeviceMemory*> ( memory );
 
   if ( device_memory )
@@ -123,9 +126,11 @@ dsp::Filterbank* dsp::Filterbank::Config::create ()
     gpu_scratch->set_memory (device_memory);
     filterbank->set_scratch (gpu_scratch);
   }
-
+  else
 #endif
+  {
+    filterbank->set_engine (new FilterbankEngineCPU);
+  }
 
   return filterbank.release();
 }
-

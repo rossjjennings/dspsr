@@ -16,18 +16,25 @@ nobase_include_HEADERS = dsp/ACFilterbank.h dsp/Detection.h	       \
 	dsp/FourthMoment.h dsp/PolnCalibration.h dsp/Dump.h	       \
 	dsp/OptimalFFT.h dsp/OptimalFilterbank.h dsp/on_host.h	       \
 	dsp/FScrunch.h dsp/FilterbankBench.h dsp/FilterbankConfig.h    \
-	dsp/FilterbankEngine.h dsp/filterbank_engine.h dsp/FZoom.h  \
-	dsp/GeometricDelay.h dsp/DelayStartTime.h \
+	dsp/FilterbankEngine.h dsp/FilterbankEngineCPU.h  \
+	dsp/filterbank_engine.h dsp/FZoom.h  \
+	dsp/GeometricDelay.h \
+	dsp/DelayStartTime.h \
 	dsp/TFPFilterbank.h dsp/RFIZapper.h dsp/SKFilterbank.h	       \
 	dsp/Resize.h dsp/SKDetector.h dsp/SKMasker.h		       \
 	dsp/Pipeline.h dsp/SingleThread.h dsp/MultiThread.h            \
 	dsp/PolnSelect.h dsp/PolnReshape.h dsp/SpectralKurtosis.h \
-  dsp/SKComputer.h dsp/ScalarFilter.h
+  dsp/SKComputer.h dsp/ScalarFilter.h \
+	dsp/InverseFilterbank.h dsp/InverseFilterbankEngine.h \
+	dsp/InverseFilterbankConfig.h \
+	dsp/InverseFilterbankEngineCPU.h \
+	dsp/InverseFilterbankResponse.h
 
 libdspdsp_la_SOURCES = optimize_fft.c cross_detect.c cross_detect.h  \
 	cross_detect.ic stokes_detect.c stokes_detect.h		     \
 	stokes_detect.ic ACFilterbank.C TScrunch.C      \
 	TimeOrder.C Apodization.C AutoCorrelation.C Filterbank.C     \
+	FilterbankEngineCPU.C \
 	IncoherentFilterbank.C Bandpass.C LevelMonitor.C RFIFilter.C \
 	Chomper.C Response.C ResponseProduct.C Convolution.C	     \
 	Dedispersion.C SampleDelay.C DelayStartTime.C DedispersionHistory.C	\
@@ -39,15 +46,21 @@ libdspdsp_la_SOURCES = optimize_fft.c cross_detect.c cross_detect.h  \
 	TFPFilterbank.C RFIZapper.C SKFilterbank.C \
 	Resize.C SKDetector.C SKMasker.C \
 	SingleThread.C MultiThread.C dsp_verbosity.C \
-	PolnSelect.C PolnReshape.C SpectralKurtosis.C ScalarFilter.C
+	PolnSelect.C PolnReshape.C SpectralKurtosis.C ScalarFilter.C \
+	InverseFilterbank.C \
+	InverseFilterbankConfig.C \
+	InverseFilterbankEngineCPU.C \
+	InverseFilterbankResponse.C
+
 
 bin_PROGRAMS = dmsmear digitxt digimon digihist filterbank_speed
+# bin_PROGRAMS += test_InverseFilterbankResponse test_FIRFilter
 
 if HAVE_CUFFT
 
 nobase_include_HEADERS += CUFFTError.h dsp/LaunchConfig.h \
 	dsp/DelayStartTimeCUDA.h \
-  dsp/FilterbankCUDA.h dsp/filterbank_cuda.h \
+  dsp/FilterbankEngineCUDA.h dsp/filterbank_cuda.h \
   dsp/TransferCUDA.h dsp/TransferBitSeriesCUDA.h \
   dsp/SKMaskerCUDA.h dsp/DetectionCUDA.h dsp/FZoomCUDA.h \
   dsp/FScrunchCUDA.h dsp/TScrunchCUDA.h \
@@ -55,16 +68,16 @@ nobase_include_HEADERS += CUFFTError.h dsp/LaunchConfig.h \
   dsp/ConvolutionCUDA.h dsp/ConvolutionCUDASpectral.h \
   dsp/ConvolutionCUDACallbacks.h dsp/SpectralKurtosisCUDA.h \
   dsp/SKComputerCUDA.h dsp/SKDetectorCUDA.h dsp/SKFilterbankCUDA.h \
-  dsp/SampleDelayCUDA.h
+  dsp/SampleDelayCUDA.h dsp/InverseFilterbankEngineCUDA.h
 
-libdspdsp_la_SOURCES += CUFFTError.C LaunchConfig.C FilterbankCUDA.cu \
+libdspdsp_la_SOURCES += CUFFTError.C LaunchConfig.C FilterbankEngineCUDA.cu \
 	DelayStartTimeCUDA.cu \
   TransferCUDA.C TransferBitSeriesCUDA.C DetectionCUDA.cu             \
   SKMaskerCUDA.cu FZoomCUDA.cu FScrunchCUDA.cu TScrunchCUDA.cu        \
   PScrunchCUDA.cu PolnSelectCUDA.cu SpectralKurtosisCUDA.cu \
   SKComputerCUDA.cu SKDetectorCUDA.cu SKFilterbankCUDA.cu \
   ConvolutionCUDA.cu ConvolutionCUDASpectral.cu ConvolutionCUDACallbacks.cu \
-  SampleDelayCUDA.cu
+  SampleDelayCUDA.cu InverseFilterbankEngineCUDA.cu
 
 bin_PROGRAMS += fftbatch_speed
 fftbatch_speed_SOURCES = fftbatch_speed.C
@@ -85,18 +98,20 @@ endif
 endif
 
 
-dmsmear_SOURCES = dmsmear.C 
+dmsmear_SOURCES = dmsmear.C
 digitxt_SOURCES = digitxt.C
 digimon_SOURCES = digimon.C
 digihist_SOURCES = digihist.C
 filterbank_speed_SOURCES = filterbank_speed.C
+# test_InverseFilterbankResponse_SOURCES = test_InverseFilterbankResponse.C
+# test_FIRFilter_SOURCES = test_FIRFilter.C
 
 check_PROGRAMS = test_PolnCalibration test_OptimalFFT
 
 test_PolnCalibration_SOURCES = test_PolnCalibration.C
 test_OptimalFFT_SOURCES = test_OptimalFFT.C
 
-libdspdsp_la_LIBADD = 
+libdspdsp_la_LIBADD =
 
 if HAVE_PGPLOT
 

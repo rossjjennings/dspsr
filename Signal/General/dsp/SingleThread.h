@@ -41,7 +41,7 @@ namespace dsp {
 
     //! Constructor
     SingleThread ();
-    
+
     //! Destructor
     ~SingleThread ();
 
@@ -84,6 +84,9 @@ namespace dsp {
     unsigned thread_id;
     void set_affinity (int core);
 
+    //! get the operations being performed
+    std::vector< Reference::To<Operation> > const get_operations () { return operations; };
+
   protected:
 
     //! Any special operations that must be performed at the end of data
@@ -103,7 +106,7 @@ namespace dsp {
 	Prepared,    //! preparations completed
 	Run,         //! processing started
 	Done,        //! processing completed
-	Joined       //! completion acknowledged 
+	Joined       //! completion acknowledged
       };
 
     //! Processing state
@@ -168,7 +171,7 @@ namespace dsp {
 
     //! Prepare the input according to the configuration
     virtual void prepare (Input*);
-    
+
     //! external function used to prepare the input each time it is opened
     Functor< void(Input*) > input_prepare;
 
@@ -266,8 +269,3 @@ namespace dsp {
 }
 
 #endif // !defined(__SingleThread_h)
-
-
-
-
-

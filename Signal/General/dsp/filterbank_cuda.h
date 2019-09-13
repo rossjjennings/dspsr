@@ -16,20 +16,20 @@
 #include <cufft.h>
 
 /*
-  The nvcc compiler in CUDA release version 4.0 has a bug 
+  The nvcc compiler in CUDA release version 4.0 has a bug
 
   http://forums.nvidia.com/index.php?showtopic=210798
 
   that causes it to fail when compiling Transformation.h
 
   This C struct is used to decouple the CUDA::FilterbankEngine
-  implementation from the (standard) C++ used by the 
+  implementation from the (standard) C++ used by the
   dsp::Filterbank::Engine.
 */
 
 typedef struct
 {
-  //! forward fft plan 
+  //! forward fft plan
   cufftHandle plan_fwd;
 
   //! backward fft plan
@@ -61,8 +61,7 @@ typedef struct
 }
   filterbank_cuda;
 
-void filterbank_cuda_perform (filterbank_engine* engine, 
+void filterbank_cuda_perform (filterbank_engine* engine,
 			      filterbank_cuda* cuda,
 			      const float* in, const int max_tpb);
 #endif
-

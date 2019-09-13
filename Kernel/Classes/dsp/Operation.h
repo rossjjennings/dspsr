@@ -21,7 +21,7 @@
 #include <vector>
 
 namespace dsp {
-  
+
   class Scratch;
   class Extensions;
 
@@ -154,7 +154,7 @@ namespace dsp {
     bool prepared;
 
   };
-  
+
 }
 
 #endif

@@ -64,6 +64,10 @@ void dsp::Convolution::set_engine (Engine * _engine)
   engine = _engine;
 }
 
+dsp::Convolution::Engine* dsp::Convolution::get_engine () {
+  return engine;
+}
+
 //! Set the frequency response function
 void dsp::Convolution::set_response (Response* _response)
 {
@@ -80,6 +84,11 @@ const dsp::Response* dsp::Convolution::get_response() const
   return response;
 }
 
+dsp::Response* dsp::Convolution::get_response()
+{
+  return response;
+}
+
 bool dsp::Convolution::has_passband () const
 {
   return passband;
@@ -90,16 +99,34 @@ const dsp::Response* dsp::Convolution::get_passband() const
   return passband;
 }
 
+dsp::Response* dsp::Convolution::get_passband()
+{
+  return passband;
+}
+
+const dsp::Apodization* dsp::Convolution::get_apodization () const {
+  return apodization;
+}
+
+dsp::Apodization* dsp::Convolution::get_apodization () {
+  return apodization;
+}
+
+
+bool dsp::Convolution::has_apodization () const {
+  return apodization;
+}
+
 //! Set the apodization function
 void dsp::Convolution::set_apodization (Apodization* _function)
 {
-  apodization = _function; 
+  apodization = _function;
 }
 
 //! Set the passband integrator
 void dsp::Convolution::set_passband (Response* _passband)
 {
-  passband = _passband; 
+  passband = _passband;
 }
 
 //! Prepare all relevant attributes
@@ -154,7 +181,7 @@ void dsp::Convolution::prepare ()
   nfilt_tot = nfilt_pos + nfilt_neg;
 
   if (verbose)
-    cerr << "Convolution::prepare filt=" << n_fft 
+    cerr << "Convolution::prepare filt=" << n_fft
          << " smear=" << nfilt_tot << endl;
 
   // 2 arrays needed: one for each of the forward and backward FFT results
@@ -281,9 +308,9 @@ void dsp::Convolution::prepare_output ()
   output->set_state( Signal::Analytic );
   output->set_ndim( 2 );
 
-  if ( state == Signal::Nyquist )
+  if ( state == Signal::Nyquist ) {
     output->set_rate( 0.5*get_input()->get_rate() );
-
+  }
   // set the input sample
   uint64_t output_ndat = output->get_ndat();
   int64_t input_sample = input->get_input_sample();
@@ -340,7 +367,7 @@ void dsp::Convolution::reserve ()
 /*!
   \pre input TimeSeries must contain phase coherent (undetected) data
   \post output TimeSeries will contain complex (Analytic) data
-    
+
   \post IMPORTANT!! Most backward complex FFT functions expect
   frequency components organized with f0+bw/2 -> f0, f0-bw/2 -> f0.
   The forward real-to-complex FFT produces f0-bw/2 -> f0+bw/2.  To
@@ -390,9 +417,9 @@ void dsp::Convolution::transformation ()
   if (verbose)
     cerr << "dsp::Convolution::transformation step nsamp=" << nsamp_step
          << " bytes=" << nbytes_step << " ndim=" << ndim << endl;
- 
+
   const unsigned cross_pol = matrix_convolution ? 2 : 1;
- 
+
   // temporary things that should not go in and out of scope
   float* ptr = 0;
   unsigned jpol=0;
@@ -406,14 +433,14 @@ void dsp::Convolution::transformation ()
       for (uint64_t ipart=0; ipart < npart; ipart++)
       {
         offset = ipart * step;
-                
+
         for (jpol=0; jpol<cross_pol; jpol++)
         {
           if (matrix_convolution)
             ipol = jpol;
-          
+
           ptr = const_cast<float*>(input->get_datptr (ichan, ipol)) + offset;
-          
+
           if (apodization)
           {
             apodization -> operate (ptr, complex_time);
@@ -428,9 +455,9 @@ void dsp::Convolution::transformation ()
 
           else if (state == Signal::Analytic)
             forward->fcc1d (nsamp_fft, spectrum[ipol], ptr);
-          
+
         }
-        
+
         if (matrix_convolution) {
 
           response->operate (spectrum[0], spectrum[1], ichan);
@@ -439,7 +466,7 @@ void dsp::Convolution::transformation ()
             passband->integrate (spectrum[0], spectrum[1], ichan);
 
         }
-        
+
         else {
 
           response->operate (spectrum[ipol], ipol, ichan);
@@ -448,18 +475,18 @@ void dsp::Convolution::transformation ()
             passband->integrate (spectrum[ipol], ipol, ichan);
 
         }
-        
+
         for (jpol=0; jpol<cross_pol; jpol++)
         {
           if (matrix_convolution)
             ipol = jpol;
-          
+
           DEBUG("BACKWARD: nfft=" << n_fft << " in=" << spectrum[ipol] \
                 << " out=" << complex_time);
 
           // fft back to the complex time domain
           backward->bcc1d (n_fft, complex_time, spectrum[ipol]);
-          
+
           // copy the good (complex) data back into the time stream
           ptr = output -> get_datptr (ichan, ipol) + offset;
 
@@ -474,4 +501,3 @@ void dsp::Convolution::transformation ()
   // for each poln
   // for each channel
 }
-

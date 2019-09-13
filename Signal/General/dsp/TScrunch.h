@@ -26,7 +26,7 @@ namespace dsp {
   public:
 
     TScrunch (Behaviour place=anyplace);
-    
+
     void set_factor ( unsigned samples );
     unsigned get_factor () const;
 
@@ -36,7 +36,7 @@ namespace dsp {
     class Engine;
 
     void set_engine (Engine*);
-    
+
   protected:
 
     //! Prepare all relevant attributes
@@ -57,7 +57,7 @@ namespace dsp {
     mutable double time_resolution;
 
     // If true, use the tres parameter, if false use the factor parameter
-    mutable bool use_tres; 
+    mutable bool use_tres;
 
     unsigned sfactor;
     uint64_t output_ndat;
@@ -70,7 +70,7 @@ namespace dsp {
   {
   public:
 
-    virtual void fpt_tscrunch (const dsp::TimeSeries * in, 
+    virtual void fpt_tscrunch (const dsp::TimeSeries * in,
                          dsp::TimeSeries * out,
                          unsigned sfactor) = 0;
 

@@ -73,7 +73,7 @@ void dsp::SampleDelay::build ()
       for (unsigned ichan=0; ichan < input_nchan; ichan++)
         if (function->get_delay (ichan, ipol) > total_delay)
           total_delay = function->get_delay (ichan, ipol);
-    
+
     return;
   }
 
@@ -85,7 +85,7 @@ void dsp::SampleDelay::build ()
         zero_delay = function->get_delay (ichan, ipol);
 
   if (verbose)
-    cerr << "dsp::SampleDelay::build zero delay = " << zero_delay 
+    cerr << "dsp::SampleDelay::build zero delay = " << zero_delay
          << " samples" << endl;
 
   total_delay = 0;
@@ -100,7 +100,7 @@ void dsp::SampleDelay::build ()
     }
 
   if (verbose)
-    cerr << "dsp::SampleDelay::build total delay = " << total_delay 
+    cerr << "dsp::SampleDelay::build total delay = " << total_delay
          << " samples" << endl;
 
   if (engine)

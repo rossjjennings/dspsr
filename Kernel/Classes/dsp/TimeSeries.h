@@ -81,7 +81,7 @@ namespace dsp {
     virtual void copy_configuration (const Observation* copy);
 
     //! Copy the data of another TimeSeries instance
-    virtual void copy_data (const TimeSeries* data, 
+    virtual void copy_data (const TimeSeries* data,
 			    uint64_t idat_start = 0, uint64_t ndat = 0);
 
     //! Match the internal memory layout of another TimeSeries
@@ -98,7 +98,7 @@ namespace dsp {
 
     //! For nchan=1, npol=1 data this uses the data in 'buffer'
     TimeSeries& use_data(float* _buffer, uint64_t _ndat);
-    
+
     //! Return pointer to the specified data block
     float* get_datptr (unsigned ichan=0, unsigned ipol=0);
 
@@ -148,6 +148,8 @@ namespace dsp {
     void set_engine (Engine*);
 
     Engine * get_engine () const { return engine; };
+
+    unsigned get_stride () const;
 
   protected:
 
@@ -201,7 +203,7 @@ namespace dsp {
 
 
   };
- 
+
   class TimeSeries::Engine : public OwnStream
   {
   public:
@@ -210,8 +212,8 @@ namespace dsp {
 
     virtual void prepare_buffer (unsigned nbytes) = 0;
 
-    virtual void copy_data_fpt (const dsp::TimeSeries * copy, 
-                                uint64_t idat_start = 0, 
+    virtual void copy_data_fpt (const dsp::TimeSeries * copy,
+                                uint64_t idat_start = 0,
                                 uint64_t ndat = 0) = 0;
 
   };
@@ -219,4 +221,3 @@ namespace dsp {
 }
 
 #endif
-

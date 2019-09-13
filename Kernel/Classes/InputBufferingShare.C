@@ -118,13 +118,13 @@ void dsp::InputBuffering::Share::pre_transformation () try
   while ( buffer->get_next_contiguous() != want )
   {
     if (buffer->get_next_contiguous() > want)
-      throw Error (InvalidState, 
+      throw Error (InvalidState,
                    "dsp::InputBuffering::Share::pre_transformation",
-                   "have=%"PRIu64" > want=%"PRIu64,
+                   "have=%" PRIu64 " > want=%" PRIu64,
                    buffer->get_next_contiguous(), want);
 
     if (Operation::verbose)
-      cerr << "dsp::InputBuffering::Share::pre_transformation want=" << want 
+      cerr << "dsp::InputBuffering::Share::pre_transformation want=" << want
 	   << "; have=" << buffer->get_next_contiguous() << endl;
 
     context->wait();
@@ -151,5 +151,3 @@ catch (Error& error)
 void dsp::InputBuffering::Share::post_transformation ()
 {
 }
-
-

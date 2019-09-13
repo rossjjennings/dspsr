@@ -10,5 +10,4 @@ if ( "$1" == "-h" || "$1" == "--help" || "$1" == "" ) then
   exit
 endif
 
-grep $* `find Kernel Signal -name "*.[hcC]"` `find Kernel Signal -name Makefile.am` `find Kernel Signal -name "*.cu"`
-
+grep $* `find Kernel Signal test -name "*.[hcC]"` `find Kernel Signal test -name Makefile.am` `find Kernel Signal test -name "*.cu"`

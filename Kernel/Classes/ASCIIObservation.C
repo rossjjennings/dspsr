@@ -6,6 +6,7 @@
  ***************************************************************************/
 
 #include "dsp/ASCIIObservation.h"
+#include "dsp/FIRFilter.h"
 #include "strutil.h"
 #include "coord.h"
 #include "tempo++.h"
@@ -74,7 +75,7 @@ void dsp::ASCIIObservation::set_required (std::string key,
 }
 
 dsp::ASCIIObservation::ASCIIObservation (const Observation* obs)
-  : Observation (*obs) 
+  : Observation (*obs)
 {
   hdr_version = "HDR_VERSION";
 }
@@ -112,11 +113,11 @@ void dsp::ASCIIObservation::load (const char* header)
   //
   // TELESCOPE
   //
-  // Note: The function ascii_header_check will check the list of 
+  // Note: The function ascii_header_check will check the list of
   // required keywords and throw an error only if the requested
   // keyword is required and not present.
   // If a value < 0 is returned here, then the keyword
-  // has been marked as not required so rather than throwing an error, 
+  // has been marked as not required so rather than throwing an error,
   // some default/unknown value should be used.
   //
   if (ascii_header_check (header, "TELESCOPE", "%s", buffer) < 0)
@@ -147,7 +148,7 @@ void dsp::ASCIIObservation::load (const char* header)
   // MODE
   //
   ascii_header_check (header, "MODE", "%s", buffer);
-    
+
   if (strncmp(buffer,"PSR",3) == 0)
     set_type(Signal::Pulsar);
   else if (strncmp(buffer,"CAL",3) == 0)
@@ -255,7 +256,7 @@ void dsp::ASCIIObservation::load (const char* header)
   */
 
   uint64_t scan_ndat = 0;
-  if (ascii_header_check (header, "NDAT", "%"PRIu64, &scan_ndat) >= 0)
+  if (ascii_header_check (header, "NDAT", "%" PRIu64, &scan_ndat) >= 0)
     set_ndat( scan_ndat );
   else
     set_ndat( 0 );
@@ -314,7 +315,7 @@ void dsp::ASCIIObservation::load (const char* header)
   {
 
     if (verbose)
-      cerr << "dsp::ASCIIObservation::load UTC_START='" 
+      cerr << "dsp::ASCIIObservation::load UTC_START='"
         << buffer << "'" << endl;
 
     struct tm utc;
@@ -334,13 +335,13 @@ void dsp::ASCIIObservation::load (const char* header)
 #endif
 
     if (verbose)
-      cerr << "dsp::ASCIIObservation::load start_mjd=" 
+      cerr << "dsp::ASCIIObservation::load start_mjd="
            << recording_start_time << endl;
   }
 
   // //////////////////////////////////////////////////////////////////////
   //
-  // PICOSECONDS offset from UTC_START second 
+  // PICOSECONDS offset from UTC_START second
   //
   int64_t offset_picoseconds = 0;
   if (ascii_header_check (header, "PICOSECONDS", I64, &offset_picoseconds) >= 0)
@@ -369,7 +370,7 @@ void dsp::ASCIIObservation::load (const char* header)
   //
   // CALCULATE the various offsets and sizes
   //
-  
+
   if ( recording_start_time != MJD::zero )
   {
     double offset_seconds = get_nsamples(offset_bytes) * sampling_interval;
@@ -394,19 +395,19 @@ void dsp::ASCIIObservation::load (const char* header)
 
   if (!has_position)
     has_position = (ascii_header_check (header, "RAJ", "%s", buffer) == 1);
-  
+
   if (has_position)
     has_position = (str2ra (&ra, buffer) == 0);
 
   if (!has_position)
     ra = 0;
-  
+
   // //////////////////////////////////////////////////////////////////////
   //
   // DEC - Declination of source in dd:mm:ss.sss
   //
   double dec = 0;
-  
+
   has_position = (ascii_header_check (header, "DEC", "%s", buffer) == 1);
 
   if (!has_position)
@@ -417,7 +418,7 @@ void dsp::ASCIIObservation::load (const char* header)
 
   if (!has_position)
     dec = 0;
-  
+
   coordinates.setRadians (ra, dec);
 
   // /////////////////////////////////////////////////////////////////////
@@ -425,6 +426,93 @@ void dsp::ASCIIObservation::load (const char* header)
   // save the header to the local buffer
   //
   loaded_header = string (header);
+
+  // //////////////////////////////////////////////////////////////////////
+  //
+  // Deripple information
+  //
+  int hdr_size;
+  ascii_header_check(header, "HDR_SIZE", "%d", &hdr_size);
+
+  int _deripple_stages;
+  if (ascii_header_check (header, "NSTAGE", "%d", &_deripple_stages) >= 0) {
+    if (verbose) {
+      std::cerr << "dsp::ASCIIObservation::load: deripple stages=" << _deripple_stages << std::endl;
+    }
+    std::vector<dsp::FIRFilter> _deripple(_deripple_stages);
+    dsp::FIRFilter filter_i;
+    std::string oversamp_str = "OVERSAMP_";
+    std::string ntap_str = "NTAP_";
+    std::string coeff_str = "COEFF_";
+    std::string nchan_pfb_str = "NCHAN_PFB_";
+    std::string istage_str;
+    int ntaps;
+    int pfb_nchan;
+    char coeff_buffer[hdr_size];
+
+    for (int istage=0; istage < _deripple_stages; istage++) {
+      istage_str = std::to_string(istage);
+
+      ascii_header_check (header, ntap_str + istage_str, "%d", &(ntaps));
+      ascii_header_check (header, nchan_pfb_str + istage_str, "%d", &(pfb_nchan));
+      ascii_header_check (header, oversamp_str + istage_str, "%s", buffer);
+
+      filter_i.set_ntaps(ntaps);
+      filter_i.set_pfb_nchan(pfb_nchan);
+      filter_i.set_oversamp(fromstring<Rational>(buffer));
+
+      ascii_header_check (header, coeff_str + istage_str, "%s", coeff_buffer);
+      load_str_into_array(coeff_buffer, filter_i.get_coeff()->data(), ntaps);
+      _deripple[istage] = filter_i;
+      if (verbose) {
+        std::cerr << "dsp::ASCIIObservation::load: deripple stage " << istage
+                  << " filter taps=" << _deripple[istage].get_ntaps()
+                  << " nchan=" << _deripple[istage].get_pfb_nchan()
+                  << " oversampling factor =" << _deripple[istage].get_oversamp()
+                  << std::endl;
+        std::cerr << "dsp::ASCIIObservation::load: coeff ";
+        for (unsigned i=0; i<filter_i.get_ntaps()-1; i++) {
+          std::cerr << filter_i[i] << " ";
+        }
+        std::cerr << filter_i[filter_i.get_ntaps() - 1] << std::endl;
+      }
+    }
+    set_deripple(_deripple);
+  }
+
+  // //////////////////////////////////////////////////////////////////////
+  //
+  // OS_FACTOR
+  //
+  if (ascii_header_check (header, "OS_FACTOR", "%s", buffer) >= 0)
+  {
+    set_oversampling_factor (fromstring<Rational>(buffer));
+    if (verbose) {
+      std::cerr << "dsp::ASCIIObservation::load: oversampling_factor="
+          << get_oversampling_factor() << std::endl;
+    }
+  }
+
+  // //////////////////////////////////////////////////////////////////////
+  //
+  // PFB_DC_CHAN
+  //
+  int _pfb_dc_chan;
+  if (ascii_header_check (header, "PFB_DC_CHAN", "%d", &_pfb_dc_chan) >= 0)
+  {
+    if (_pfb_dc_chan != 1 && _pfb_dc_chan != 0) {
+      std::cerr << "dsp::ASCIIObservation::load: pfb_dc_chan="
+        << _pfb_dc_chan << " invalid. "
+        << "defaulting to 0" << std::endl;
+      _pfb_dc_chan = 0;
+    }
+    set_pfb_dc_chan (_pfb_dc_chan);
+    if (verbose) {
+      std::cerr << "dsp::ASCIIObservation::load: pfb_dc_chan="
+        << get_pfb_dc_chan() << std::endl;
+    }
+  }
+
 }
 
 /* ***********************************************************************
@@ -452,7 +540,7 @@ void dsp::ASCIIObservation::unload (char* header)
   //
   // TELESCOPE
   //
-  if (ascii_header_set (header, "TELESCOPE", "%s", 
+  if (ascii_header_set (header, "TELESCOPE", "%s",
 			get_telescope().c_str() ) < 0)
     throw Error (InvalidState, "ASCIIObservation", "failed unload TELESCOPE");
 
@@ -485,7 +573,7 @@ void dsp::ASCIIObservation::unload (char* header)
   default: mode = "UNKNOWN"; break;
   }
   ascii_header_set (header, "MODE", "%s", mode.c_str());
-    
+
 
   if (get_type() == Signal::PolnCal
       && ascii_header_set (header, "CALFREQ", "%lf", get_calfreq()) < 0)
@@ -590,5 +678,25 @@ void dsp::ASCIIObservation::unload (char* header)
   if (ascii_header_set (header, "INSTRUMENT", "%s", get_machine().c_str()) < 0)
     throw Error (InvalidState, "ASCIIObservation", "failed unload INSTRUMENT");
 
-}
+  // //////////////////////////////////////////////////////////////////////
+  //
+  // OS_FACTOR
+  //
+  Rational osfactor = get_oversampling_factor();
 
+  if (osfactor != 1)
+  {
+    string osf = tostring (osfactor);
+    if (ascii_header_set (header, "OS_FACTOR", "%s", osf.c_str() ) < 0 )
+      throw Error (InvalidState, "ASCIIObservation", "failed unload OS_FACTOR");
+  }
+
+  // //////////////////////////////////////////////////////////////////////
+  //
+  // PFB_DC_CHAN
+  //
+  bool _pfb_dc_chan = get_pfb_dc_chan();
+  if (ascii_header_set (header, "PFB_DC_CHAN", "%d", _pfb_dc_chan) < 0) {
+    throw Error (InvalidState, "ASCIIObservation", "failed unload PFB_DC_CHAN");
+  }
+}

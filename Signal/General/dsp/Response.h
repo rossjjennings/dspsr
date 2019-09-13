@@ -18,6 +18,7 @@
 #include "dsp/Shape.h"
 #include "Callback.h"
 #include "Jones.h"
+#include "Rational.h"
 
 namespace dsp {
 
@@ -55,6 +56,12 @@ namespace dsp {
 
     //! Match the frequency response to another Response
     virtual void match (const Response* response);
+
+    //! Get the number of input channels
+    unsigned get_input_nchan () const { return input_nchan; }
+
+    //! Set the number of input channels
+    void set_input_nchan (unsigned _input_nchan) { input_nchan = _input_nchan; }
 
     //! Get the size of the positive half of the impulse response, \f$m_+\f$
     /*! Get the number of complex time samples in the t>0 half of the
@@ -96,7 +103,7 @@ namespace dsp {
 
     //! Set the policy used to compute the optimal FFT length
     void set_optimal_fft (OptimalFFT*);
-    OptimalFFT* get_optimal_fft ();
+    OptimalFFT* get_optimal_fft () const;
     bool has_optimal_fft () const;
 
     //! Given impulse_pos and impulse_neg, check that ndat is large enough
@@ -115,7 +122,7 @@ namespace dsp {
     void operate (float* spectrum, unsigned poln=0, int ichan=-1) const;
 
     //! Multiply spectrum by complex frequency response
-    void operate (float* spectrum, unsigned poln, 
+    void operate (float* spectrum, unsigned poln,
 		  int ichan_start, unsigned nchan_op) const;
 
     //! Multiply spectrum vector by complex matrix frequency response
@@ -141,12 +148,25 @@ namespace dsp {
 
     //! Called when the Response has been changed
     Callback<Response> changed;
-    
+
     //! Set flags that response should be swapped
     void flagswap (unsigned divisions = 1);
 
   protected:
-  
+
+    void calc_lcf (unsigned a, unsigned b, const Rational& osf, std::vector<unsigned>& result);
+
+    void calc_oversampled_discard_region(
+      unsigned* _discard_neg,
+      unsigned* _discard_pos,
+      unsigned _nchan,
+      const Rational& osf);
+
+    void calc_oversampled_fft_length(
+      unsigned* _fft_length,
+      unsigned _nchan,
+      const Rational& osf);
+
     mutable unsigned step;
 
     Reference::To<OptimalFFT> optimal_fft;
@@ -169,10 +189,10 @@ namespace dsp {
     //! Toggled when built for a bin-centred spectrum
     bool dc_centred;
 
+    //! number of input channels. Used by some derived classes
+    unsigned input_nchan;
   };
 
 }
 
 #endif
-
-

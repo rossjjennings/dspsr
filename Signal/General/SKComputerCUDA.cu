@@ -20,14 +20,6 @@
 
 #include <cuComplex.h>
 
-#ifdef __CUDA_ARCH__
-    #if (__CUDA_ARCH__ >= 300)
-        #define HAVE_SHFL
-    #else
-        #define NO_SHFL
-    #endif
-#endif
-
 using namespace std;
 
 void check_error (const char*);
@@ -89,7 +81,20 @@ __global__ void reduce_sqld_new (float2 * in, float2 * sums, float * skestimates
     s2 += (power * power);
   }
 
-#ifdef HAVE_SHFL
+#if (__CUDA_ARCH__ >= 300)
+#if (__CUDACC_VER_MAJOR__>= 9)
+  s1 += __shfl_down_sync (0xFFFFFFFF, s1, 16);
+  s1 += __shfl_down_sync (0xFFFFFFFF, s1, 8);
+  s1 += __shfl_down_sync (0xFFFFFFFF, s1, 4);
+  s1 += __shfl_down_sync (0xFFFFFFFF, s1, 2);
+  s1 += __shfl_down_sync (0xFFFFFFFF, s1, 1);
+
+  s2 += __shfl_down_sync (0xFFFFFFFF, s2, 16);
+  s2 += __shfl_down_sync (0xFFFFFFFF, s2, 8);
+  s2 += __shfl_down_sync (0xFFFFFFFF, s2, 4);
+  s2 += __shfl_down_sync (0xFFFFFFFF, s2, 2);
+  s2 += __shfl_down_sync (0xFFFFFFFF, s2, 1);
+#else
   s1 += __shfl_down (s1, 16);
   s1 += __shfl_down (s1, 8);
   s1 += __shfl_down (s1, 4);
@@ -101,6 +106,7 @@ __global__ void reduce_sqld_new (float2 * in, float2 * sums, float * skestimates
   s2 += __shfl_down (s2, 4);
   s2 += __shfl_down (s2, 2);
   s2 += __shfl_down (s2, 1);
+#endif
 
   unsigned warp_idx = threadIdx.x % 32;
   unsigned warp_num = threadIdx.x / 32;
@@ -117,6 +123,19 @@ __global__ void reduce_sqld_new (float2 * in, float2 * sums, float * skestimates
     s1 = s1s[warp_idx];
     s2 = s2s[warp_idx];
 
+#if (__CUDACC_VER_MAJOR__>= 9)
+    s1 += __shfl_down_sync (0xFFFFFFFF, s1, 16);
+    s1 += __shfl_down_sync (0xFFFFFFFF, s1, 8);
+    s1 += __shfl_down_sync (0xFFFFFFFF, s1, 4);
+    s1 += __shfl_down_sync (0xFFFFFFFF, s1, 2);
+    s1 += __shfl_down_sync (0xFFFFFFFF, s1, 1);
+
+    s2 += __shfl_down_sync (0xFFFFFFFF, s2, 16);
+    s2 += __shfl_down_sync (0xFFFFFFFF, s2, 8);
+    s2 += __shfl_down_sync (0xFFFFFFFF, s2, 4);
+    s2 += __shfl_down_sync (0xFFFFFFFF, s2, 2);
+    s2 += __shfl_down_sync (0xFFFFFFFF, s2, 1);
+#else
     s1 += __shfl_down (s1, 16);
     s1 += __shfl_down (s1, 8);
     s1 += __shfl_down (s1, 4);
@@ -128,6 +147,7 @@ __global__ void reduce_sqld_new (float2 * in, float2 * sums, float * skestimates
     s2 += __shfl_down (s2, 4);
     s2 += __shfl_down (s2, 2);
     s2 += __shfl_down (s2, 1);
+#endif
 
     // s1 and s2 sums across block are complete
     if (warp_idx == 0)
@@ -139,9 +159,7 @@ __global__ void reduce_sqld_new (float2 * in, float2 * sums, float * skestimates
       skestimates[odx] = ((M+1) / (M-1)) * (M * (s2 / (s1 * s1)) - 1);
     }
   }
-#endif
-#ifdef NO_SHFL
-
+#else
   s1s[threadIdx.x] = s1;
   s2s[threadIdx.x] = s2;
 
@@ -166,8 +184,6 @@ __global__ void reduce_sqld_new (float2 * in, float2 * sums, float * skestimates
     sums [odx] = val;
     skestimates[odx] = ((M+1) / (M-1)) * (M * (val.y / (val.x * val.x)) - 1);
   }
-
-
 #endif
 
   // now we need to a reduction across the block

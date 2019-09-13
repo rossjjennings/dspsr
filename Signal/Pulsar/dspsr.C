@@ -28,7 +28,7 @@
 #include "strutil.h"
 
 #include <iostream>
-#include <sstream>     
+#include <sstream>
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
@@ -108,7 +108,7 @@ int main (int argc, char** argv) try
   engine->finish();
 
   return 0;
-} 
+}
 catch (Error& error)
 {
   cerr << error << endl;
@@ -129,7 +129,7 @@ void input_prepare (dsp::Input* input)
     if (info->get_state() == Signal::Nyquist)
     {
       info->set_rate( fabs(bandwidth) * 2e6 );
-      cerr << "dspsr: corrected Nyquist (real-valued) sampling rate=" 
+      cerr << "dspsr: corrected Nyquist (real-valued) sampling rate="
            << info->get_rate() << " Hz" << endl;
     }
     else if (info->get_state () == Signal::Analytic)
@@ -139,7 +139,7 @@ void input_prepare (dsp::Input* input)
            << info->get_rate() << " Hz" << endl;
     }
   }
-  
+
   if (centre_frequency != 0)
   {
     cerr << "dspsr: over-riding centre_frequency"
@@ -147,7 +147,7 @@ void input_prepare (dsp::Input* input)
       " new=" << centre_frequency << endl;
     info->set_centre_frequency (centre_frequency);
   }
-  
+
   if (!telescope.empty())
   {
     cerr << "dspsr: over-riding telescope code"
@@ -155,15 +155,15 @@ void input_prepare (dsp::Input* input)
       " new=" << telescope << endl;
     info->set_telescope (telescope);
   }
-  
+
   if (!pulsar_name.empty())
   {
     cerr << "dspsr: over-riding source name"
       " old=" << info->get_source() <<
       " new=" << pulsar_name << endl;
-    info->set_source( pulsar_name );   
+    info->set_source( pulsar_name );
   }
-  
+
   if (!mjd_string.empty())
   {
     MJD mjd (mjd_string);
@@ -199,7 +199,7 @@ void prepare (dsp::Pipeline* engine, dsp::Input* input)
 		 " are specific to baseband (undetected) data.");
 
   engine->construct ();
-  engine->prepare ();    
+  engine->prepare ();
 }
 
 #include "CommandLine.h"
@@ -217,7 +217,7 @@ void parse_options (int argc, char** argv) try
   /* ***********************************************************************
 
   General Processing Options
-  
+
   *********************************************************************** */
 
   config->add_options (menu);
@@ -238,11 +238,11 @@ void parse_options (int argc, char** argv) try
 
   arg = menu.add (config->apply_FITS_scale_and_offset, "scloffs");
   arg->set_help ("denormalize using DAT_SCL and DAT_OFFS [PSRFITS]");
-   
+
   /* ***********************************************************************
 
   Source Options
-  
+
   *********************************************************************** */
 
   menu.add ("\n" "Source options:");
@@ -255,14 +255,14 @@ void parse_options (int argc, char** argv) try
 
   arg = menu.add (telescope, 'k', "telescope");
   arg->set_help ("set the telescope name");
-    
+
   arg = menu.add (pulsar_name, 'N', "name");
   arg->set_help ("set the source name");
-    
+
   /* ***********************************************************************
 
   Clock/Time Options
-  
+
   *********************************************************************** */
 
   menu.add ("\n" "Clock/Time options:");
@@ -276,7 +276,7 @@ void parse_options (int argc, char** argv) try
   /* ***********************************************************************
 
   RFI Removal (SK) Options
-  
+
   *********************************************************************** */
   menu.add ("\n" "RFI removal options:");
 
@@ -327,7 +327,7 @@ void parse_options (int argc, char** argv) try
   /* ***********************************************************************
 
   Dispersion removal Options
-  
+
   *********************************************************************** */
 
   menu.add ("\n" "Dispersion removal options:");
@@ -344,6 +344,21 @@ void parse_options (int argc, char** argv) try
      " - after the filterbank with -F 256 or -F 256:<M>\n"
      " - during the filterbank with -F 256:D \n"
      " - before the filterbank with -F 256:B \n" );
+
+  arg = menu.add (config->inverse_filterbank, "IF", "<N>[:D]");
+  arg->set_help( "create inverse filterbank with N output channels");
+
+  arg = menu.add (config->do_deripple, "dr");
+  arg->set_help( "Apply deripple correction to inverse filterbank");
+
+  arg = menu.add (config->inverse_filterbank_fft_window, "fft-window");
+  arg->set_help( "Specify FFT window function to use with inverse filterbank." );
+  arg->set_long_help(
+    "Available FFT windows are\n"
+    " - tukey: Tukey window (default)\n"
+    " - top_hat: Top Hat window function\n"
+    " - no_window: No FFT window function\n"
+  );
 
   arg = menu.add (config->plfb_nbin, 'G', "nbin");
   arg->set_help ("create phase-locked filterbank");
@@ -384,7 +399,7 @@ void parse_options (int argc, char** argv) try
   /* ***********************************************************************
 
   Detection Options
-  
+
   *********************************************************************** */
 
   menu.add ("\n" "Detection options:");
@@ -401,7 +416,7 @@ void parse_options (int argc, char** argv) try
   /* ***********************************************************************
 
   Folding Options
-  
+
   *********************************************************************** */
 
   menu.add ("\n" "Folding options:");
@@ -442,7 +457,7 @@ void parse_options (int argc, char** argv) try
   /* ***********************************************************************
 
   Division Options
-  
+
   *********************************************************************** */
 
   menu.add ("\n" "Time division options:");
@@ -474,7 +489,7 @@ void parse_options (int argc, char** argv) try
   /* ***********************************************************************
 
   Output Archive Options
-  
+
   *********************************************************************** */
 
   menu.add ("\n" "Output archive options:");
@@ -506,7 +521,7 @@ void parse_options (int argc, char** argv) try
   /* ***********************************************************************
 
   Output Archive Options
-  
+
   *********************************************************************** */
 
 
@@ -515,14 +530,14 @@ void parse_options (int argc, char** argv) try
   if (config->integration_length && config->minimum_integration_length < 0)
   {
     /*
-      rationale: If data are divided into blocks, and blocks are 
+      rationale: If data are divided into blocks, and blocks are
       sent down different data reduction paths, then it is possible
       for blocks on different paths to overlap by a small amount.
-      
+
       The minimum integration length is a simple attempt to avoid
       producing a small overlap archive with the same name as the
       full integration length archive.
-  
+
       If minimum_integration_length is not specified, a default of 10%
       of the integration length is applied.
     */
@@ -539,7 +554,7 @@ void parse_options (int argc, char** argv) try
     int scanned = sscanf (carg, "n%u", &config->excision_nsample);
     if (scanned == 1)
     {
-      cerr << "dspsr: Using " << config->excision_nsample 
+      cerr << "dspsr: Using " << config->excision_nsample
 	   << " samples to estimate undigitized power" << endl;
       continue;
     }
@@ -559,7 +574,7 @@ void parse_options (int argc, char** argv) try
 	   << config->excision_threshold << endl;
       continue;
     }
-  } 
+  }
 
   // interpret the nbin argument
   if (nbin < 0)
@@ -569,7 +584,7 @@ void parse_options (int argc, char** argv) try
   }
   if (nbin > 0)
     config->nbin = nbin;
-   
+
   // over-ride the dispersion measure
   if (dm != -1.0)
   {
@@ -592,7 +607,7 @@ void parse_options (int argc, char** argv) try
   for (unsigned i=0; i<predictor.size(); i++)
   {
     cerr << "dspsr: Loading phase model from " << predictor[i] << endl;
-    config->predictors.push_back 
+    config->predictors.push_back
       ( factory<Pulsar::Predictor> (predictor[i]) );
   }
 
@@ -620,7 +635,7 @@ void parse_options (int argc, char** argv) try
 
       key_string = temp;
       break;
-      
+
     }
     if(key_string.empty())
       throw Error(InvalidState,"parse_options","Bad input file to -w flag.");
@@ -643,7 +658,7 @@ void parse_options (int argc, char** argv) try
       if(key_next.empty() && key_rest.empty())
 	key_next = key_string;
 
-      cerr<< "Considering Key = '" << key_next << "'"<<endl;      
+      cerr<< "Considering Key = '" << key_next << "'"<<endl;
       keys.push_back(key_next);
 
       key_string = key_rest;
@@ -656,7 +671,7 @@ void parse_options (int argc, char** argv) try
 
 
     cerr << "loaded " << nkeys << " keys." << endl;
-    
+
 
     while ( fgets (buf, buffer.size(), fptr) == buf ) {
 
@@ -674,15 +689,15 @@ void parse_options (int argc, char** argv) try
       string value_rest;
 
       for(int i=0; i< nkeys; i++ ) {
-	
-        string_split_on_any( value_string, value_next, value_rest, delim );	
-	
+
+        string_split_on_any( value_string, value_next, value_rest, delim );
 
 
-	
+
+
 	if(value_next.empty() && !value_rest.empty()){
 	  stringstream err;
-	  cerr <<  "Value in candiate file was empty on line " << nline << endl; 
+	  cerr <<  "Value in candiate file was empty on line " << nline << endl;
 	  throw Error (InvalidState,"dspsr", err.str().c_str());
 	}
 
@@ -719,7 +734,7 @@ void parse_options (int argc, char** argv) try
       cerr << "dspsr: Loading source names from " << pulsar_name << endl;
       vector <string> names;
       stringfload (&names, pulsar_name);
-      
+
       if (names.size())
 	pulsar_name = names[0];
       for (unsigned i=1; i < names.size(); i++)
@@ -728,7 +743,7 @@ void parse_options (int argc, char** argv) try
     else
       cerr << "dspsr: Source name set to " << pulsar_name << endl;
   }
-  
+
   if (!ram_min.empty())
   {
     double MB = fromstring<double> (ram_min);
@@ -773,7 +788,7 @@ void parse_options (int argc, char** argv) try
     }
 
     unsigned times = 0;
-    
+
     if (string(carg) == "min")
       config->times_minimum_nfft = 1;
     else if ( sscanf(carg, "minX%u", &times) == 1 )
@@ -802,4 +817,3 @@ catch (std::exception& error)
   cerr << error.what() << endl;
   exit (-1);
 }
-

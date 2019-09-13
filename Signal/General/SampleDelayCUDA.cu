@@ -55,7 +55,7 @@ CUDA::SampleDelayEngine::~SampleDelayEngine ()
   {
     cudaError_t error = cudaFree (d_delays);
     if (error != cudaSuccess)
-      throw Error (FailedCall, "CUDA::SampleDelayEngine::~SampleDelayEngine", 
+      throw Error (FailedCall, "CUDA::SampleDelayEngine::~SampleDelayEngine",
                    "cudaFree(%x): %s", (void *) &d_delays,
                    cudaGetErrorString (error));
   }
@@ -63,7 +63,7 @@ CUDA::SampleDelayEngine::~SampleDelayEngine ()
 }
 
 void CUDA::SampleDelayEngine::set_delays (unsigned npol, unsigned nchan,
-                                          int64_t _zero_delay, 
+                                          int64_t _zero_delay,
                                           dsp::SampleDelayFunction * function)
 {
   zero_delay = _zero_delay;
@@ -115,7 +115,7 @@ void CUDA::SampleDelayEngine::set_delays (unsigned npol, unsigned nchan,
   }
 
   // transfer host to device, and wait for the copy to complete
-  error = cudaMemcpyAsync ((void *)d_delays, (void *)h_delays, 
+  error = cudaMemcpyAsync ((void *)d_delays, (void *)h_delays,
                            delays_size, cudaMemcpyHostToDevice, stream);
   if (error != cudaSuccess)
     throw Error (FailedCall, "CUDA::SampleDelayEngine::set_delays",
@@ -132,7 +132,7 @@ void CUDA::SampleDelayEngine::set_delays (unsigned npol, unsigned nchan,
                  cudaGetErrorString (error));
 }
 
-void CUDA::SampleDelayEngine::retard(const dsp::TimeSeries* input, 
+void CUDA::SampleDelayEngine::retard(const dsp::TimeSeries* input,
 					                           dsp::TimeSeries* output,
                                      uint64_t output_ndat)
 {
@@ -166,10 +166,10 @@ void CUDA::SampleDelayEngine::retard(const dsp::TimeSeries* input,
 
   if (dsp::Operation::verbose)
     cerr << "CUDA::SampleDelayEngine::retard ndim=" << ndim
-         << " output_ndat=" << output_ndat 
+         << " output_ndat=" << output_ndat
          << " input.base=" << input_base
          << " input.span=" << input_span
-         << " output.base=" << output_base 
+         << " output.base=" << output_base
          << " output.span=" << output_span
          << endl;
 

@@ -26,10 +26,10 @@ using namespace std;
 
 //! Constructor
 dsp::Seekable::Seekable (const char* name) : Input (name)
-{ 
-  init(); 
+{
+  init();
 }
-    
+
 /*! The destructor is defined in the .C file so that the
     Reference::To<BitStream> destructor need not know about the BitStream
     class in the .h file, allowing changes to be made to BitStream without
@@ -63,7 +63,7 @@ void dsp::Seekable::load_data (BitSeries* data)
 {
   if (verbose)
     cerr << "dsp::Seekable::load_data"
-      "\n   load_size=" << get_load_size() << 
+      "\n   load_size=" << get_load_size() <<
       "\n   load_sample=" << get_load_sample() <<
       "\n   current_sample=" << current_sample << endl;
 
@@ -72,31 +72,31 @@ void dsp::Seekable::load_data (BitSeries* data)
   uint64_t read_sample = get_load_sample() + recycled;
 
   uint64_t read_size = get_load_size() - recycled;
-  
+
   if (verbose)
     cerr << "dsp::Seekable::load_data"
-      "\n   recycled=" << recycled << 
-      "\n   read_size=" << read_size << 
+      "\n   recycled=" << recycled <<
+      "\n   read_size=" << read_size <<
       "\n   read_sample=" << read_sample << endl;
 
   // check that the amount to read does not surpass the end of data
   if (get_info()->get_ndat())
   {
     if (verbose)
-      cerr << "dsp::Seekable::load_data total ndat=" << get_info()->get_ndat() 
+      cerr << "dsp::Seekable::load_data total ndat=" << get_info()->get_ndat()
            << " read_sample=" << read_sample << endl;
 
     if (read_sample > get_info()->get_ndat())
       throw Error (InvalidState, "dsp::Seekable::load_data",
-                   "read_sample="UI64" > ndat="UI64 "\n\t"
-                   "recycled="UI64" load_sample="UI64,
+                   "read_sample=" UI64 " > ndat=" UI64 "\n\t"
+                   "recycled=" UI64 " load_sample=" UI64,
                    read_sample, get_info()->get_ndat(),
                    recycled, get_load_sample());
 
     uint64_t samples_left = get_info()->get_ndat() - read_sample;
 
     if (verbose)
-      cerr << "dsp::Seekable::load_data " << samples_left 
+      cerr << "dsp::Seekable::load_data " << samples_left
            << " samples remaining" << endl;
 
     if (samples_left <= read_size)
@@ -123,17 +123,17 @@ void dsp::Seekable::load_data (BitSeries* data)
 
     if (verbose)
       cerr << "dsp::Seekable::load_data read_sample=" << read_sample
-           << " != current_sample=" << current_sample 
+           << " != current_sample=" << current_sample
            << " seek_bytes=" << toseek_bytes << endl;
 
     int64_t seeked = seek_bytes (toseek_bytes);
     if (seeked < 0)
       throw Error (FailedCall, "dsp::Seekable::load_data", "error seek_bytes");
-    
+
     // confirm that we be where we expect we be
     if (read_sample != (uint64_t) data->get_nsamples (seeked))
       throw Error (InvalidState, "dsp::Seekable::load_data", "seek mismatch"
-                   " read_sample="UI64" absolute_sample="UI64,
+                   " read_sample=" UI64 " absolute_sample=" UI64,
                    read_sample, data->get_nsamples (seeked));
 
     current_sample = read_sample;
@@ -178,7 +178,7 @@ void dsp::Seekable::load_data (BitSeries* data)
 
   if (bytes_read < 0)
     throw Error (FailedCall, "dsp::Seekable::load_data",
-                 "load_bytes ("UI64") block_size=", toread_bytes,
+                 "load_bytes (" UI64 ") block_size=", toread_bytes,
                  get_block_size());
 
   if ((uint64_t)bytes_read < toread_bytes)
@@ -266,7 +266,7 @@ uint64_t dsp::Seekable::recycle_data (BitSeries* data)
   uint64_t to_recycle = last_sample - get_load_sample();
 
   if (verbose)
-    cerr << "dsp::Seekable::recycle_data recycle " 
+    cerr << "dsp::Seekable::recycle_data recycle "
          << to_recycle << " samples" << endl;
 
   if (to_recycle > get_load_size())
@@ -293,14 +293,14 @@ uint64_t dsp::Seekable::recycle_data (BitSeries* data)
     // check if the next sample is already the start sample
     if (!offset_bytes)
       return to_recycle;
-    
+
     while (recycle_bytes)
     {
       if (offset_bytes > recycle_bytes)
         offset_bytes = recycle_bytes;
 
       from->get_memory()->do_copy (into, rbuf, size_t(offset_bytes));
-      
+
       recycle_bytes -= offset_bytes;
       into += offset_bytes;
       rbuf += offset_bytes;
@@ -331,5 +331,3 @@ void dsp::Seekable::set_overlap_buffer_memory (Memory * memory)
     set_overlap_buffer( new BitSeries );
   overlap_buffer->set_memory( memory );
 }
-
-

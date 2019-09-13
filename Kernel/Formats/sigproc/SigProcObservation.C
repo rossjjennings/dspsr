@@ -244,6 +244,7 @@ void dsp::SigProcObservation::unload_global ()
   if(get_machine().compare("BPSR")==0)machine_id=10;
   else if(get_machine().compare("SCAMP")==0)machine_id=6;
   else if(get_machine().compare("COBALT")==0)machine_id=11;
+  else if(get_machine().compare("ROACH")==0)machine_id=83;
 
   // This is the 'rawfilename' parameter in the header.
   // inpfile is possibly uninitialized here so avoid setting

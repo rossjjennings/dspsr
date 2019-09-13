@@ -1,7 +1,7 @@
 
 noinst_LTLIBRARIES = libClasses.la
 
-nobase_include_HEADERS = environ.h ascii_header.h \
+nobase_include_HEADERS = environ.h ascii_header.h Rational.h \
 	dsp/ASCIIObservation.h dsp/Seekable.h dsp/BitSeries.h	     \
 	dsp/InputBuffering.h dsp/InputBufferingShare.h		     \
 	dsp/Reserve.h \
@@ -33,9 +33,12 @@ nobase_include_HEADERS = environ.h ascii_header.h \
 	dsp/GenericEightBitUnpacker.h \
 	dsp/GenericFourBitUnpacker.h \
 	dsp/GenericTwoBitCorrection.h \
-	dsp/CommandLineHeader.h dsp/OutputFileShare.h
+	dsp/CommandLineHeader.h dsp/OutputFileShare.h \
+	dsp/FIRFilter.h \
+	EventEmitter.h
 
-libClasses_la_SOURCES = ascii_header.c ASCIIObservation.C	    \
+
+libClasses_la_SOURCES = ascii_header.c Rational.C ASCIIObservation.C \
 	InputBufferingShare.C Reserve.C \
 	BitSeries.C SubByteTwoBitCorrection.C \
 	DADAFile.C DummyFile.C TestInput.C BitTable.C BitUnpacker.C \
@@ -55,7 +58,8 @@ libClasses_la_SOURCES = ascii_header.c ASCIIObservation.C	    \
 	GenericEightBitUnpacker.C \
 	GenericFourBitUnpacker.C \
 	GenericTwoBitCorrection.C \
-	CommandLineHeader.C OutputFileShare.C
+	CommandLineHeader.C OutputFileShare.C \
+	FIRFilter.C
 
 if HAVE_MPI
 libClasses_la_SOURCES += MPIRoot.C MPITrans.C MPIServer.C mpi_Observation.C
@@ -69,8 +73,10 @@ libClasses_la_SOURCES += MemoryCUDA.C check_error.C GenericEightBitUnpackerCUDA.
 libClasses_la_LIBADD = @CUDA_LIBS@
 endif
 
-check_PROGRAMS = test_BlockIterator test_environ
+
+check_PROGRAMS = test_BlockIterator test_environ test_Rational
 test_BlockIterator_SOURCES = test_BlockIterator.C
+test_Rational_SOURCES = test_Rational.C
 
 #############################################################################
 #
@@ -81,4 +87,3 @@ include $(top_srcdir)/config/Makefile.cuda
 LDADD = libClasses.la
 
 AM_CPPFLAGS += @CUDA_CFLAGS@ @PSRDADA_CFLAGS@
-

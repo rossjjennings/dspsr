@@ -140,7 +140,7 @@ void dsp::SingleThread::share (SingleThread* other)
       continue;
 
     Xform* trans = dynamic_kast<Xform>( operations[iop] );
-    
+
     if (!trans)
       throw Error (InvalidState, "dsp::SingleThread::share",
 		   "mismatched operation type");
@@ -148,9 +148,9 @@ void dsp::SingleThread::share (SingleThread* other)
     if (!trans->has_buffering_policy())
       throw Error (InvalidState, "dsp::SingleThread::share",
 		   "mismatched buffering policy");
-    
+
     if (Operation::verbose)
-      cerr << "dsp::SingleThread::share sharing buffering policy of " 
+      cerr << "dsp::SingleThread::share sharing buffering policy of "
         << trans->get_name() << endl;
 
     trans->set_buffering_policy( ibuf0->clone(trans) );
@@ -219,7 +219,7 @@ void dsp::SingleThread::construct () try
   if (run_on_gpu)
   {
     gpu_device = config->cuda_device[thread_id];
-    cerr << "dspsr: thread " << thread_id 
+    cerr << "dspsr: thread " << thread_id
          << " using CUDA device " << gpu_device << endl;
 
     int ndevice = 0;
@@ -281,12 +281,12 @@ void dsp::SingleThread::construct () try
       TransferCUDA* transfer = new TransferCUDA (stream);
       transfer->set_kind( cudaMemcpyHostToDevice );
       transfer->set_input( unpacked );
-        
+
       unpacked = new_time_series ();
       unpacked->set_memory (device_memory);
       transfer->set_output( unpacked );
       operations.push_back (transfer);
-    }    
+    }
   }
   else
     unpacker->set_device( Memory::get_manager () );
@@ -409,15 +409,15 @@ void dsp::SingleThread::run () try
       for (unsigned iop=0; iop < operations.size(); iop++) try
       {
 	if (Operation::verbose)
-	  cerr << "dsp::SingleThread::run calling " 
+	  cerr << "dsp::SingleThread::run calling "
 	       << operations[iop]->get_name() << endl;
-      
+
 	operations[iop]->operate ();
-      
+
 	if (Operation::verbose)
 	  cerr << "dsp::SingleThread::run "
 	       << operations[iop]->get_name() << " done" << endl;
-      
+
       }
       catch (Error& error)
       {
@@ -428,21 +428,21 @@ void dsp::SingleThread::run () try
 
 	throw error += "dsp::SingleThread::run";
       }
-    
+
       block++;
-    
-      if (thread_id==0 && config->report_done) 
+
+      if (thread_id==0 && config->report_done)
       {
 	double seconds = input->tell_seconds();
 	int64_t decisecond = int64_t( seconds * 10 );
-      
+
 	if (decisecond > last_decisecond)
 	{
 	  last_decisecond = decisecond;
 	  cerr << "Finished " << decisecond/10.0 << " s";
 
 	  if (nblocks_tot)
-	    cerr << " (" 
+	    cerr << " ("
 		 << int (100.0*input->tell()/float(input->get_total_samples()))
 		 << "%)";
 
@@ -470,7 +470,7 @@ void dsp::SingleThread::run () try
 	  file->open(filename);
 	  // cerr << "file opened" << endl;
 	  config->repeated = 1;
-	  
+
 	  if (config->input_prepare)
 	    config->input_prepare (file);
 
@@ -517,7 +517,7 @@ void dsp::SingleThread::combine (const SingleThread* that)
 {
   if (Operation::verbose)
     cerr << "dsp::SingleThread::combine"
-         << " this size=" << operations.size() 
+         << " this size=" << operations.size()
          << " ptr=" << &(this->operations)
          << " that size=" << that->operations.size()
          << " ptr=" << &(that->operations) << endl;
@@ -647,7 +647,7 @@ dsp::Input* dsp::SingleThread::Config::open (int argc, char** argv)
     filenames.push_back ( clh.convert(argc,argv) );
   }
 
-  else 
+  else
   {
     for (int ai=optind; ai<argc; ai++)
       dirglob (&filenames, argv[ai]);
@@ -695,7 +695,7 @@ void dsp::SingleThread::Config::prepare (Input* input)
 {
   if (list_attributes || editor.will_modify())
     cout << editor.process (input->get_info()) << endl;
-    
+
   if (input_prepare)
     input_prepare( input );
 
@@ -790,7 +790,7 @@ void dsp::SingleThread::Config::add_options (CommandLine::Menu& menu)
   arg = menu.add (total_seconds, 'T', "total");
   arg->set_help ("process only t=total seconds");
 
-  arg = menu.add (&editor, &TextEditor<Observation>::add_commands, 
+  arg = menu.add (&editor, &TextEditor<Observation>::add_commands,
 		  "set", "key=value");
   arg->set_help ("set observation attributes");
 
@@ -871,8 +871,8 @@ void dsp::SingleThread::Config::set_fft_library (string fft_lib)
       std::cerr << "There are " << nlib << " available FFT libraries:";
       for (unsigned ilib=0; ilib < nlib; ilib++)
 	std::cerr << " " << FTransform::get_library_name (ilib);
-      
-      std::cerr << "\nThe default FFT library is " 
+
+      std::cerr << "\nThe default FFT library is "
 		<< FTransform::get_library() << endl;
     }
     exit (0);

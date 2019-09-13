@@ -20,7 +20,7 @@
 #include "FTransformAgent.h"
 
 namespace dsp {
-  
+
   class Apodization;
 
   //! Convolves a TimeSeries using a frequency response function
@@ -31,16 +31,16 @@ namespace dsp {
     The algorithm can perform both scalar and matrix convolution
     methods, and is highly suited to phase-coherent dispersion removal
     and phase-coherent polarimetric calibration.
-    
+
     If g(t) is the finite impulse response function with which the
     data stream will be convolved, then the Convolution::response
     attribute represents G(w), the FFT of g(t).  Convolution::response
     may contain an array of filters, one for each frequency channel.
-    
+
     In order to improve the spectral leakage characteristics, an
     apodization function may be applied to the data in the time domain
     by setting the Convolution::apodization attribute.
-    
+
     Referring to Figure 13.1.3 in Numerical Recipes,
     \f$m_+\f$=response->get_impulse_pos() and
     \f$m_-\f$=response->get_impulse_neg(), so that the duration,
@@ -55,6 +55,8 @@ namespace dsp {
   class Convolution: public Transformation <TimeSeries, TimeSeries> {
 
   public:
+
+    class Config;
 
     //! Null constructor
     Convolution (const char* name = "Convolution", Behaviour type = outofplace);
@@ -94,12 +96,24 @@ namespace dsp {
 
     //! Return a pointer to the frequency response function
     virtual const Response* get_response() const;
+    virtual Response* get_response();
 
     //! Return true if the passband attribute has been set
     bool has_passband () const;
 
     //! Return a pointer to the integrated passband
     virtual const Response* get_passband() const;
+    virtual Response* get_passband();
+
+    //! Return true if the apodization attribute has been set
+    bool has_apodization() const;
+
+    //! Return a pointer to to the apodization object
+    virtual const Apodization* get_apodization() const;
+    virtual Apodization* get_apodization();
+
+    //! get the matrix_convolution flag
+    bool get_matrix_convolution () const { return matrix_convolution; };
 
     //! Set the memory allocator to be used
     void set_device (Memory *);
@@ -108,6 +122,9 @@ namespace dsp {
     class Engine;
 
     void set_engine (Engine*);
+
+    Engine* get_engine();
+
 
   protected:
 
@@ -135,6 +152,7 @@ namespace dsp {
   private:
 
     friend class Filterbank;
+    friend class InverseFilterbank;
     friend class TFPFilterbank;
     friend class SKFilterbank;
 
@@ -162,19 +180,17 @@ namespace dsp {
     //! Interface to alternate processing engine (e.g. GPU)
     Reference::To<Engine> engine;
   };
-
-  class Convolution::Engine : public Reference::Able
-  {
-    public:
-
-      virtual void set_scratch (void *) = 0;
-
-      virtual void prepare (dsp::Convolution * convolution) = 0;
-
-      virtual void perform (const TimeSeries* in, TimeSeries* out, unsigned npart) = 0;
-  };
-
-  
 }
+
+class dsp::Convolution::Engine : public Reference::Able
+{
+  public:
+
+    virtual void set_scratch (void *) = 0;
+
+    virtual void prepare (dsp::Convolution * convolution) = 0;
+
+    virtual void perform (const dsp::TimeSeries* in, dsp::TimeSeries* out, unsigned npart) = 0;
+};
 
 #endif

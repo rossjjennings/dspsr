@@ -1,9 +1,21 @@
 %module dspsr
+/* class Engine {
+  public:
+    virtual void set_scratch (void *) = 0;
+
+    virtual void prepare (dsp::Convolution* convolution) = 0;
+
+    virtual void perform (const dsp::TimeSeries* in, dsp::TimeSeries* out, unsigned npart) = 0;
+};
+%nestedworkaround dsp::Convolution::Engine; */
+
 %{
 #define SWIG_FILE_WITH_INIT
 #include "numpy/noprefix.h"
 
 #include "Reference.h"
+#include "dsp/Transformation.h"
+#include "dsp/Unpacker.h"
 #include "dsp/Operation.h"
 #include "dsp/Observation.h"
 #include "dsp/DataSeries.h"
@@ -16,10 +28,12 @@
 #include "dsp/Response.h"
 #include "dsp/Convolution.h"
 
+using namespace dsp;
+
 %}
 
 // Language independent exception handler
-%include exception.i       
+%include exception.i
 
 %include std_string.i
 %include stdint.i
@@ -44,6 +58,7 @@ using namespace std;
   import_array();
 %}
 
+
 // Declare functions that return a newly created object
 // (Helps memory management)
 //%newobject Pulsar::Archive::new_Archive;
@@ -62,7 +77,7 @@ void pointer_tracker_add(Reference::Able *ptr) {
 }
 void pointer_tracker_remove(Reference::Able *ptr) {
     std::vector< Reference::To<Reference::Able> >::iterator it;
-    for (it=_pointer_tracker.begin(); it<_pointer_tracker.end(); it++) 
+    for (it=_pointer_tracker.begin(); it<_pointer_tracker.end(); it++)
         if ((*it).ptr() == ptr) {
             _pointer_tracker.erase(it);
             break;
@@ -75,9 +90,11 @@ void pointer_tracker_remove(Reference::Able *ptr) {
 %ignore dsp::IOManager::combine(const Operation*);
 %ignore dsp::IOManager::set_scratch(Scratch*);
 %ignore dsp::BitSeries::set_memory(Memory*);
-%ignore dsp::Convolution::Convolution(const char *, Behaviour);
 %ignore dsp::Detection::set_engine(Engine*);
+%ignore dsp::Convolution::set_engine(Engine*);
 %ignore dsp::Observation::verbose_nbytes(uint64_t) const;
+%ignore dsp::Observation::set_deripple(const std::vector<dsp::FIRFilter>&);
+%ignore dsp::Observation::get_deripple();
 
 // Return psrchive's Estimate class as a Python tuple
 %typemap(out) Estimate<double> {
@@ -104,16 +121,27 @@ void pointer_tracker_remove(Reference::Able *ptr) {
         $1 = Signal::string2 ## TYPE (PyString_AsString($input));
     } catch (Error &error) {
         SWIG_exception(SWIG_RuntimeError,error.get_message().c_str());
-    } 
+    }
 }
 %enddef
 %map_enum(State)
 %map_enum(Basis)
 %map_enum(Scale)
 %map_enum(Source)
+%map_enum(Behaviour)
+/* %rename("%(title)s", %$isenumitem) ""; */
+
+
 
 // Header files included here will be wrapped
 %include "ReferenceAble.h"
+%include "dsp/Transformation.h"
+
+%template(TransformationTimeSeriesTimeSeries) dsp::Transformation<dsp::TimeSeries, dsp::TimeSeries>;
+template class dsp::Transformation<dsp::TimeSeries, dsp::TimeSeries>;
+
+
+%include "dsp/Input.h"
 %include "dsp/Operation.h"
 %include "dsp/Observation.h"
 %include "dsp/DataSeries.h"
@@ -122,9 +150,10 @@ void pointer_tracker_remove(Reference::Able *ptr) {
 %include "dsp/BitSeries.h"
 %include "dsp/TimeSeries.h"
 // Detection::Engine is screwing this up...
-//%include "dsp/Detection.h"
+/* %include "dsp/Detection.h" */
 %include "dsp/Dedispersion.h"
 %include "dsp/Response.h"
+/* %include "dsp/InverseFilterbank.h" */
 %include "dsp/Convolution.h"
 
 // Python-specific extensions to the classes:
@@ -137,7 +166,7 @@ void pointer_tracker_remove(Reference::Able *ptr) {
         PyArrayObject *arr;
         float *ptr;
         npy_intp dims[2];
-        
+
         dims[0] = self->get_ndat();
         dims[1] = self->get_ndim();
         ptr = self->get_datptr(ichan, ipol);
@@ -153,3 +182,8 @@ void pointer_tracker_remove(Reference::Able *ptr) {
         return self->get_start_time().fracday();
     }
 }
+/* %rename(Transformation_outofplace) outofplace; */
+
+/* %{
+typedef dsp::Convolution::Engine Engine;
+%} */

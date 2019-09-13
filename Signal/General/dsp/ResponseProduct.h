@@ -13,6 +13,7 @@
 
 #include "dsp/Response.h"
 #include "Reference.h"
+#include "Rational.h"
 
 namespace dsp {
 
@@ -48,7 +49,7 @@ namespace dsp {
 
     //! Set the element to which all others are matched
     void set_match_index (unsigned i);
-    
+
   protected:
 
     //! The responses
@@ -67,7 +68,7 @@ namespace dsp {
     void build ();
 
   };
-  
+
 }
 
 #endif

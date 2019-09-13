@@ -23,7 +23,7 @@ using namespace std;
 
   has been derived from "fundamental and primary physical and
   astronomical constants" (section 3 of Backer, Hama, van Hook and
-  Foster 1993. ApJ 404, 636-642), the rounded value is in standard 
+  Foster 1993. ApJ 404, 636-642), the rounded value is in standard
   use by pulsar astronomers (page 129 of Manchester and Taylor 1977).
 */
 const double dsp::Dedispersion::dm_dispersion = 2.41e-4;
@@ -49,6 +49,8 @@ dsp::Dedispersion::Dedispersion ()
 
   built = false;
   context = 0;
+
+  oversampling_factor = Rational(1,1);
 }
 
 //! Set the dimensions of the data and update the built attribute
@@ -89,6 +91,9 @@ void dsp::Dedispersion::set_bandwidth (double _bandwidth)
 //! Set the dispersion measure in \f${\rm pc\,cm}^{-3}\f$
 void dsp::Dedispersion::set_dispersion_measure (double _dispersion_measure)
 {
+  if (verbose) {
+    cerr << "dsp::Dedispersion::set_dispersion_measure " << _dispersion_measure << endl;
+  }
   if (dispersion_measure != _dispersion_measure)
     built = false;
 
@@ -113,7 +118,7 @@ void dsp::Dedispersion::set_dc_centred (bool _dc_centred)
   dc_centred = _dc_centred;
 }
 
-//! Set the blah
+//! Set the number of channels
 void dsp::Dedispersion::set_nchan (unsigned _nchan)
 {
   if (nchan != _nchan)
@@ -173,7 +178,7 @@ void dsp::Dedispersion::prepare (const Observation* input, unsigned channels)
       " centre frequency=" << input->get_centre_frequency() <<
       " bandwidth=" << input->get_bandwidth () <<
       " dispersion measure=" << input->get_dispersion_measure() << endl;
-  
+
   set_centre_frequency ( input->get_centre_frequency() );
   set_bandwidth ( input->get_bandwidth() );
   set_dispersion_measure ( input->get_dispersion_measure() );
@@ -221,7 +226,7 @@ void dsp::Dedispersion::prepare ()
     unsigned threshold = smearing_samples_threshold / nchan;
     supported_channels = vector<bool> (nchan, true);
     unsigned ichan = 0;
-  
+
     while( (impulse_neg = smearing_samples (-1)) > threshold )
     {
       supported_channels[ichan] = false;
@@ -236,7 +241,7 @@ void dsp::Dedispersion::prepare ()
     if (verbose)
       cerr << "dsp::Dedispersion::prepare "
 	   << ichan << " unsupported channels" << endl;
-    
+
     impulse_pos = smearing_samples (1);
   }
 
@@ -248,10 +253,9 @@ void dsp::Dedispersion::prepare ()
   }
 }
 
-
 /*! Builds a frequency response function (kernel) suitable for phase-coherent
   dispersion removal, based on the centre frequency, bandwidth, and number
-  of channels in the input Observation. 
+  of channels in the input Observation.
 
   \param input Observation for which a dedispersion kernel will be built.
 
@@ -261,13 +265,18 @@ void dsp::Dedispersion::prepare ()
  */
 void dsp::Dedispersion::match (const Observation* input, unsigned channels)
 {
-  if (verbose)
+  if (verbose){
     cerr << "dsp::Dedispersion::match before lock" << endl;
+  }
+
+  input_nchan = input->get_nchan();
+  oversampling_factor = input->get_oversampling_factor();
 
   ThreadContext::Lock lock (context);
 
-  if (verbose)
+  if (verbose){
     cerr << "dsp::Dedispersion::match after lock" << endl;
+  }
 
   prepare (input, channels);
 
@@ -306,6 +315,27 @@ void dsp::Dedispersion::build ()
     if (optimal_fft)
       optimal_fft->set_simultaneous (nchan > 1);
     set_optimal_ndat ();
+    if (verbose) {
+      std::cerr << "dsp::Dedispersion::build:"
+        << " calculating oversampled ndat and discard regions"
+        << " ndat=" << ndat
+        << " impulse_pos=" << impulse_pos
+        << " impulse_neg=" << impulse_neg
+        << std::endl;
+    }
+    if (oversampling_factor.doubleValue() > 1.0) {
+      calc_oversampled_fft_length(
+        &ndat, input_nchan/nchan, oversampling_factor);
+      calc_oversampled_discard_region(
+        &impulse_neg, &impulse_pos, input_nchan/nchan, oversampling_factor);
+    }
+    if (verbose) {
+      std::cerr << "dsp::Dedispersion::build:"
+        << " ndat=" << ndat
+        << " impulse_pos=" << impulse_pos
+        << " impulse_neg=" << impulse_neg
+        << std::endl;
+    }
   }
 
   // calculate the complex frequency response function
@@ -385,7 +415,7 @@ unsigned dsp::Dedispersion::get_effective_smearing_samples () const
   number of points "nsmear" that must be thrown away for each FFT.
 */
 double dsp::Dedispersion::smearing_time (int half) const
-{  
+{
   if ( ! (half==0 || half==-1 || half == 1) )
     throw Error (InvalidParam, "dsp::Dedispersion::smearing_time",
 		 "invalid half=%d", half);
@@ -400,7 +430,7 @@ double dsp::Dedispersion::smearing_time (int half) const
     lower_ch_cfreq += ch_abs_bw;
     ichan++;
   }
-      
+
   // calculate the smearing (in the specified half of the band)
   if (half)
   {
@@ -413,7 +443,7 @@ double dsp::Dedispersion::smearing_time (int half) const
 	 << " bw=" << ch_abs_bw << endl;
 
   double tsmear = smearing_time (lower_ch_cfreq, ch_abs_bw);
-  
+
   if (verbose)
   {
     string band = "band";
@@ -450,16 +480,16 @@ unsigned dsp::Dedispersion::smearing_samples (int half) const
   if (psrdisp_compatible)
   {
      cerr << "dsp::Dedispersion::prepare psrdisp compatibility\n"
-       "   increasing smearing time by 5 instead of " 
+       "   increasing smearing time by 5 instead of "
           << smearing_buffer*100.0 << " percent" << endl;
     tsmear *= 1.05;
   }
   else
     tsmear *= (1.0 + smearing_buffer);
-  
+
   // smear across one channel in number of time samples.
   unsigned nsmear = unsigned (ceil(tsmear * sampling_rate));
- 
+
   if (psrdisp_compatible)
   {
     cerr << "dsp::Dedispersion::prepare psrdisp compatibility\n"
@@ -552,7 +582,7 @@ void dsp::Dedispersion::build (vector<float>& phases,
 	phases[spt+ipt] /= (2.0*M_PI * freq);
 
 #ifdef _DEBUG
-      cerr << ichan*_ndat + ipt << " " << chan_cfreq+freq << " " 
+      cerr << ichan*_ndat + ipt << " " << chan_cfreq+freq << " "
 	   << phases[spt+ipt] << endl;
 #endif
     }
@@ -564,4 +594,3 @@ void dsp::Dedispersion::set_build_delays (bool delays)
 {
   build_delays = delays;
 }
-

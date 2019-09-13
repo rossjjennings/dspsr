@@ -13,6 +13,7 @@
 #include "Jones.h"
 #include "cross_detect.h"
 
+#include <vector>
 #include <assert.h>
 #include <math.h>
 
@@ -20,7 +21,7 @@ using namespace std;
 
 //#define _DEBUG
 
-/*! If specified, this attribute restricts the value for ndat chosen by 
+/*! If specified, this attribute restricts the value for ndat chosen by
   the set_optimal_ndat method, enabling the amount of RAM used by the calling
   process to be limited. */
 unsigned dsp::Response::ndat_max = 0;
@@ -35,7 +36,8 @@ dsp::Response::Response ()
   npol = 2;
   ndim = 1;
   nchan = 1;
-  step  = 1;
+  input_nchan = 1;
+  step = 1;
 }
 
 //! Destructor
@@ -58,6 +60,7 @@ const dsp::Response& dsp::Response::operator = (const Response& response)
 
   Shape::operator = ( response );
 
+  input_nchan = response.input_nchan;
   impulse_pos = response.impulse_pos;
   impulse_neg = response.impulse_neg;
   whole_swapped = response.whole_swapped;
@@ -80,7 +83,7 @@ const dsp::Response& dsp::Response::operator *= (const Response& response)
   if (npol < response.npol)
     throw Error (InvalidParam, "dsp::Response::operator *=",
 		 "npol=%d < *.npol=%d", npol, response.npol);
-   
+
   /*
     perform A = A * B where
     A = this->buffer
@@ -113,13 +116,11 @@ void dsp::Response::prepare (const Observation* input, unsigned channels)
   impulse_neg = impulse_pos = 0;
 }
 
-
-
-/*! The ordering of frequency channels in the response function depends 
+/*! The ordering of frequency channels in the response function depends
   upon:
   <UL>
   <LI> the state of the input Observation (real or complex); and </LI>
-  <LI> Operations to be performed upon the Observation 
+  <LI> Operations to be performed upon the Observation
        (e.g. simultaneous filterbank) </LI>
   </UL>
   As well, sub-classes of Response may need to dynamically check, refine, or
@@ -138,7 +139,7 @@ void dsp::Response::match (const Observation* input, unsigned channels)
   if (verbose)
     cerr << "dsp::Response::match input.nchan=" << input->get_nchan()
 	 << " channels=" << channels << endl;
-
+  input_nchan = input->get_nchan();
   if ( input->get_nchan() == 1 ) {
 
     // if the input Observation is single-channel, complex sampled
@@ -149,7 +150,7 @@ void dsp::Response::match (const Observation* input, unsigned channels)
 	cerr << "dsp::Response::match swap whole" << endl;
       doswap ();
     }
-  }      
+  }
   else  {
 
     // if the filterbank channels are centred on DC
@@ -209,17 +210,18 @@ void dsp::Response::match (const Response* response)
 
   resize (npol, response->get_nchan(),
 	  response->get_ndat(), ndim);
-  
+
+  input_nchan = response->input_nchan;
   whole_swapped = response->whole_swapped;
   swap_divisions = response->swap_divisions;
   dc_centred = response->dc_centred;
-  
+
   zero();
 }
 
 void dsp::Response::mark (Observation* output)
 {
-  
+
 }
 
 //! Set the flag for a bin-centred spectrum
@@ -246,7 +248,7 @@ void dsp::Response::naturalize ()
       cerr << "dsp::Response::naturalize sub-bandpass swap" << endl;
     doswap ( swap_divisions );
   }
-  
+
   if ( dc_centred )
   {
     if (verbose)
@@ -263,7 +265,7 @@ void dsp::Response::naturalize ()
 unsigned dsp::Response::get_minimum_ndat () const
 {
   double impulse_tot = impulse_pos + impulse_neg;
-  
+
   if (impulse_tot == 0)
     return 0;
 
@@ -272,13 +274,13 @@ unsigned dsp::Response::get_minimum_ndat () const
     min *= 2;
 
   if (verbose)
-    cerr << "dsp::Response::get_minimum_ndat impulse_tot=" << impulse_tot 
+    cerr << "dsp::Response::get_minimum_ndat impulse_tot=" << impulse_tot
 	 << " min power of two=" << min << endl;
 
   return min;
 }
 
-extern "C" uint64_t 
+extern "C" uint64_t
 optimal_fft_length (uint64_t nbadperfft, uint64_t nfft_max, char verbose);
 
 /*!  Using the get_minimum_ndat method and the max_ndat static attribute,
@@ -287,9 +289,9 @@ void dsp::Response::set_optimal_ndat ()
 {
   unsigned ndat_min = get_minimum_ndat ();
 
-  if (verbose) 
+  if (verbose)
     cerr << "Response::set_optimal_ndat minimum ndat=" << ndat_min << endl;
-  
+
   if (ndat_max && ndat_max < ndat_min)
     throw Error (InvalidState, "Response::set_optimal_ndat",
 		  "specified maximum ndat (%d) < required minimum ndat (%d)",
@@ -319,7 +321,7 @@ void dsp::Response::set_optimal_fft (OptimalFFT* policy)
   optimal_fft = policy;
 }
 
-dsp::OptimalFFT* dsp::Response::get_optimal_fft ()
+dsp::OptimalFFT* dsp::Response::get_optimal_fft () const
 {
   return optimal_fft;
 }
@@ -338,15 +340,15 @@ void dsp::Response::check_ndat () const
 
   unsigned ndat_min = get_minimum_ndat ();
 
-  if (verbose) 
+  if (verbose)
     cerr << "Response::check_ndat minimum ndat=" << ndat_min << endl;
-  
+
   if (ndat < ndat_min)
     throw Error (InvalidState, "dsp::Response::check_ndat",
 		 "specified ndat (%d) < required minimum ndat (%d)",
 		 ndat, ndat_min);
 }
-  
+
 //! Get the passband
 vector<float> dsp::Response::get_passband (unsigned ipol, int ichan) const
 {
@@ -374,7 +376,7 @@ vector<float> dsp::Response::get_passband (unsigned ipol, int ichan) const
 
   \param ipol the polarization of the data (Response may optionally
   contain a different frequency response function for each polarization)
-  
+
   \param data an array of nchan*ndat complex numbers */
 
 void dsp::Response::operate (float* data, unsigned ipol, int ichan) const
@@ -414,9 +416,9 @@ dsp::Response::operate (float* spectrum, unsigned poln, int ichan_start, unsigne
     A = spectrum
     B = this->buffer
   */
-    
+
 #ifdef _DEBUG
-  cerr << "dsp::Response::operate nchan=" << nchan << " ipol=" << ipol 
+  cerr << "dsp::Response::operate nchan=" << nchan << " ipol=" << ipol
        << " buf=" << buffer << " f_p=" << f_p
        << " off=" << offset(ipol) << endl;
 #endif
@@ -451,11 +453,11 @@ dsp::Response::operate (float* spectrum, unsigned poln, int ichan_start, unsigne
 
 /*! Adds the square of each complex point to the current power spectrum
 
-  \param data an array of nchan*ndat complex numbers 
+  \param data an array of nchan*ndat complex numbers
 
   \param ipol the polarization of the data (Response may optionally
   integrate a different power spectrum for each polarization)
-  
+
 */
 void dsp::Response::integrate (float* data, unsigned ipol, int ichan)
 {
@@ -472,12 +474,12 @@ void dsp::Response::integrate (float* data, unsigned ipol, int ichan)
     npts *= nchan;
     ichan = 0;
   }
-   
+
   register float* d_p = data;
   register float* f_p = buffer + offset * ipol + ichan * ndat * ndim;
 
 #ifdef _DEBUG
-  cerr << "dsp::Response::integrate ipol=" << ipol 
+  cerr << "dsp::Response::integrate ipol=" << ipol
        << " buf=" << buffer << " f_p=" << f_p
        << "off=" << offset(ipol) << endl;
 #endif
@@ -513,7 +515,7 @@ void dsp::Response::set (const vector<complex<float> >& filt)
 
 // /////////////////////////////////////////////////////////////////////////
 //
-// Response::operate - multiplies two complex arrays by complex matrix Response 
+// Response::operate - multiplies two complex arrays by complex matrix Response
 // ndat = number of complex points
 //
 void dsp::Response::operate (float* data1, float* data2, int ichan) const
@@ -548,12 +550,12 @@ void dsp::Response::operate (float* data1, float* data2, int ichan) const
 
     // ///////////////////////
     // multiply: r1 = f11 * d1
-    d_r = *d1_rp; 
+    d_r = *d1_rp;
     d_i = *d1_ip;
     f_r = *f_p; f_p ++;
     f_i = *f_p; f_p ++;
 
-    r1_r = f_r * d_r - f_i * d_i; 
+    r1_r = f_r * d_r - f_i * d_i;
     r1_i = f_i * d_r + f_r * d_i;
 
     // ///////////////////////
@@ -561,7 +563,7 @@ void dsp::Response::operate (float* data1, float* data2, int ichan) const
     f_r = *f_p; f_p ++;
     f_i = *f_p; f_p ++;
 
-    r2_r = f_r * d_r - f_i * d_i; 
+    r2_r = f_r * d_r - f_i * d_i;
     r2_i = f_i * d_r + f_r * d_i;
 
     // ////////////////////////////
@@ -581,7 +583,7 @@ void dsp::Response::operate (float* data1, float* data2, int ichan) const
     f_r = *f_p; f_p ++;
     f_i = *f_p; f_p ++;
 
-    *d1_rp = r1_r + f_r * d_r - f_i * d_i; 
+    *d1_rp = r1_r + f_r * d_r - f_i * d_i;
     d1_rp += 2;
     *d1_ip = r1_i + f_i * d_r + f_r * d_i;
     d1_ip += 2;
@@ -611,7 +613,7 @@ void dsp::Response::integrate (float* data1, float* data2, int ichan)
     cerr << "dsp::Response::integrate::cross_detect_int" << endl;
 
   cross_detect_int (npts, data1, data2,
-		    data, data + offset, 
+		    data, data + offset,
 		    data + 2*offset, data + 3*offset, 1);
 }
 
@@ -627,7 +629,7 @@ void dsp::Response::set (const vector<Jones<float> >& response)
 
   for (unsigned idat=0; idat<response.size(); idat++) {
 
-    // for efficiency, the elements of a Jones matrix Response 
+    // for efficiency, the elements of a Jones matrix Response
     // are ordered as: f11, f21, f22, f12
 
     for (int j=0; j<2; j++)
@@ -709,4 +711,91 @@ void dsp::Response::flagswap (unsigned divisions)
     whole_swapped = true;
   else
     swap_divisions = divisions;
+}
+
+void dsp::Response::calc_lcf (
+	unsigned a, unsigned b, const Rational& osf, vector<unsigned>& result)
+{
+  // if (verbose) {
+  //   std::cerr << "dsp::Response::calc_lcf:"
+  //     << " a=" << a
+  //     << " b=" << b
+  //     << " osf=" << osf
+  //     << std::endl;
+  //   std::cerr << "dsp::Response::calc_lcf: quot=" << a / (osf.get_denominator()*b) << std::endl;
+  //   std::cerr << "dsp::Response::calc_lcf: rem=" << a % (osf.get_denominator()*b) << std::endl;
+  // }
+  result[0] = a / (osf.get_denominator()*b);
+  result[1] = a % (osf.get_denominator()*b);
+}
+
+void dsp::Response::calc_oversampled_fft_length (
+  unsigned* _fft_length,
+  unsigned _nchan,
+  const Rational& osf
+)
+{
+  // if (verbose) {
+  //   std::cerr << "dsp::Response::calc_oversampled_fft_length:"
+  //     << " _fft_length=" << *_fft_length
+  //     << " _nchan=" << _nchan
+  //     << " osf=" << osf
+  //     << std::endl;
+  // }
+  vector<unsigned> max_fft_length_lcf(2);
+	calc_lcf(*_fft_length, _nchan, osf, max_fft_length_lcf);
+  while (max_fft_length_lcf[1] != 0 || fmod(log2(max_fft_length_lcf[0]), 1) != 0){
+    if (max_fft_length_lcf[1] != 0) {
+      (*_fft_length) -= max_fft_length_lcf[1];
+    } else {
+      (*_fft_length) -= 2;
+    }
+    calc_lcf(*_fft_length, _nchan, osf, max_fft_length_lcf);
+  }
+  // if (verbose) {
+  //   std::cerr << "dsp::Response::calc_oversampled_fft_length: result"
+  //     << " _fft_length=" << *_fft_length
+  //     << std::endl;
+  // }
+}
+
+void dsp::Response::calc_oversampled_discard_region(
+  unsigned* _discard_neg,
+  unsigned* _discard_pos,
+  unsigned _nchan,
+  const Rational& osf
+)
+{
+  // if (verbose) {
+  //   std::cerr << "dsp::Response::calc_oversampled_discard_region"
+  //     << " _discard_neg=" << *_discard_neg
+  //     << " _discard_pos=" << *_discard_pos
+  //     << " _nchan=" << _nchan
+  //     << " osf=" << osf
+  //     << std::endl;
+  // }
+	vector<unsigned> n = {*_discard_pos, *_discard_neg};
+  vector<vector<unsigned>> lcfs(2);
+  unsigned min_n;
+	vector<unsigned> lcf(2);
+  for (int i=0; i<n.size(); i++) {
+    min_n = n[i];
+    calc_lcf(min_n, _nchan, osf, lcf);
+    if (lcf[1] != 0) {
+      min_n += osf.get_denominator()*_nchan - lcf[1];
+			lcf[0] += 1;
+	    lcf[1] = 0;
+    }
+    lcfs[i] = lcf;
+    n[i] = min_n;
+  }
+
+  *_discard_pos = n[0];
+  *_discard_neg = n[1];
+  // if (verbose) {
+  //   std::cerr << "dsp::Response::calc_oversampled_discard_region: result"
+  //     << " _discard_neg=" << *_discard_neg
+  //     << " _discard_pos=" << *_discard_pos
+  //     << std::endl;
+  // }
 }

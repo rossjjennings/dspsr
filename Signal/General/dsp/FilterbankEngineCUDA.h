@@ -9,8 +9,8 @@
 
 // dspsr/Signal/General/dsp/FilterbankCUDA.h
 
-#ifndef __FilterbankCUDA_h
-#define __FilterbankCUDA_h
+#ifndef __FilterbankEngineCUDA_h
+#define __FilterbankEngineCUDA_h
 
 #include "dsp/FilterbankEngine.h"
 #include "dsp/LaunchConfig.h"
@@ -49,9 +49,13 @@ namespace CUDA
 
     void finish ();
 
+    FTransform::Plan* get_forward ();
+
+    FTransform::Plan* get_backward ();
+
   protected:
 
-    //! forward fft plan 
+    //! forward fft plan
     cufftHandle plan_fwd;
 
     //! backward fft plan

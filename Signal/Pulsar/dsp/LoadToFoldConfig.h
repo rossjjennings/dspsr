@@ -11,8 +11,11 @@
 #ifndef __baseband_dsp_LoadToFoldConfig_h
 #define __baseband_dsp_LoadToFoldConfig_h
 
+#include <string>
+
 #include "dsp/LoadToFold1.h"
 #include "dsp/FilterbankConfig.h"
+#include "dsp/InverseFilterbankConfig.h"
 
 namespace Pulsar
 {
@@ -64,7 +67,7 @@ namespace dsp {
 
     // when unpacking FITS data, denormalize using DAT_SCL and DAT_OFFS
     bool apply_FITS_scale_and_offset;
-    
+
     // perform coherent dedispersion
     bool coherent_dedispersion;
 
@@ -145,6 +148,16 @@ namespace dsp {
     // Filterbank configuration options
     Filterbank::Config filterbank;
 
+    // Inverse Filterbank configuration options
+    InverseFilterbank::Config inverse_filterbank;
+
+    bool is_inverse_filterbank;
+
+    // whether or not to apply deripple correction
+    bool do_deripple;
+
+    std::string inverse_filterbank_fft_window;
+
     bool force_sensible_nbin;
 
     // length of sub-integrations in pulse periods
@@ -181,8 +194,8 @@ namespace dsp {
     }
 
     // multiple threads can (and should) write to disk at once
-    bool concurrent_archives () 
-    { 
+    bool concurrent_archives ()
+    {
       return integration_turns && !single_archiver_required();
     }
 

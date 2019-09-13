@@ -60,8 +60,6 @@ AM_INIT_AUTOMAKE([foreign subdir-objects])
 
 DSPSR_FORMATS
 
-# Create static libraries by default
-AC_DISABLE_SHARED
 
 # Enable large-file support
 AC_SYS_LARGEFILE
@@ -81,6 +79,18 @@ AC_PROG_F77
 AC_PROG_INSTALL
 AC_PROG_LIBTOOL
 
+# check for C++11 compatibility
+AX_CXX_COMPILE_STDCXX_11([noext], [optional])
+AM_CONDITIONAL([HAVE_CXX11], [test x"$HAVE_CXX11" == x1])
+
+# Create static libraries by default
+if test x"$enable_shared" == xyes; then
+  # echo "enable shared"
+  AC_ENABLE_SHARED
+else
+  # echo "disable shared"
+  AC_DISABLE_SHARED
+fi
 #
 # Disable the debugging information option, -g
 #
@@ -178,9 +188,11 @@ else
 fi
 
 AM_CONDITIONAL([HAVE_PYTHON], [test "$PYTHON" != :])
-
+# echo "HAVE_PYTHON=$HAVE_PYTHON"
+# echo "HAVE_CUDA=$HAVE_CUDA"
 #
-# Initialize variables used by Makefile.include 
+#
+# Initialize variables used by Makefile.include
 #
 INCLUDE_CPPFLAGS="$PSRCHIVE_CPPFLAGS"
 AC_SUBST(INCLUDE_CPPFLAGS)
@@ -244,7 +256,8 @@ AC_CONFIG_FILES([Makefile
     More/Makefile
     More/Plotting/Makefile
     More/Applications/Makefile
-		python/Makefile])
+		python/Makefile
+    test/Makefile])
 
 AC_OUTPUT
 
@@ -254,7 +267,7 @@ if test x"$selected_formats" = x; then
   echo "WARNING: no file formats have been selected"
   echo "Please see http://dspsr.sourceforge.net/formats for details"
 else
-  echo "DSPSR will support these formats: $selected_formats" 
+  echo "DSPSR will support these formats: $selected_formats"
 fi
 
 echo

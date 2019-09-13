@@ -14,7 +14,7 @@
 #include "dsp/Convolution.h"
 
 namespace dsp {
-  
+
   //! Breaks a single-band TimeSeries into multiple frequency channels
   /* This class implements the coherent filterbank technique described
      in Willem van Straten's thesis.  */
@@ -54,22 +54,33 @@ namespace dsp {
     void set_frequency_resolution (unsigned fres) { freq_res = fres; }
 
     //! Get the frequency resolution factor
-    unsigned get_freq_res () const { return freq_res; } 
+    unsigned get_freq_res () const { return freq_res; }
     unsigned get_frequency_resolution () const { return freq_res; }
 
     void set_frequency_overlap (unsigned over) { overlap_ratio = over; }
     unsigned get_frequency_overlap () const { return (unsigned) overlap_ratio; }
 
+    //! get the response's positive impulse
+    unsigned get_nfilt_pos() {return nfilt_pos;}
+
+    //! get the response's negative impulse
+    unsigned get_nfilt_neg() {return nfilt_neg;}
+
+    FTransform::Plan* get_forward();
+
+    FTransform::Plan* get_backward();
+
     //! Engine used to perform discrete convolution step
     class Engine;
     void set_engine (Engine*);
+    Engine* get_engine();
 
   protected:
 
     //! Perform the convolution transformation on the input TimeSeries
     virtual void transformation ();
 
-    //! Perform the filterbank step 
+    //! Perform the filterbank step
     virtual void filterbank ();
     virtual void custom_prepare () {}
 
@@ -96,8 +107,7 @@ namespace dsp {
     void resize_output (bool reserve_extra = false);
 
   };
- 
+
 }
 
 #endif
-

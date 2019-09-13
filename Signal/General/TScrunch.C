@@ -12,7 +12,7 @@
 
 using namespace std;
 
-dsp::TScrunch::TScrunch (Behaviour place) 
+dsp::TScrunch::TScrunch (Behaviour place)
   : Transformation <TimeSeries, TimeSeries> ("TScrunch", place)
 {
   factor = 0;
@@ -44,14 +44,14 @@ unsigned dsp::TScrunch::get_factor() const
 		  "invalid time resolution:%lf", time_resolution);
     double in_tsamp = 1.0e6/input->get_rate();  // in microseconds
     factor = unsigned(time_resolution/in_tsamp + 0.00001);
-    
+
     if ( factor<1 )
       factor = 1;
 
     use_tres = false;
     time_resolution = 0.0;
   }
-  
+
   return factor;
 }
 
@@ -68,7 +68,7 @@ void dsp::TScrunch::set_engine( Engine* _engine )
   engine = _engine;
 }
 
-// Prepare all relevant attributes
+// Initial preparation of relevant attributes
 void dsp::TScrunch::prepare ()
 {
   sfactor = get_factor();
@@ -114,15 +114,12 @@ void dsp::TScrunch::prepare_output ()
     if (verbose)
       cerr << "dsp::TScrunch::prepare_output copying configuration" << endl;
     get_output()->copy_configuration (get_input());
-
-    // this is necessary if we buffer further down the line otherwise, samples are misaligned
-    get_output()->set_input_sample (get_input()->get_input_sample() / sfactor);
   }
 
+  // this is necessary if we buffer further down the line otherwise, samples are misaligned
+  get_output()->set_input_sample (get_input()->get_input_sample() / sfactor);
   output->rescale (sfactor);
   output->set_rate (input->get_rate() / sfactor);
-  if (verbose)
-    cerr << "dsp::TScrunch::prepare_output done" << endl;
 }
 
 void dsp::TScrunch::transformation ()
@@ -180,7 +177,7 @@ void dsp::TScrunch::transformation ()
   }
 
   if( input.get() == output.get() )
-    output->set_ndat( input->get_ndat()/sfactor );
+    output->set_ndat( output_ndat );
 }
 
 void dsp::TScrunch::fpt_tscrunch ()
@@ -197,17 +194,17 @@ void dsp::TScrunch::fpt_tscrunch ()
       {
         const float* in = input->get_datptr(ichan, ipol) + idim;
         float* out = output->get_datptr(ichan, ipol) + idim;
-        
+
         unsigned input_idat=0;
 
-        for (unsigned output_idat=0; 
+        for (unsigned output_idat=0;
             output_idat<output_ndat*ndim; output_idat+=ndim)
         {
           unsigned stop = (input_idat + sfactor*ndim);
-    
+
           out[output_idat] = in[input_idat];
           input_idat += ndim;
-        
+
           for( ; input_idat<stop; input_idat += ndim)
             out[output_idat] += in[input_idat];
 
@@ -229,7 +226,7 @@ void dsp::TScrunch::tfp_tscrunch ()
 
   const float* indat = input->get_dattfp ();
   float* outdat = output->get_dattfp ();
-  
+
   for( unsigned output_idat=0; output_idat<output_ndat; ++output_idat)
   {
     for (unsigned ifloat=0; ifloat < nfloat; ifloat++)

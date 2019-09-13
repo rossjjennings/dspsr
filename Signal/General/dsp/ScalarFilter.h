@@ -60,7 +60,7 @@ namespace dsp {
     bool built;
 
   };
-  
+
 }
 
 #endif

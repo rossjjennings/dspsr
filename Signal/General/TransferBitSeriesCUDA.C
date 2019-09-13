@@ -44,7 +44,7 @@ void dsp::TransferBitSeriesCUDA::transformation ()
     if (verbose)
       cerr << "dsp::TransferBitSeriesCUDA::transformation"
            << " ndat=" << ndat
-           << " out=" << (void*)output->get_rawptr() << " size=" << out_size 
+           << " out=" << (void*)output->get_rawptr() << " size=" << out_size
            << " in=" << (void*)input->get_rawptr() << " size=" << in_size
            << endl;
 
@@ -54,12 +54,12 @@ void dsp::TransferBitSeriesCUDA::transformation ()
     assert (output->get_size() >= input->get_size());
 
     if (stream)
-      error = cudaMemcpyAsync (output->get_rawptr(), 
-                               input->get_rawptr(), 
+      error = cudaMemcpyAsync (output->get_rawptr(),
+                               input->get_rawptr(),
                                input->get_size(), kind, stream);
     else
-      error = cudaMemcpy (output->get_rawptr(), 
-                          input->get_rawptr(), 
+      error = cudaMemcpy (output->get_rawptr(),
+                          input->get_rawptr(),
                           input->get_size(), kind);
 
     if (error != cudaSuccess)
@@ -76,7 +76,7 @@ void dsp::TransferBitSeriesCUDA::transformation ()
   }
   else
     if (verbose)
-      cerr << "dsp::TransferBitSeriesCUDA::transformation skipping transfer as ndat=" 
+      cerr << "dsp::TransferBitSeriesCUDA::transformation skipping transfer as ndat="
            << ndat << endl;
 }
 
@@ -85,4 +85,3 @@ void dsp::TransferBitSeriesCUDA::prepare ()
   output->internal_match( input );
   output->copy_configuration( input );
 }
-

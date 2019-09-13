@@ -15,7 +15,7 @@
 #include "ascii_header.h"
 
 namespace dsp {
- 
+
   //! Parses Observation attributes from an ASCII header
   /*! This class parses the ASCII header block used by DADA-based
     instruments such as CPSR2, PuMa2, and APSR.  It initializes all of
@@ -58,20 +58,36 @@ namespace dsp {
 
     //! Load a keyword, only throw an error if it's required and doesn't exist
     template <typename T>
-    int ascii_header_check (const char *header, std::string key, 
+    int ascii_header_check (const char *header, std::string key,
         const char *format, T result);
 
+    template <typename T>
+    void load_str_into_array (std::string from, T* buffer, int bufsize);
 
     //! Number of bytes offset from the beginning of acquisition
     uint64_t offset_bytes;
 
     std::string loaded_header;
   };
-  
+
 }
 
 template <typename T>
-int dsp::ASCIIObservation::custom_header_get ( std::string key, 
+void dsp::ASCIIObservation::load_str_into_array ( std::string from, T* buffer, int bufsize ) {
+  std::string val;
+  std::string delimiter = ",";
+  size_t pos=0;
+  for (unsigned i=0; i<bufsize; i++) {
+    pos = from.find(delimiter);
+    val = from.substr(0, pos);
+    buffer[i] = fromstring<T>(val);
+    from.erase(0, pos + delimiter.length());
+  }
+}
+
+
+template <typename T>
+int dsp::ASCIIObservation::custom_header_get ( std::string key,
     const char *format, T result) const
 {
   int rv = ascii_header_get (loaded_header.c_str(), key.c_str(), format, result);
@@ -87,7 +103,7 @@ int dsp::ASCIIObservation::ascii_header_check (const char *header,
 {
   int rv = ascii_header_get(header, key.c_str(), format, result);
 
-  if ( rv>0 || !is_required(key) ) 
+  if ( rv>0 || !is_required(key) )
     return rv;
 
   throw Error (InvalidState, "ASCIIObservation", "failed load " + key);
