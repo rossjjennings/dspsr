@@ -34,6 +34,9 @@ namespace dsp {
     //! Finish up
     virtual void finish () { }
 
+    //! get the amount of scratch space the engine has calculated that it needs
+    unsigned get_total_scratch_needed () const { return total_scratch_needed; }
+
     virtual void set_passband (dsp::Response* _passband) { passband = _passband; }
 
     virtual FTransform::Plan* get_forward () = 0;
@@ -43,6 +46,8 @@ namespace dsp {
   protected:
 
     float* scratch;
+
+    unsigned total_scratch_needed;
 
     float* output;
     unsigned output_span;

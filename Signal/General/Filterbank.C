@@ -12,6 +12,7 @@
 #include "dsp/Response.h"
 #include "dsp/Apodization.h"
 #include "dsp/InputBuffering.h"
+#include "dsp/Scratch.h"
 #include "dsp/OptimalFFT.h"
 
 #include "FTransform.h"
@@ -515,6 +516,16 @@ void dsp::Filterbank::transformation ()
 
 void dsp::Filterbank::filterbank ()
 {
+
+  // divide up the scratch space
+  scratch_needed = engine->get_total_scratch_needed();
+
+  if (verbose) {
+    std::cerr << "dsp::Filterbank:filterbank: allocating "<< scratch_needed <<" bytes of scratch space" << std::endl;
+  }
+
+  float* scratch_space = scratch->space<float>(scratch_needed);
+
   if (verbose){
     cerr << "dsp::Filterbank::filterbank: computing in_step and out_step" << endl;
   }
@@ -527,6 +538,7 @@ void dsp::Filterbank::filterbank ()
   // number of floats to step between output from filterbank
   const uint64_t out_step = nkeep * 2;
 
+  engine->set_scratch (scratch_space);
   engine->perform (input, output, npart, in_step, out_step);
   if (Operation::record_time){
     engine->finish ();
