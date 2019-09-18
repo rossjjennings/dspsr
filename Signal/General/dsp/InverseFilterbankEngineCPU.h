@@ -121,7 +121,7 @@ namespace dsp
   private:
 
 
-    //! device scratch sapce
+    //! device scratch space
     float* scratch;
 
     //! plan for computing forward fourier transforms
