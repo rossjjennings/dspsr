@@ -52,6 +52,8 @@ namespace dsp {
     //! Prepare for folding
     virtual void prepare ();
 
+    void set_engine(Engine*);
+ 
     //! Set the number of lags to fold
     void set_nlag(unsigned _nlag) { nlag = _nlag; }
     //! Get the number of lags to fold
@@ -77,6 +79,9 @@ namespace dsp {
 
     //! Prepare the output PhaseSeries
     virtual void prepare_output();
+
+    //! Transfer current settings to engine
+    virtual void setup_engine();
 
     //! Number of lags to compute when folding
     unsigned nlag;
