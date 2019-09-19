@@ -55,6 +55,7 @@
 #include "dsp/MemoryCUDA.h"
 #include "dsp/SpectralKurtosisCUDA.h"
 #include "dsp/CyclicFoldEngineCUDA.h"
+#include "dsp/SampleDelayCUDA.h"
 #endif
 
 #include "dsp/SampleDelay.h"
@@ -461,9 +462,9 @@ void dsp::LoadToFold::construct () try
   }
 
   if (filterbank_after_dedisp)
-    prepare_interchan (convolved);
+    prepare_interchan (convolved, run_on_gpu);
   else
-    prepare_interchan (convolved);
+    prepare_interchan (convolved, run_on_gpu);
 
   if (filterbank_after_dedisp && filterbank) {
     if (! using_inverse_filterbank) {
@@ -692,7 +693,7 @@ catch (Error& error)
   throw error += "dsp::LoadToFold::construct";
 }
 
-void dsp::LoadToFold::prepare_interchan (TimeSeries* data)
+void dsp::LoadToFold::prepare_interchan (TimeSeries* data, bool run_on_gpu)
 {
   if (! config->interchan_dedispersion)
     return;
@@ -709,6 +710,16 @@ void dsp::LoadToFold::prepare_interchan (TimeSeries* data)
   sample_delay->set_function (new Dedispersion::SampleDelay);
   if (kernel)
     kernel->set_fractional_delay (true);
+
+#if HAVE_CUDA
+  if (run_on_gpu)
+  {
+    sample_delay->set_engine (
+        new CUDA::SampleDelayEngine ((cudaStream_t) gpu_stream));
+    // Note, this assumes the data TimeSeries memory has already been 
+    // properly set up to use the GPU.
+  }
+#endif
 
   operations.push_back (sample_delay.get());
 }
