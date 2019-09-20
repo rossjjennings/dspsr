@@ -125,6 +125,8 @@ void dsp::LoadToFold::construct () try
 #if HAVE_CUDA
   bool run_on_gpu = thread_id < config->get_cuda_ndevice();
   cudaStream_t stream = reinterpret_cast<cudaStream_t>( gpu_stream );
+#else
+  const bool run_on_gpu = false;
 #endif
 
   if (manager->get_info()->get_detected())
