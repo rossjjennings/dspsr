@@ -215,6 +215,9 @@ void dsp::SpectralKurtosis::transformation ()
       cerr << "dsp::SpectralKurtosis::transformation setting next_start_sample="
            << output_ndat << endl;
     get_buffering_policy()->set_next_start (output_ndat);
+    if (verbose) {
+      std::cerr << "dsp::SpectralKurtosis::transformation set_next_start done" << std::endl;
+    }
   }
 
   prepare_output ();
@@ -226,9 +229,21 @@ void dsp::SpectralKurtosis::transformation ()
     return;
 
   // perform SK functions
+  if (verbose) {
+    std::cerr << "dsp::SpectralKurtosis::transformation: calling compute" << std::endl;
+  }
   compute ();
+  if (verbose) {
+    std::cerr << "dsp::SpectralKurtosis::transformation: calling detect" << std::endl;
+  }
   detect ();
+  if (verbose) {
+    std::cerr << "dsp::SpectralKurtosis::transformation: calling mask" << std::endl;
+  }
   mask ();
+  if (verbose) {
+    std::cerr << "dsp::SpectralKurtosis::transformation: done" << std::endl;
+  }
   //insertsk();
 }
 
@@ -383,7 +398,7 @@ void dsp::SpectralKurtosis::compute ()
   //   size * sizeof(float)
   // );
   // outfile.close();
-  
+
   if (verbose || debugd < 1)
     cerr << "dsp::SpectralKurtosis::compute done" << endl;
   if (debugd < 1)

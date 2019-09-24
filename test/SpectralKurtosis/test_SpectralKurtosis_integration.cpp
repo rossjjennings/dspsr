@@ -117,19 +117,20 @@ TEST_CASE (
     32, 32, 2, 2, 2, 2, 1024, 1024);
 
   void* stream = 0;
-  // cudaStream_t cuda_stream = reinterpret_cast<cudaStream_t>(stream);
-  // CUDA::DeviceMemory* device_memory = new CUDA::DeviceMemory(cuda_stream);
-  // CUDA::SpectralKurtosisEngine engine_cuda(device_memory);
+  cudaStream_t cuda_stream = reinterpret_cast<cudaStream_t>(stream);
+  CUDA::DeviceMemory* device_memory = new CUDA::DeviceMemory(cuda_stream);
+  CUDA::SpectralKurtosisEngine engine_cuda(device_memory);
 
   dsp::SpectralKurtosis sk_cpu;
+  sk_cpu.set_buffering_policy(nullptr);
   dsp::SpectralKurtosis sk_cuda;
-
-  // sk_cuda.set_engine(&engine_cuda);
+  sk_cuda.set_buffering_policy(nullptr);
+  sk_cuda.set_engine(&engine_cuda);
 
   Reporter reporter_cpu;
-  // Reporter reporter_cuda(cuda_stream);
+  Reporter reporter_cuda(cuda_stream);
   sk_cpu.reporter.on("compute", &reporter_cpu);
-  // sk_cuda.reporter.on("compute", &reporter_cuda);
+  sk_cuda.reporter.on("compute", &reporter_cuda);
 
   Reference::To<dsp::TimeSeries> in = new dsp::TimeSeries;
   Reference::To<dsp::TimeSeries> out = new dsp::TimeSeries;
@@ -143,12 +144,22 @@ TEST_CASE (
 
   sk_cpu.prepare();
   sk_cpu.operate();
+
   // sk_cpu.finish();
 
-  // auto transfer = util::transferTimeSeries(cuda_stream, device_memory);
-  // transfer(in, in_gpu, cudaMemcpyHostToDevice);
-  // transfer(out, out_gpu, cudaMemcpyHostToDevice);
-  // transfer(out_gpu, out_cuda, cudaMemcpyDeviceToHost);
+  auto transfer = util::transferTimeSeries(cuda_stream, device_memory);
+  transfer(in, in_gpu, cudaMemcpyHostToDevice);
+  transfer(out, out_gpu, cudaMemcpyHostToDevice);
+
+  sk_cuda.set_input(in_gpu);
+  sk_cuda.set_output(out_gpu);
+
+  sk_cuda.prepare();
+  sk_cuda.operate();
+
+  transfer(out_gpu, out_cuda, cudaMemcpyDeviceToHost);
+
+  REQUIRE(util::allclose(out_cuda, out, thresh[0], thresh[1]));
 
   // Reference::To<dsp::TimeSeries> out_cuda = new dsp::TimeSeries;
   //
