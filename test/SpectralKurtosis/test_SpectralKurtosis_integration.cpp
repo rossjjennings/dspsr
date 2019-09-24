@@ -9,19 +9,25 @@
 #include "dsp/MemoryCUDA.h"
 
 #include "util.hpp"
+#include "TestConfig.hpp"
+#include "TransformationProxy.hpp"
+
+static util::TestConfig test_config;
+
 
 void check_error (const char*);
 
 
-// class Reporter : public dsp::SpectralKurtosis::Reporter {
-class Reporter  {
+class Reporter : public dsp::SpectralKurtosis::Reporter {
+// class Reporter  {
 public:
 
   Reporter (bool _iscuda = false): iscuda(_iscuda) {}
 
   Reporter (cudaStream_t _stream): stream(_stream) { iscuda = true; }
 
-  void operator() (float* arr, unsigned nchan, unsigned npol, unsigned ndat, unsigned ndim)
+  void operator() (
+    float* arr, unsigned nchan, unsigned npol, unsigned ndat, unsigned ndim)
   {
     unsigned total_size = nchan * npol * ndat * ndim;
     // if (util::config::verbose)
@@ -99,7 +105,7 @@ TEST_CASE (
   "[SpectralKurtosis]"
 )
 {
-  // std::vector<float> thresh = test_config.get_thresh();
+  std::vector<float> thresh = test_config.get_thresh();
   // std::vector<util::TestShape> test_shapes = test_config.get_test_vector_shapes();
   //
   // auto idx = GENERATE_COPY(range(0, (int) test_shapes.size()));
@@ -107,30 +113,43 @@ TEST_CASE (
   //   std::cerr << "test_SpectralKurtosis_integration: idx=" << idx << std::endl;
   // }
   //
-  // util::TestShape test_shape = test_shapes[idx];
-
+  util::TransformationProxy sk_proxy(
+    32, 32, 2, 2, 2, 2, 1024, 1024);
 
   void* stream = 0;
-  cudaStream_t cuda_stream = reinterpret_cast<cudaStream_t>(stream);
-  CUDA::DeviceMemory* device_memory = new CUDA::DeviceMemory(cuda_stream);
-  CUDA::SpectralKurtosisEngine engine_cuda(device_memory);
+  // cudaStream_t cuda_stream = reinterpret_cast<cudaStream_t>(stream);
+  // CUDA::DeviceMemory* device_memory = new CUDA::DeviceMemory(cuda_stream);
+  // CUDA::SpectralKurtosisEngine engine_cuda(device_memory);
 
   dsp::SpectralKurtosis sk_cpu;
   dsp::SpectralKurtosis sk_cuda;
 
-  sk_cuda.set_engine(&engine_cuda);
+  // sk_cuda.set_engine(&engine_cuda);
 
   Reporter reporter_cpu;
-  Reporter reporter_cuda(cuda_stream);
-  // sk_cpu.reporter.on("fft_window", &reporter_cpu_fft_window);
-  // sk_cuda.reporter.on("fft_window", &reporter_cuda_fft_window);
-  //
-  //
-  //
-  // Reference::To<dsp::TimeSeries> in = new dsp::TimeSeries;
-  // Reference::To<dsp::TimeSeries> out = new dsp::TimeSeries;
-  // Reference::To<dsp::TimeSeries> in_gpu = new dsp::TimeSeries;
-  // Reference::To<dsp::TimeSeries> out_gpu = new dsp::TimeSeries;
+  // Reporter reporter_cuda(cuda_stream);
+  sk_cpu.reporter.on("compute", &reporter_cpu);
+  // sk_cuda.reporter.on("compute", &reporter_cuda);
+
+  Reference::To<dsp::TimeSeries> in = new dsp::TimeSeries;
+  Reference::To<dsp::TimeSeries> out = new dsp::TimeSeries;
+  Reference::To<dsp::TimeSeries> in_gpu = new dsp::TimeSeries;
+  Reference::To<dsp::TimeSeries> out_gpu = new dsp::TimeSeries;
+  Reference::To<dsp::TimeSeries> out_cuda = new dsp::TimeSeries;
+
+  sk_proxy.setup (in, out);
+  sk_cpu.set_input(in);
+  sk_cpu.set_output(out);
+
+  sk_cpu.prepare();
+  sk_cpu.operate();
+  // sk_cpu.finish();
+
+  // auto transfer = util::transferTimeSeries(cuda_stream, device_memory);
+  // transfer(in, in_gpu, cudaMemcpyHostToDevice);
+  // transfer(out, out_gpu, cudaMemcpyHostToDevice);
+  // transfer(out_gpu, out_cuda, cudaMemcpyDeviceToHost);
+
   // Reference::To<dsp::TimeSeries> out_cuda = new dsp::TimeSeries;
   //
   // Rational os_factor (4, 3);

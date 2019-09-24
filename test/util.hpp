@@ -183,7 +183,7 @@ namespace util {
 
   std::string get_test_data_dir ();
 
-  //! load data from a stl vector unsignedo a dspsr TimeSeries object.
+  //! load data from a stl vector to a dspsr TimeSeries object.
   //! dim should be of length 3.
   //! Assumes TimeSeries is in FPT order.
   template<typename T>

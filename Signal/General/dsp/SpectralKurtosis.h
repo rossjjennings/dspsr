@@ -10,6 +10,7 @@
 #include "dsp/TimeSeries.h"
 #include "dsp/BitSeries.h"
 #include "dsp/Memory.h"
+#include "EventEmitter.h"
 
 #ifndef __SpectralKurtosis_h
 #define __SpectralKurtosis_h
@@ -83,6 +84,16 @@ namespace dsp {
 
     void set_engine (Engine*);
 
+    class Reporter {
+    public:
+      virtual void operator() (float*, unsigned, unsigned, unsigned, unsigned) {};
+    };
+
+    // A event emitter that takes a data array, and the nchan, npol, ndat and ndim
+    // associated with the data array
+    EventEmitter<Reporter> reporter;
+
+
   protected:
 
     //! Perform the transformation on the input time series
@@ -121,7 +132,7 @@ namespace dsp {
 
     uint64_t output_ndat;
 
-    //! SK Estimates 
+    //! SK Estimates
     Reference::To<TimeSeries> estimates;
 
     //! Tscrunched SK Estimate for block
@@ -200,7 +211,7 @@ namespace dsp {
                                 const TimeSeries * input_tscr,
                                 BitSeries* output,
                                 float upper, float lower) = 0;
- 
+
       virtual int count_mask (const BitSeries* output) = 0;
 
       virtual float * get_estimates (const TimeSeries* input) = 0;

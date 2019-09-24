@@ -12,6 +12,7 @@ test_main_SOURCES = test_main.cpp \
                     InverseFilterbank/test_InverseFilterbank.cpp \
                     InverseFilterbank/test_InverseFilterbankPipeline.cpp \
                     util.cpp \
+                    TransformationProxy.cpp \
                     TestConfig.cpp \
                     InverseFilterbankTestConfig.cpp
 
