@@ -12,6 +12,7 @@
 #include <errno.h>
 #include <assert.h>
 #include <string.h>
+#include <fstream>
 
 using namespace std;
 
@@ -63,7 +64,7 @@ dsp::SpectralKurtosis::~SpectralKurtosis ()
     percent_fscr = (100 * (float) zap_counts[ZAP_FSCR] / (float) npart_total);
   }
 
-  cerr << "Zapped: " 
+  cerr << "Zapped: "
        << " total=" << percent_all <<  "\%" << " skfb=" << percent_skfb << "\%"
        << " tscr=" << percent_tscr << "\%" << " fscr=" << percent_fscr << "\%"
        << endl;
@@ -136,7 +137,7 @@ void dsp::SpectralKurtosis::prepare_output ()
 {
   if (verbose)
     cerr << "dsp::SpectralKurtosis::prepare_output()" << endl;
-    
+
   double mask_rate = input->get_rate() / M;
 
   estimates->copy_configuration (get_input());
@@ -165,11 +166,11 @@ void dsp::SpectralKurtosis::prepare_output ()
   zapmask->set_npol (1);
 
   // configure output timeseries (out-of-place) to match input
-  output->copy_configuration (get_input()); 
+  output->copy_configuration (get_input());
   output->set_input_sample (input->get_input_sample ());
 }
 
-/* ensure containers have correct dynamic size */ 
+/* ensure containers have correct dynamic size */
 void dsp::SpectralKurtosis::reserve ()
 {
   if (verbose)
@@ -180,7 +181,7 @@ void dsp::SpectralKurtosis::reserve ()
   output_ndat = npart * M;
 
   if (verbose)
-    cerr << "dsp::SpectralKurtosis::reserve input_ndat=" << ndat 
+    cerr << "dsp::SpectralKurtosis::reserve input_ndat=" << ndat
          << " npart=" << npart << " output_ndat=" << output_ndat << endl;
 
   // use resize since out of place operation
@@ -220,7 +221,7 @@ void dsp::SpectralKurtosis::transformation ()
 
   // ensure output containers are sized correctly
   reserve ();
-  
+
   if ((ndat == 0) || (npart == 0))
     return;
 
@@ -371,6 +372,18 @@ void dsp::SpectralKurtosis::compute ()
     }
   }
 
+  // std::ofstream outfile(
+  //   "SpectralKurtosis.compute.dat", std::ios::out | std::ios::binary);
+  // unsigned size = (
+  //     estimates->get_nchan() * estimates->get_ndat() *
+  //     estimates->get_npol() * estimates->get_ndim());
+  //
+  // outfile.write(
+  //   reinterpret_cast<const char*>(estimates->get_dattfp()),
+  //   size * sizeof(float)
+  // );
+  // outfile.close();
+  
   if (verbose || debugd < 1)
     cerr << "dsp::SpectralKurtosis::compute done" << endl;
   if (debugd < 1)
@@ -402,7 +415,7 @@ void dsp::SpectralKurtosis::set_channel_range (unsigned start, unsigned end)
   channels[1] = end;
 }
 
-void dsp::SpectralKurtosis::set_options (bool _disable_fscr, 
+void dsp::SpectralKurtosis::set_options (bool _disable_fscr,
     bool _disable_tscr, bool _disable_ft)
 {
   detection_flags[0] = _disable_fscr;
@@ -421,13 +434,13 @@ void dsp::SpectralKurtosis::detect ()
 
   if (verbose || debugd < 1)
   {
-    cerr << "dsp::SpectralKurtosis::detect npart= " << npart  
-         << " nchan=" << nchan << " nbit=" << input->get_nbit() 
+    cerr << "dsp::SpectralKurtosis::detect npart= " << npart
+         << " nchan=" << nchan << " nbit=" << input->get_nbit()
          << " npol=" << npol << " ndim=" << ndim << endl;
 
     cerr << "dsp::SpectralKurtosis::detect OUTPUT ndat="
          << zapmask->get_ndat() << " nchan=" << zapmask->get_nchan()
-         << " nbit=" << zapmask->get_nbit() << " npol=" << zapmask->get_npol() 
+         << " nbit=" << zapmask->get_nbit() << " npol=" << zapmask->get_npol()
          << " ndim=" << zapmask->get_ndim() << endl;
   }
 
@@ -499,7 +512,7 @@ void dsp::SpectralKurtosis::detect_tscr ()
       thresholds_tscr_lower.push_back(lower);
       thresholds_tscr_upper.push_back(upper);
     }
-  
+
     if (verbose)
       cerr << "dsp::SpectralKurtosis::detect_tscr M=" << M_tscr << " std_devs="
            << std_devs  << " [" << lower << " - " << upper << "]" << endl;
@@ -524,7 +537,7 @@ void dsp::SpectralKurtosis::detect_tscr ()
     if (zap_chan)
     {
       if (verbose)
-        cerr << "dsp::SpectralKurtosis::detect_tscr zap V=" << V << ", " 
+        cerr << "dsp::SpectralKurtosis::detect_tscr zap V=" << V << ", "
              << "ichan=" << ichan << endl;
       outdat = zapmask->get_datptr();
       for (unsigned ipart=0; ipart < npart; ipart++)
@@ -579,7 +592,7 @@ void dsp::SpectralKurtosis::detect_skfb ()
     }
 
     indat += nchan * npol;
-    outdat += nchan; 
+    outdat += nchan;
   }
 }
 
@@ -648,7 +661,7 @@ void dsp::SpectralKurtosis::count_zapped ()
       unfiltered_sum[outdex] += indat[index];
       if (npol == 2)
         unfiltered_sum[outdex+1] += indat[index+1];
-  
+
       if (outdat[(ipart*nchan) + ichan] == 1)
       {
         zap_counts[ZAP_ALL] ++;
@@ -686,7 +699,7 @@ void dsp::SpectralKurtosis::detect_fscr ()
 
   float sk_avg;
   unsigned sk_avg_cnt = 0;
-  
+
   unsigned zap_ipart;
   uint64_t nzap = 0;
 
@@ -769,7 +782,7 @@ void dsp::SpectralKurtosis::mask ()
   else
   {
     // mask is a TFP ordered bit series, output is FTP order Timeseries
-    const unsigned nfloat = M * ndim;      
+    const unsigned nfloat = M * ndim;
     for (unsigned ichan=0; ichan < nchan; ichan++)
     {
       for (unsigned ipol=0; ipol < npol; ipol++)
@@ -800,10 +813,9 @@ void dsp::SpectralKurtosis::mask ()
     debugd++;
 }
 
-//! 
+//!
 void dsp::SpectralKurtosis::insertsk ()
 {
   if (engine)
     engine->insertsk (estimates, output, M);
 }
-

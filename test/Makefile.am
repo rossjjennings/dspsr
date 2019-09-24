@@ -21,7 +21,8 @@ if HAVE_CUFFT
 
   test_main_SOURCES += InverseFilterbank/test_InverseFilterbankEngineCUDA_kernels.cpp \
                        InverseFilterbank/test_InverseFilterbankEngineCUDA.cpp \
-                       InverseFilterbank/test_InverseFilterbankEngine_integration.cpp
+                       InverseFilterbank/test_InverseFilterbankEngine_integration.cpp \
+                       SpectralKurtosis/test_SpectralKurtosis_integration.cpp
 
   test_main_SOURCES += test_FTransform_cufft_precision.cpp
 
