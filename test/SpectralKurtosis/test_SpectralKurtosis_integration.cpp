@@ -40,14 +40,20 @@ TEST_CASE (
   int nparts = 2;
   int block_size = tscrunch * nparts;
 
+  bool disable_fscr = false;
+  bool disable_tscr = true;
+  bool disable_ft = true;
+
   dsp::SpectralKurtosis sk_cpu;
   sk_cpu.set_buffering_policy(nullptr);
   sk_cpu.set_thresholds(tscrunch, 4);
+  sk_cpu.set_options(disable_fscr, disable_tscr, disable_ft);
 
   dsp::SpectralKurtosis sk_cuda;
   sk_cuda.set_buffering_policy(nullptr);
   sk_cuda.set_thresholds(tscrunch, 4);
   sk_cuda.set_engine(&engine_cuda);
+  sk_cuda.set_options(disable_fscr, disable_tscr, disable_ft);
 
   std::vector<std::string> float_reporter_names = {
     "estimates",

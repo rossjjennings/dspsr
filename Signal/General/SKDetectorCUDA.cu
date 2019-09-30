@@ -193,16 +193,22 @@ __global__ void reduce_sum_fscr_1pol (const float * input, unsigned char * out,
   }
 }
 
-__global__ void reduce_sum_fscr_2pol (const float2 * input, unsigned char * out,
-                                      const unsigned nchan, float lower, float upper,
-                                      unsigned schan, unsigned echan)
+//! blockDim.x is nchan, so threadIdx.x is ichan
+//! gridDim.x is input->get_ndat(), or npart, os blockIdx.x is ipart
+__global__ void reduce_sum_fscr_2pol (
+  const float2 * input, unsigned char * out,
+  const unsigned nchan, float lower, float upper,
+  unsigned schan, unsigned echan
+)
 {
-  extern __shared__ float2 sdata2[];
+  extern __shared__ float2 sdata2[]; // we have nchan * npol * sizeof(float) available bytes
 
   // idat = blockIdx.x
+  // use float 2 because input is TFP, meaning we can bundle polarizations
+  // as if they were complex number
   const float2 * in = input + (blockIdx.x * nchan);
 
-  float2 sum = make_cuComplex(0,0);
+  float2 sum = make_cuComplex(0, 0);
   for (unsigned ichan=threadIdx.x; ichan<nchan; ichan+=blockDim.x)
   {
     if (ichan >= schan && ichan < echan)
@@ -214,7 +220,7 @@ __global__ void reduce_sum_fscr_2pol (const float2 * input, unsigned char * out,
 
   // now do a block wide sum across all threads
   int last_offset = blockDim.x / 2;
-  for (int offset = last_offset; offset > 0;  offset >>= 1)
+  for (int offset = last_offset; offset > 0;  offset >>= 1) // bitshift down by one
   {
     if (threadIdx.x < offset)
       sdata2[threadIdx.x] = cuCaddf(sdata2[threadIdx.x], sdata2[threadIdx.x + offset]);
@@ -227,16 +233,27 @@ __global__ void reduce_sum_fscr_2pol (const float2 * input, unsigned char * out,
     float p0 = sdata2[0].x / nvalidchan;
     float p1 = sdata2[0].y / nvalidchan;
 
-    if (p0 < lower || p0 > upper || p1 < lower || p1 > upper)
+    if (p0 < lower || p0 > upper || p1 < lower || p1 > upper) {
+      // for ( unsigned ichan=0; ichan < nchan; ichan++ ) {
+      //   out[blockIdx.x * nchan + ichan] = 1;
+      // }
       out[blockIdx.x] = 1;
+    }
   }
 }
 
-
-void CUDA::SKDetectorEngine::detect_fscr (const dsp::TimeSeries* input, dsp::BitSeries* output, const float lower, const float upper, unsigned schan, unsigned echan)
+// schan is the start channel and echan is the end channel. Together these
+// define a range of channels that will be zapped.
+// input is the TFP ordered SK estimates, of size (npart, nchan, npol)
+// output is the TFP ordered zapmask, of size (npart, nchan, 1)
+// Here, npart is the original TimeSeries input ndat divided by ``M``
+void CUDA::SKDetectorEngine::detect_fscr (
+  const dsp::TimeSeries* input, dsp::BitSeries* output,
+  const float lower, const float upper,
+  unsigned schan, unsigned echan)
 {
-  if (dsp::Operation::verbose)
-    cerr << "CUDA::SKDetectorEngine::detect_fscr()" << endl;
+  // if (dsp::Operation::verbose)
+  cerr << "CUDA::SKDetectorEngine::detect_fscr()" << endl;
 
   const unsigned nchan = input->get_nchan();
   const unsigned npol  = input->get_npol();
@@ -253,18 +270,26 @@ void CUDA::SKDetectorEngine::detect_fscr (const dsp::TimeSeries* input, dsp::Bit
 
   // outdat is the bitmask
   unsigned char * outdat = output->get_datptr();
-
-  if (dsp::Operation::verbose)
-  {
+  std::cerr << "CUDA::SKDetectorEngine::detect_fscr:"
+    << " output->get_ndat()=" << output->get_ndat()
+    << " output->get_npol()=" << output->get_npol()
+    << " output->get_nchan()=" << output->get_nchan() << std::endl;
+  // if (dsp::Operation::verbose)
+  // {
     cerr << "CUDA::SKDetectorEngine::detect_fscr nchan=" << nchan << " ndat=" << ndat << endl;
     cerr << "CUDA::SKDetectorEngine::detect_fscr nblocks=" << nblocks << " nthreads=" << nthreads << " shared_bytes=" << shared_bytes << endl;
     cerr << "CUDA::SKDetectorEngine::detect_fscr thresholds [" << lower << " - " << upper << "]" << endl;
-  }
+  // }
 
-  if (npol == 1)
-    reduce_sum_fscr_1pol<<<nblocks,nthreads,shared_bytes,stream>>>(indat, outdat, nchan, lower, upper, schan, echan);
-  else
-    reduce_sum_fscr_2pol<<<nblocks,nthreads,shared_bytes,stream>>>((float2*) indat, outdat, nchan, lower, upper, schan, echan);
+  if (npol == 1) {
+    std::cerr << "CUDA::SKDetectorEngine::detect_fscr single pol kernel" << std::endl;
+    reduce_sum_fscr_1pol<<<nblocks,nthreads,shared_bytes,stream>>>(
+      indat, outdat, nchan, lower, upper, schan, echan);
+  } else {
+    std::cerr << "CUDA::SKDetectorEngine::detect_fscr double pol kernel" << std::endl;
+    reduce_sum_fscr_2pol<<<nblocks,nthreads,shared_bytes,stream>>>(
+      (float2*) indat, outdat, nchan, lower, upper, schan, echan);
+  }
 
   if (dsp::Operation::record_time || dsp::Operation::verbose)
     check_error( "CUDA::SKDetectorEngine::detect_fscr_element" );
@@ -323,7 +348,8 @@ __global__ void detect_tscr_element (
     {
       all_pol_in_thresh = false;
       for (unsigned ipol=0; ipol<npol; ipol++) {
-        all_pol_in_thresh = all_pol_in_thresh || (indat[threadIdx.x*npol + ipol] > upper || indat[threadIdx.x*npol + ipol] < lower);
+        all_pol_in_thresh = (all_pol_in_thresh ||
+          (indat[threadIdx.x*npol + ipol] > upper || indat[threadIdx.x*npol + ipol] < lower));
       }
       sk_tscr[threadIdx.x] = (char) all_pol_in_thresh;
     }
