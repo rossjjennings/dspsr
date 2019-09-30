@@ -10,7 +10,7 @@
 #include "dsp/MemoryCUDA.h"
 #include "Rational.h"
 
-#include "util.hpp"
+#include "util/util.hpp"
 #include "InverseFilterbankTestConfig.hpp"
 
 void check_error (const char*);

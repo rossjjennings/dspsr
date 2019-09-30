@@ -10,7 +10,7 @@
 #include "FTransform.h"
 #include "dsp/OptimalFFT.h"
 
-#include "TestConfig.hpp"
+#include "util/TestConfig.hpp"
 
 static util::TestConfig test_config;
 

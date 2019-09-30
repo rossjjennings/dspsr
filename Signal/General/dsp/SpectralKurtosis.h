@@ -84,14 +84,16 @@ namespace dsp {
 
     void set_engine (Engine*);
 
+    template<class T>
     class Reporter {
     public:
-      virtual void operator() (float*, unsigned, unsigned, unsigned, unsigned) {};
+      virtual void operator() (T*, unsigned, unsigned, unsigned, unsigned) {};
     };
 
     // A event emitter that takes a data array, and the nchan, npol, ndat and ndim
     // associated with the data array
-    EventEmitter<Reporter> reporter;
+    EventEmitter<Reporter<float>> float_reporter;
+    EventEmitter<Reporter<unsigned char>> char_reporter;
 
 
   protected:

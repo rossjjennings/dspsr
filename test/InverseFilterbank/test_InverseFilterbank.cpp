@@ -16,7 +16,7 @@
 #include "dsp/InverseFilterbankEngineCPU.h"
 #include "dsp/InverseFilterbankResponse.h"
 
-#include "util.hpp"
+#include "util/util.hpp"
 
 const std::string file_path = util::get_test_data_dir() + "/channelized.simulated_pulsar.noise_0.0.nseries_3.ndim_2.dump";
 const unsigned block_size = 699048; // this is taken from dspsr logs

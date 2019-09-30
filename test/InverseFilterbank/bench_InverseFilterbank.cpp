@@ -10,7 +10,7 @@
 #include "Rational.h"
 #include "CommandLine.h"
 
-#include "util.hpp"
+#include "util/util.hpp"
 #include "InverseFilterbankTestConfig.hpp"
 
 class BenchmarkOptions : public Reference::Able {

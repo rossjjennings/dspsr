@@ -76,7 +76,7 @@ __global__ void detect_two_pol (const float2 * indat, unsigned char * outdat, ui
   unsigned idat  = (blockIdx.x * blockDim.x) + threadIdx.x;
   if (idat < nval)
   {
-    const float2 V = indat[idat]; 
+    const float2 V = indat[idat];
     if (V.x < lower || V.x > upper || V.y < lower || V.y > upper)
     {
       outdat[idat] = 1;
@@ -157,7 +157,7 @@ void CUDA::SKDetectorEngine::detect_ft (const dsp::TimeSeries* input,
 
 // input data are stored TFP, 1 warp per time sample, 32 warps / block to sum across channels
 __global__ void reduce_sum_fscr_1pol (const float * input, unsigned char * out,
-                                      const unsigned nchan, float lower, float upper, 
+                                      const unsigned nchan, float lower, float upper,
                                       unsigned schan, unsigned echan)
 {
   extern __shared__ float sdata[];
@@ -194,7 +194,7 @@ __global__ void reduce_sum_fscr_1pol (const float * input, unsigned char * out,
 }
 
 __global__ void reduce_sum_fscr_2pol (const float2 * input, unsigned char * out,
-                                      const unsigned nchan, float lower, float upper, 
+                                      const unsigned nchan, float lower, float upper,
                                       unsigned schan, unsigned echan)
 {
   extern __shared__ float2 sdata2[];
@@ -278,25 +278,58 @@ void CUDA::SKDetectorEngine::detect_fscr (const dsp::TimeSeries* input, dsp::Bit
     check_error( "CUDA::SKDetectorEngine::detect detect_fscr" );
 }
 
-__global__ void detect_tscr_element (const float * indat, unsigned char * outdat, uint64_t nval, float upper, float lower, unsigned npol, unsigned nchan)
+// nval is output->get_ndat() * nchan
+// indat is TFP ordered
+// indat is (1, nchan, npol)
+// outdat is (ndat, nchan, npol)
+__global__ void detect_tscr_element (
+  const float * indat,
+  unsigned char * outdat,
+  uint64_t nval,
+  float upper,
+  float lower,
+  unsigned npol,
+  unsigned nchan
+)
 {
+
   extern __shared__ char sk_tscr[];
 
   unsigned int idat  = (blockIdx.x * blockDim.x + threadIdx.x);
-
+  bool all_pol_in_thresh;
+  if (idat ==0) {
+    printf("detect_tscr_element: npol=%u, nchan=%u\n", npol, nchan);
+  }
   if (idat < nval)
   {
-    const unsigned nchanpol = nchan * npol;
-    const unsigned ichanpol = idat % nchanpol;
+    // const unsigned nchanpol = nchan * npol;
+    // const unsigned ichanpol = idat % nchanpol;
 
     // first nchan threads to fill shared mem with the tscr SK estimates for each chan & pol (TFP)
-    if (threadIdx.x < nchanpol)
+
+    // if (threadIdx.x < nchan)
+    // {
+    //   // sk_tscr[threadIdx.x] = (char) (indat[threadIdx.x] > upper || indat[threadIdx.x] < lower);
+    //   all_pol_in_thresh = false;
+    //   for (unsigned ipol=0; ipol<npol; ipol++) {
+    //     all_pol_in_thresh = all_pol_in_thresh || (indat[threadIdx.x*npol + ipol] > upper || indat[threadIdx.x*npol + ipol] < lower);
+    //   }
+    //   sk_tscr[threadIdx.x] = (char) all_pol_in_thresh;
+    // }
+    // __syncthreads();
+    // outdat[idat/npol] = sk_tscr[ichanpol];
+
+    if (threadIdx.x < nchan)
     {
-      sk_tscr[threadIdx.x] = (char) (indat[threadIdx.x] > upper || indat[threadIdx.x] < lower);
+      all_pol_in_thresh = false;
+      for (unsigned ipol=0; ipol<npol; ipol++) {
+        all_pol_in_thresh = all_pol_in_thresh || (indat[threadIdx.x*npol + ipol] > upper || indat[threadIdx.x*npol + ipol] < lower);
+      }
+      sk_tscr[threadIdx.x] = (char) all_pol_in_thresh;
     }
     __syncthreads();
+    outdat[idat] = sk_tscr[idat % nchan];
 
-    outdat[idat/npol] = sk_tscr[ichanpol];
   }
 }
 
@@ -327,13 +360,15 @@ void CUDA::SKDetectorEngine::detect_tscr (const dsp::TimeSeries* input,
   dim3 blocks (nblocks);
   unsigned shared_bytes = nchan*npol*sizeof(char);
 
-  if (dsp::Operation::verbose)
-    cerr << "CUDA::SKDetectorEngine::detect_tscr_element ndat=" << ndat
-         << " nchan=" << nchan << " nval=" << nval
-         << " max_threads=" << max_threads_per_block
-         << " nblocks=" << nblocks << endl;
+  // if (dsp::Operation::verbose)
+  cerr << "CUDA::SKDetectorEngine::detect_tscr_element ndat=" << ndat
+      << " npol=" << npol
+       << " nchan=" << nchan << " nval=" << nval
+       << " max_threads=" << max_threads_per_block
+       << " nblocks=" << nblocks << endl;
 
-  detect_tscr_element<<<blocks,threads,shared_bytes,stream>>>(indat, outdat, nval, upper_thresh, lower_thresh, npol, nchan);
+  detect_tscr_element<<<blocks,threads,shared_bytes,stream>>>(
+    indat, outdat, nval, upper_thresh, lower_thresh, npol, nchan);
 
   if (dsp::Operation::record_time || dsp::Operation::verbose)
     check_error( "CUDA::SKDetectorEngine::detect_tscr_element" );
@@ -396,4 +431,3 @@ unsigned char * CUDA::SKDetectorEngine::get_zapmask (const dsp::BitSeries * inpu
   cudaStreamSynchronize (stream);
   return zapmask_host->get_datptr();
 }
-

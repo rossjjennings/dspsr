@@ -7,8 +7,7 @@
 #define CATCH_CONFIG_RUNNER
 #include "catch.hpp"
 
-#include "util.hpp"
-#include "InverseFilterbankTestConfig.hpp"
+#include "util/util.hpp"
 
 int main( int argc, char* argv[] )
 {

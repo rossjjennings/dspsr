@@ -16,7 +16,7 @@
 #include "dsp/FIRFilter.h"
 #include "dsp/Apodization.h"
 
-#include "util.hpp"
+#include "util/util.hpp"
 
 std::string tukey_file_path = "/home/SWIN/dshaff/ska/test_data/tukey_window.dat";
 std::string tophat_file_path = "/home/SWIN/dshaff/ska/test_data/tophat_window.dat";

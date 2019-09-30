@@ -2,8 +2,6 @@
 
 #include "dsp/FilterbankEngineCPU.h"
 
-#include "util.hpp"
-
 
 TEST_CASE ("can create instance of FilterbankEngineCPU", "[FilterbankEngineCPU]")
 {

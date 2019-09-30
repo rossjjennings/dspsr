@@ -231,19 +231,58 @@ void dsp::SpectralKurtosis::transformation ()
   // perform SK functions
   if (verbose) {
     std::cerr << "dsp::SpectralKurtosis::transformation: calling compute" << std::endl;
+    std::cerr << "dsp::SpectralKurtosis::transformation:: detection_flags=["
+      << detection_flags[0] << ", "
+      << detection_flags[1] << ", "
+      << detection_flags[2] << "]" << std::endl;
   }
+
   compute ();
   if (verbose) {
     std::cerr << "dsp::SpectralKurtosis::transformation: calling detect" << std::endl;
   }
+
+  float_reporter.emit(
+    "estimates",
+    estimates->get_dattfp(),
+    estimates->get_nchan(),
+    estimates->get_npol(),
+    estimates->get_ndat(),
+    estimates->get_ndim());
+
+  float_reporter.emit(
+    "estimates_tscr",
+    estimates_tscr->get_dattfp(),
+    estimates_tscr->get_nchan(),
+    estimates_tscr->get_npol(),
+    estimates_tscr->get_ndat(),
+    estimates_tscr->get_ndim());
+
   detect ();
   if (verbose) {
     std::cerr << "dsp::SpectralKurtosis::transformation: calling mask" << std::endl;
   }
+
+  char_reporter.emit(
+    "zapmask",
+    zapmask->get_datptr(),
+    zapmask->get_nchan(),
+    zapmask->get_npol(),
+    zapmask->get_ndat(),
+    zapmask->get_ndim());
+
   mask ();
   if (verbose) {
     std::cerr << "dsp::SpectralKurtosis::transformation: done" << std::endl;
   }
+  float_reporter.emit(
+    "output",
+    output->get_datptr(),
+    output->get_nchan(),
+    output->get_npol(),
+    output->get_ndat(),
+    output->get_ndim());
+
   //insertsk();
 }
 
@@ -266,13 +305,17 @@ void dsp::SpectralKurtosis::compute ()
     }
 
     float S1_sum, S2_sum;
-    const float M_fac = (M+1) / (M-1);
+    const float M_fac = (float)(M+1) / (M-1);
+    std::cerr << "dsp::SpectralKurtosis::compute: M_fac=" << M_fac << std::endl;
     float * outdat = estimates->get_dattfp();
 
     switch (input->get_order())
     {
       case dsp::TimeSeries::OrderTFP:
       {
+        if (verbose) {
+          std::cerr << "dsp::SpectralKurtosis::compute: OrderTFP" << std::endl;
+        }
         const unsigned int chan_stride = nchan * npol * ndim;
         float * indat;
 
@@ -317,6 +360,11 @@ void dsp::SpectralKurtosis::compute ()
 
       case dsp::TimeSeries::OrderFPT:
       {
+        if (verbose) {
+          std::cerr << "dsp::SpectralKurtosis::compute: OrderFPT" << std::endl;
+        }
+        std::cerr << "dsp::SpectralKurtosis::compute: input->get_stride()="
+          <<   input->get_stride() << "input->get_ndat()=" << input->get_ndat() << std::endl;
         const unsigned int nfloat = M * ndim;
         // foreach input channel
         for (unsigned ipart=0; ipart < npart; ipart++)
@@ -327,6 +375,7 @@ void dsp::SpectralKurtosis::compute ()
             {
               // input pointer for channel pol
               const float* indat = input->get_datptr (ichan, ipol) + ipart * nfloat;
+              // std::cerr << "  ichan=" << ichan << ", ipol=" << ipol << ", ipart=" << ipart << std::endl;
 
               S1_sum = 0;
               S2_sum = 0;
@@ -334,6 +383,7 @@ void dsp::SpectralKurtosis::compute ()
               // Square Law Detect for S1 + S2
               for (unsigned i=0; i<nfloat; i+=2)
               {
+                // std::cerr << indat[i] << ", " << indat[i+1] << std::endl;
                 float sqld = (indat[i] * indat[i]) + (indat[i+1] * indat[i+1]);
                 S1_sum += sqld;
                 S2_sum += (sqld * sqld);
@@ -345,7 +395,6 @@ void dsp::SpectralKurtosis::compute ()
                 S1_tscr [ichan*npol + ipol] += S1_sum;
                 S2_tscr [ichan*npol + ipol] += S2_sum;
               }
-
               // calculate the SK estimator
               if (S1_sum == 0)
                 outdat[ichan*npol + ipol] = 0;
@@ -387,17 +436,6 @@ void dsp::SpectralKurtosis::compute ()
     }
   }
 
-  // std::ofstream outfile(
-  //   "SpectralKurtosis.compute.dat", std::ios::out | std::ios::binary);
-  // unsigned size = (
-  //     estimates->get_nchan() * estimates->get_ndat() *
-  //     estimates->get_npol() * estimates->get_ndim());
-  //
-  // outfile.write(
-  //   reinterpret_cast<const char*>(estimates->get_dattfp()),
-  //   size * sizeof(float)
-  // );
-  // outfile.close();
 
   if (verbose || debugd < 1)
     cerr << "dsp::SpectralKurtosis::compute done" << endl;
@@ -464,17 +502,39 @@ void dsp::SpectralKurtosis::detect ()
   // reset the mask to all 0 (no zapping)
   reset_mask();
 
-  // apply the tscrunches SKFB estiamtes to the mask
+  // apply the tscrunches SKFB estimates to the mask
   if (!detection_flags[1])
     detect_tscr ();
+  char_reporter.emit(
+    "zapmask_tscr",
+    zapmask->get_datptr(),
+    zapmask->get_nchan(),
+    zapmask->get_npol(),
+    zapmask->get_ndat(),
+    zapmask->get_ndim());
 
   // apply the SKFB estimates to the mask
   if (!detection_flags[2])
     detect_skfb ();
 
+  char_reporter.emit(
+    "zapmask_skfb",
+    zapmask->get_datptr(),
+    zapmask->get_nchan(),
+    zapmask->get_npol(),
+    zapmask->get_ndat(),
+    zapmask->get_ndim());
+
   if (!detection_flags[0])
     detect_fscr ();
 
+  char_reporter.emit(
+    "zapmask_fscr",
+    zapmask->get_datptr(),
+    zapmask->get_nchan(),
+    zapmask->get_npol(),
+    zapmask->get_ndat(),
+    zapmask->get_ndim());
   count_zapped ();
 
   if (debugd < 1)
@@ -551,9 +611,9 @@ void dsp::SpectralKurtosis::detect_tscr ()
 
     if (zap_chan)
     {
-      if (verbose)
-        cerr << "dsp::SpectralKurtosis::detect_tscr zap V=" << V << ", "
-             << "ichan=" << ichan << endl;
+      // if (verbose)
+      //   cerr << "dsp::SpectralKurtosis::detect_tscr zap V=" << V << ", "
+      //        << "ichan=" << ichan << endl;
       outdat = zapmask->get_datptr();
       for (unsigned ipart=0; ipart < npart; ipart++)
       {

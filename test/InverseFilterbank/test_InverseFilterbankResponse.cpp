@@ -16,7 +16,7 @@
 #include "dsp/FIRFilter.h"
 #include "dsp/InverseFilterbankResponse.h"
 
-#include "util.hpp"
+#include "util/util.hpp"
 
 const std::string file_path = util::get_test_data_dir() + "/fir.768.dada";
 

@@ -10,7 +10,7 @@
 #include "dsp/InverseFilterbankEngineCUDA.h"
 #include "dsp/MemoryCUDA.h"
 
-#include "util.hpp"
+#include "util/util.hpp"
 #include "InverseFilterbankTestConfig.hpp"
 
 static util::InverseFilterbank::InverseFilterbankTestConfig test_config;
