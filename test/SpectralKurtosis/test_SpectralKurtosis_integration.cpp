@@ -137,6 +137,8 @@ TEST_CASE (
 
   sk_cpu.prepare();
   sk_cpu.operate();
+  sk_cpu.prepare();
+  sk_cpu.operate();
 
   auto transfer = test::util::transferTimeSeries(cuda_stream, device_memory);
   transfer(in, in_gpu, cudaMemcpyHostToDevice);
@@ -145,6 +147,9 @@ TEST_CASE (
   sk_cuda.set_input(in_gpu);
   sk_cuda.set_output(out_gpu);
 
+  sk_cuda.prepare();
+  sk_cuda.operate();
+  check_error("test_SpectralKurtosis_integration");
   sk_cuda.prepare();
   sk_cuda.operate();
   check_error("test_SpectralKurtosis_integration");
@@ -170,13 +175,16 @@ TEST_CASE (
       float_cuda_vector,
       thresh[0], thresh[1]
     );
-
+    //
     // for (unsigned idx=0; idx<float_cpu_vector.size(); idx++)
     // {
-    //   // if (test::util::isclose(float_cpu_vector[idx], float_cuda_vector[idx], thresh[0], thresh[1])) {
-    //   //   std::cerr << "idx=" << idx << std::endl;
+    //   // if (! test::util::isclose(float_cpu_vector[idx], float_cuda_vector[idx], thresh[0], thresh[1])) {
+    //   //   std::cerr << "idx=" << idx;
+    //   //   std::cerr << " (" << float_cpu_vector[idx] << ", " << float_cuda_vector[idx] << ") ";
+    //   //
     //   // }
-    //   std::cerr << "(" << float_cpu_vector[idx] << ", " << float_cuda_vector[idx] << ") ";
+    //   // std::cerr << " (" << float_cpu_vector[idx] << ", " << float_cuda_vector[idx] << ") ";
+    //
     // }
     // std::cerr << std::endl;
 

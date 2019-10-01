@@ -2,15 +2,15 @@ atol = 1e-3
 rtol = 1e-3
 
 [SpectralKurtosis.test_SpectralKurtosis_integration]
-tscrunch = 256
-std_devs = 2
+tscrunch = 128
+std_devs = 3
 file_name = "1644-4559.pre_Convolution.dump"
 s_chan = 0
 e_chan = 128
-nparts = 291
+nparts = 400
 disable_fscr = false
-disable_tscr = true
-disable_ft = true
+disable_tscr = false
+disable_ft = false
 
 [test_Apodization]
 tukey_window_file_name = "tukey_window.dat"

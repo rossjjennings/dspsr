@@ -145,10 +145,10 @@ __device__ float warp_reduce_sum (float val) {
 
 // each
 __global__ void reduce_sqld_naive_warp_reduction (
-  float2 * in,
+  const float2 * in,
   float2 * sums,
   float * skestimates,
-  uint64_t in_stride,
+  const uint64_t in_stride,
   const unsigned M,
   const unsigned nchan,
   const unsigned npol,
@@ -199,6 +199,7 @@ __global__ void reduce_sqld_naive_warp_reduction (
 
   unsigned warp_idx = threadIdx.x % 32;
   unsigned warp_num = threadIdx.x / 32;
+  unsigned max_warp_num = blockDim.x / warpSize;
 
   if (warp_idx == 0)
   {
@@ -209,8 +210,13 @@ __global__ void reduce_sqld_naive_warp_reduction (
 
   if (warp_num == 0)
   {
-    s1 = s1s[warp_idx];
-    s2 = s2s[warp_idx];
+    if (warp_idx > max_warp_num) {
+      s1 = 0;
+      s2 = 0;
+    } else {
+      s1 = s1s[warp_idx];
+      s2 = s2s[warp_idx];
+    }
 
     s1 = warp_reduce_sum(s1);
     s2 = warp_reduce_sum(s2);
@@ -653,19 +659,7 @@ void CUDA::SKComputerEngine::compute (const dsp::TimeSeries* input,
       // std::cerr << "CUDA::SKComputerEngine::compute output->get_ndim()=" << output->get_ndim() << std::endl;
 
 
-      reduce_sqld_naive_warp_reduction<<<blocks,nthreads,shm_bytes_1,stream>>> (
-        (float2 *) indat,
-        (float2 *) work_buffer,
-        outdat,
-        in_stride,
-        M,
-        nchan,
-        npol,
-        npart,
-        input->get_ndat()
-      );
-
-      // reduce_sqld_naive<<<blocks,nthreads,shm_bytes_1,stream>>> (
+      // reduce_sqld_naive_warp_reduction<<<blocks, nthreads, shm_bytes_1, stream>>> (
       //   (float2 *) indat,
       //   (float2 *) work_buffer,
       //   outdat,
@@ -676,6 +670,18 @@ void CUDA::SKComputerEngine::compute (const dsp::TimeSeries* input,
       //   npart,
       //   input->get_ndat()
       // );
+
+      reduce_sqld_naive<<<blocks,nthreads,shm_bytes_1,stream>>> (
+        (float2 *) indat,
+        (float2 *) work_buffer,
+        outdat,
+        in_stride,
+        M,
+        nchan,
+        npol,
+        npart,
+        input->get_ndat()
+      );
 
 
       if (dsp::Operation::record_time || dsp::Operation::verbose)

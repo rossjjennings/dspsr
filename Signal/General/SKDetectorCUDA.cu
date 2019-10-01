@@ -367,8 +367,8 @@ __global__ void reduce_sum_fscr_2pol (
       float upper = 1 + ((1+std_devs) * one_sigma_idat);
       float lower = 1 - ((1+std_devs) * one_sigma_idat);
       if (p0 < lower || p0 > upper || p1 < lower || p1 > upper) {
-        printf("Zapping ipart=%u p0=%f, p1=%f [%f - %f] cnt=%f\n",
-          blockIdx.x, p0, p1, lower, upper, sk_avg_cnt);
+        // printf("Zapping ipart=%u p0=%f, p1=%f [%f - %f] cnt=%f\n",
+        //   blockIdx.x, p0, p1, lower, upper, sk_avg_cnt);
         // out[blockIdx.x] = 1;
         // for (unsigned ichan=0; ichan < nchan; ichan++) {
         //   out[blockIdx.x * nchan + ichan] = 1;
