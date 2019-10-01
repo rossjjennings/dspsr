@@ -16,6 +16,9 @@
 #include <thrust/device_ptr.h>
 
 #include <cuComplex.h>
+
+#define FULL_MASK 0xffffffff
+
 //#define _DEBUG 1
 
 // TODO consider having schan / echan in mask represented by values other than 0, 1
@@ -152,6 +155,38 @@ void CUDA::SKDetectorEngine::detect_ft (const dsp::TimeSeries* input,
 #endif
 }
 
+__device__ float2 warp_reduce_sum (float2 val) {
+  for (int offset = warpSize/2; offset > 0; offset /= 2) {
+    #if (__CUDACC_VER_MAJOR__>= 9)
+    val.x += __shfl_down_sync(FULL_MASK, val.x, offset);
+    val.y += __shfl_down_sync(FULL_MASK, val.y, offset);
+    #else
+    val.x += __shfl_down (val.x, offset);
+    val.y += __shfl_down (val.y, offset);
+    #endif
+  }
+  return val;
+}
+
+__device__ float3 warp_reduce_sum (float3 val) {
+  for (int offset = warpSize/2; offset > 0; offset /= 2) {
+    #if (__CUDACC_VER_MAJOR__>= 9)
+    val.x += __shfl_down_sync(FULL_MASK, val.x, offset);
+    val.y += __shfl_down_sync(FULL_MASK, val.y, offset);
+    val.z += __shfl_down_sync(FULL_MASK, val.z, offset);
+    #else
+    val.x += __shfl_down (val.x, offset);
+    val.y += __shfl_down (val.y, offset);
+    val.z += __shfl_down (val.z, offset);
+    #endif
+  }
+  return val;
+}
+
+
+
+
+
 // each block reads 1 time sample, all channels/pols
 // then do a block-wide sum
 
@@ -195,13 +230,15 @@ __global__ void reduce_sum_fscr_1pol (const float * input, unsigned char * out,
 
 //! blockDim.x is nchan, so threadIdx.x is ichan
 //! gridDim.x is input->get_ndat(), or npart, os blockIdx.x is ipart
+//! input is TFP (npart, nchan, npol)
+//! out is TFP (npart, nchan, 1)
 __global__ void reduce_sum_fscr_2pol (
   const float2 * input, unsigned char * out,
   const unsigned nchan, const float mu2, const unsigned std_devs,
   const unsigned schan, const unsigned echan
 )
 {
-  extern __shared__ float3 sdata3[]; // we have nchan * npol * sizeof(float) available bytes
+  extern __shared__ float3 sdata3[]; // we have nchan * (npol + 1) * sizeof(float) available bytes
 
   // idat = blockIdx.x
   // use float 2 because input is TFP, meaning we can bundle polarizations
@@ -211,45 +248,55 @@ __global__ void reduce_sum_fscr_2pol (
   float3 sum = make_float3(0, 0, 0);
   for (unsigned ichan=threadIdx.x; ichan<nchan; ichan+=blockDim.x)
   {
-    if (ichan >= schan && ichan < echan) {
+    if (ichan >= schan && ichan < echan && out[blockIdx.x * nchan + ichan] == 0) {
       sum.x += in[ichan].x;
       sum.y += in[ichan].y;
       sum.z += 1;
     }
   }
 
-  sdata3[threadIdx.x] = sum;
+  sum = warp_reduce_sum(sum);
+
+  unsigned warp_idx = threadIdx.x % 32;
+  unsigned warp_num = threadIdx.x / 32;
+
+  if (warp_idx == 0) {
+    sdata3[warp_num] = sum;
+  }
   __syncthreads();
 
-  // now do a block wide sum across all threads
-  int last_offset = blockDim.x / 2;
-  for (int offset = last_offset; offset > 0;  offset >>= 1) // bitshift down by one
-  {
-    if (threadIdx.x < offset) {
-      sdata3[threadIdx.x].x += sdata3[threadIdx.x + offset].x;
-      sdata3[threadIdx.x].y += sdata3[threadIdx.x + offset].y;
-      sdata3[threadIdx.x].z += sdata3[threadIdx.x + offset].z;
-    }
-    __syncthreads();
-  }
+  if (warp_num == 0) {
+    sum = sdata3[warp_idx];
+    sum = warp_reduce_sum(sum);
 
-  if (threadIdx.x == 0)
-  {
-    float sk_avg_cnt = sdata3[0].z;
-    float p0 = sdata3[0].x / sk_avg_cnt;
-    float p1 = sdata3[0].y / sk_avg_cnt;
-    float one_sigma_idat = sqrtf(mu2 / (float) sk_avg_cnt);
-    float upper = 1 + ((1+std_devs) * one_sigma_idat);
-    float lower = 1 - ((1+std_devs) * one_sigma_idat);
-    // printf("reduce_sum_fscr_2pol: p0=%f, p1=%f, lower=%f, upper=%f, nvalidchan=%f, pol0 sum=%f, pol1 sum=%f\n", p0, p1, lower, upper, nvalidchan, p0*nvalidchan, p1*nvalidchan);
-    if (p0 < lower || p0 > upper || p1 < lower || p1 > upper) {
-      // printf("reduce_sum_fscr_2pol: setting out[%i] to 1\n", blockIdx.x);
-      // for ( unsigned ichan=0; ichan < nchan; ichan++ ) {
-      //   out[blockIdx.x * nchan + ichan] = 1;
-      // }
-      out[blockIdx.x] = 1;
+    if (warp_idx == 0) {
+      float sk_avg_cnt = sum.z;
+      float one_sigma_idat = sqrtf(mu2 / (float) sk_avg_cnt);
+      float p0 = sum.x / sk_avg_cnt;
+      float p1 = sum.y / sk_avg_cnt;
+      float upper = 1 + ((1+std_devs) * one_sigma_idat);
+      float lower = 1 - ((1+std_devs) * one_sigma_idat);
+      printf("reduce_sum_fscr_2pol: p0=%f, p1=%f, lower=%f, upper=%f, sk_avg_cnt=%f, pol0 sum=%f, pol1 sum=%f\n", p0, p1, lower, upper, sk_avg_cnt, p0*sk_avg_cnt, p1*sk_avg_cnt);
+      if (p0 < lower || p0 > upper || p1 < lower || p1 > upper) {
+        for (unsigned ichan=0; ichan<nchan; ichan+=1) {
+          out[blockIdx.x * nchan + ichan] = 1;
+        }
+      }
     }
   }
+  // sdata3[threadIdx.x] = warp_reduce_sum(sdata3[threadIdx.x]);
+
+  // now do a block wide sum across all threads
+  // int last_offset = blockDim.x / 2;
+  // for (int offset = last_offset; offset > 0;  offset >>= 1) // bitshift down by one
+  // {
+  //   if (threadIdx.x < offset) {
+  //     sdata3[threadIdx.x].x += sdata3[threadIdx.x + offset].x;
+  //     sdata3[threadIdx.x].y += sdata3[threadIdx.x + offset].y;
+  //     sdata3[threadIdx.x].z += sdata3[threadIdx.x + offset].z;
+  //   }
+  //   __syncthreads();
+  // }
 }
 
 // schan is the start channel and echan is the end channel. Together these

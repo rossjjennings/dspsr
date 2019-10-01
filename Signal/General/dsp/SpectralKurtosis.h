@@ -206,7 +206,7 @@ namespace dsp {
                               float upper_thresh, float lower_thresh) = 0;
 
       virtual void detect_fscr (const TimeSeries* input, BitSeries* output,
-                                const float lower, const float upper,
+                                const float mu2, const unsigned std_devs,
                                 unsigned schan, unsigned echan) = 0;
 
       virtual void detect_tscr (const TimeSeries* input,
