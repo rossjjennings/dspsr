@@ -1,5 +1,9 @@
-atol = 1e-5
-rtol = 1e-5
+atol = 1e-3
+rtol = 1e-3
+
+[test_Apodization]
+tukey_window_file_name = "tukey_window.dat"
+tophat_window_file_name = "tophat_window.dat"
 
 [test_FTransform_cufft_precision]
 nchan = 256
@@ -9,6 +13,14 @@ scale = 500.0
 [InverseFilterbank]
 do_fft_window = true
 do_response = true
+
+[InverseFilterbank.test_InverseFilterbankResponse]
+fir_file_name = "fir.768.dada"
+
+[InverseFilterbank.test_InverseFilterbankPipeline]
+pipeline_file_name = "channelized.simulated_pulsar.noise_0.0.nseries_3.ndim_2.dump"
+dm = 2.64476
+period = 0.00575745
 
 [[InverseFilterbank.test_shapes]]
 npart = 2
@@ -64,3 +76,10 @@ overlap_neg = 16
 # output_ndat = 0
 # overlap_pos = 16
 # overlap_neg = 16
+
+test_data_files = [
+  "tukey_window.dat",
+  "tophat_window.dat",
+  "fir.768.dada",
+  "channelized.simulated_pulsar.noise_0.0.nseries_3.ndim_2.dump"
+]

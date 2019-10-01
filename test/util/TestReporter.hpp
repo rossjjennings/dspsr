@@ -5,6 +5,7 @@
 
 void check_error (const char*);
 
+namespace test {
 namespace util {
 
   template<class ReporterBase, class T>
@@ -23,7 +24,7 @@ namespace util {
       unsigned nchan, unsigned npol, unsigned ndat, unsigned ndim)
     {
       unsigned total_size = nchan * npol * ndat * ndim;
-      if (util::config::verbose)
+      if (test::util::config::verbose)
       {
         std::cerr << "TestReporter::operator() (..."
           // << arr << ", "
@@ -81,6 +82,7 @@ namespace util {
 
   };
 
+}
 }
 
 #endif

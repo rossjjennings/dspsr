@@ -12,14 +12,14 @@
 int main( int argc, char* argv[] )
 {
 
-  util::set_verbose(false);
+  test::util::set_verbose(false);
 
   for (int i=0; i<argc; i++) {
     if (strcmp(argv[i], "-v") == 0) {
-      util::config::verbose = true;
+      test::util::config::verbose = true;
       if (i + 1 < argc) {
         if (strcmp(argv[i+1], "high") == 0) {
-          util::set_verbose(true);
+          test::util::set_verbose(true);
           argv[i+1] = (char *)"normal";
         }
       }

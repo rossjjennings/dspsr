@@ -3,6 +3,7 @@
 
 #include "dsp/TimeSeries.h"
 
+namespace test {
 namespace util {
   class TransformationProxy  {
 
@@ -45,7 +46,7 @@ namespace util {
     dsp::TimeSeries* output;
   };
 }
-
+}
 
 
 #endif

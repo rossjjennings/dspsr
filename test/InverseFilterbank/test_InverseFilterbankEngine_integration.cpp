@@ -13,7 +13,7 @@
 #include "util/util.hpp"
 #include "InverseFilterbankTestConfig.hpp"
 
-static util::InverseFilterbank::InverseFilterbankTestConfig test_config;
+static test::util::InverseFilterbank::InverseFilterbankTestConfig test_config;
 
 void check_error (const char*);
 
@@ -27,7 +27,7 @@ public:
   void operator() (float* arr, unsigned nchan, unsigned npol, unsigned ndat, unsigned ndim)
   {
     unsigned total_size = nchan * npol * ndat * ndim;
-    // if (util::config::verbose)
+    // if (test::util::config::verbose)
     // {
     //   std::cerr << "Reporter::operator() ("
     //     << arr << ", "
@@ -58,12 +58,12 @@ public:
       }
       check_error("Reporter::operator()");
     } else {
-      // if (util::config::verbose) {
+      // if (test::util::config::verbose) {
       //   std::cerr << "Reporter::operator() assigning vector contents" << std::endl;
       // }
       data.assign(arr, arr + total_size);
     }
-    // if (util::config::verbose) {
+    // if (test::util::config::verbose) {
     //   std::cerr << "Reporter::operator() data_vectors.size()=" << data_vectors.size() << std::endl;
     // }
     data_vectors.push_back(data);
@@ -76,7 +76,7 @@ public:
     unsigned n_vec = data_vectors.size();
     unsigned size_each = data_vectors[0].size();
     unsigned total_size = size_each * n_vec;
-    // if (util::config::verbose) {
+    // if (test::util::config::verbose) {
     //   std::cerr << "Reporter::concatenate_data_vectors: n_vec=" << n_vec
     //     << " size_each=" << size_each << " total_size=" << total_size << std::endl;
     // }
@@ -105,16 +105,16 @@ TEST_CASE (
 {
 
   std::vector<float> thresh = test_config.get_thresh();
-  std::vector<util::TestShape> test_shapes = test_config.get_test_vector_shapes();
+  std::vector<test::util::TestShape> test_shapes = test_config.get_test_vector_shapes();
   bool do_fft_window = test_config.get_field<bool>("InverseFilterbank.do_fft_window");
   bool do_response = test_config.get_field<bool>("InverseFilterbank.do_response");
 
   auto idx = GENERATE_COPY(range(0, (int) test_shapes.size()));
-  if (util::config::verbose) {
+  if (test::util::config::verbose) {
     std::cerr << "test_InverseFilterbankEngine_integration: idx=" << idx << std::endl;
   }
 
-  util::TestShape test_shape = test_shapes[idx];
+  test::util::TestShape test_shape = test_shapes[idx];
 
 
   void* stream = 0;
@@ -156,7 +156,7 @@ TEST_CASE (
   unsigned npart = test_shape.npart;
   unsigned npol = test_shape.input_npol;
 
-  util::InverseFilterbank::InverseFilterbankProxy proxy(
+  test::util::InverseFilterbank::InverseFilterbankProxy proxy(
     os_factor, npart, npol,
     test_shape.input_nchan, test_shape.output_nchan,
     test_shape.input_ndat, test_shape.overlap_pos
@@ -173,7 +173,7 @@ TEST_CASE (
     in, out, npart
   );
   engine_cpu.finish();
-  auto transfer = util::transferTimeSeries(cuda_stream, device_memory);
+  auto transfer = test::util::transferTimeSeries(cuda_stream, device_memory);
   transfer(in, in_gpu, cudaMemcpyHostToDevice);
   transfer(out, out_gpu, cudaMemcpyHostToDevice);
 
@@ -233,7 +233,7 @@ TEST_CASE (
   //
   //   size = cpu_vector.size();
   //
-  //   nclose = util::nclose(
+  //   nclose = test::util::nclose(
   //     cpu_vector,
   //     cuda_vector,
   //     thresh[0], thresh[1]
@@ -255,15 +255,15 @@ TEST_CASE (
   //   // );
   //   // cuda_file.close();
   //
-  //   if (util::config::verbose)
+  //   if (test::util::config::verbose)
   //   {
   //     std::cerr << "test_InverseFilterbankEngine_integration: "
   //       << reporter_names[r_idx] << " " << nclose << "/" << size
   //       << " (" << 100 * (float) nclose / size << "%)" << std::endl;
   //     std::cerr << "test_InverseFilterbankEngine_integration: "
   //       << reporter_names[r_idx]
-  //       << " max cpu=" << util::max(cpu_vector)
-  //       << ", max gpu=" << util::max(cuda_vector)
+  //       << " max cpu=" << test::util::max(cpu_vector)
+  //       << ", max gpu=" << test::util::max(cuda_vector)
   //       << std::endl;
   //   }
   //
@@ -271,5 +271,5 @@ TEST_CASE (
   //
   // }
 
-  REQUIRE(util::allclose(out_cuda, out, thresh[0], thresh[1]));
+  REQUIRE(test::util::allclose(out_cuda, out, thresh[0], thresh[1]));
 }

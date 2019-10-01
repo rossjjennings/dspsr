@@ -1,5 +1,6 @@
 #include "util/TestConfig.hpp"
 
+namespace test {
 namespace util {
   TestConfig::TestConfig ()
   {
@@ -18,21 +19,21 @@ namespace util {
       // found = current_dir.find_last_of("/\\");
       // current_dir = current_dir.substr(0, found + 1);
       //
-      // const std::string cwd = util::get_working_path();
+      // const std::string cwd = test::util::get_working_path();
       // const std::string current_dir_path = cwd + "/" + current_dir;
-      
-      const std::string test_data_dir = util::get_test_env_var("DSPSR_TEST_DIR", "./test");
-      if (util::config::verbose) {
-        std::cerr << "util::TestConfig::load_toml_config: test_data_dir="
+
+      const std::string test_data_dir = test::util::get_test_env_var("DSPSR_TEST_DIR", "./test");
+      if (test::util::config::verbose) {
+        std::cerr << "test::util::TestConfig::load_toml_config: test_data_dir="
           << test_data_dir << std::endl;
       }
       std::string test_data_file_path = test_data_dir + "/test_config.toml";
 
-      if (util::config::verbose) {
-        std::cerr << "util::TestConfig::load_toml_config: test_data_file_path="
+      if (test::util::config::verbose) {
+        std::cerr << "test::util::TestConfig::load_toml_config: test_data_file_path="
           << test_data_file_path << std::endl;
       }
-      toml_config = util::load_toml(test_data_file_path);
+      toml_config = test::util::load_toml(test_data_file_path);
       toml_config_loaded = true;
     }
   }
@@ -51,4 +52,5 @@ namespace util {
 
     return tol;
   }
+}
 }

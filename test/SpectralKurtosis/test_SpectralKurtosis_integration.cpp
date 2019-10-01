@@ -13,23 +13,23 @@
 #include "util/TestReporter.hpp"
 #include "util/TransformationProxy.hpp"
 
-static util::TestConfig test_config;
+static test::util::TestConfig test_config;
 
 TEST_CASE (
   "SpectralKurtosis CPU and CUDA implementations produce same output",
   "[SpectralKurtosis]"
 )
 {
-  typedef util::TestReporter<
+  typedef test::util::TestReporter<
     dsp::SpectralKurtosis::Reporter<float>, float
   > FloatSpectralKurtosisReporter;
-  typedef util::TestReporter<
+  typedef test::util::TestReporter<
     dsp::SpectralKurtosis::Reporter<unsigned char>, unsigned char
   > CharSpectralKurtosisReporter;
 
   // std::string file_name = "1644-4559.pre_Convolution.4.dump"; // four channel for easy testing
   std::string file_name = "1644-4559.pre_Convolution.dump"; // 128 channel for more realistic testing
-  std::string file_path = util::get_test_data_dir() + "/" + file_name;
+  std::string file_path = test::util::get_test_data_dir() + "/" + file_name;
   std::vector<float> thresh = test_config.get_thresh();
 
   void* stream = 0;
@@ -119,7 +119,7 @@ TEST_CASE (
   dsp::IOManager manager;
   manager.open(file_path);
 
-  util::load_psr_data(manager, block_size, in, 1);
+  test::util::load_psr_data(manager, block_size, in, 1);
 
   sk_cpu.set_input(in);
   sk_cpu.set_output(out);
@@ -127,7 +127,7 @@ TEST_CASE (
   sk_cpu.prepare();
   sk_cpu.operate();
 
-  auto transfer = util::transferTimeSeries(cuda_stream, device_memory);
+  auto transfer = test::util::transferTimeSeries(cuda_stream, device_memory);
   transfer(in, in_gpu, cudaMemcpyHostToDevice);
   transfer(out, out_gpu, cudaMemcpyHostToDevice);
 
@@ -153,7 +153,7 @@ TEST_CASE (
 
     size = float_cpu_vector.size();
 
-    nclose = util::nclose(
+    nclose = test::util::nclose(
       float_cpu_vector,
       float_cuda_vector,
       thresh[0], thresh[1]
@@ -161,14 +161,14 @@ TEST_CASE (
 
     // for (unsigned idx=0; idx<float_cpu_vector.size(); idx++)
     // {
-    //   // if (util::isclose(float_cpu_vector[idx], float_cuda_vector[idx], thresh[0], thresh[1])) {
+    //   // if (test::util::isclose(float_cpu_vector[idx], float_cuda_vector[idx], thresh[0], thresh[1])) {
     //   //   std::cerr << "idx=" << idx << std::endl;
     //   // }
     //   std::cerr << "(" << float_cpu_vector[idx] << ", " << float_cuda_vector[idx] << ") ";
     // }
     // std::cerr << std::endl;
 
-    if (util::config::verbose)
+    if (test::util::config::verbose)
     {
       std::cerr << "test_SpectralKurtosis_integration: "
         << float_reporter_names[r_idx] << " " << nclose << "/" << size
@@ -196,7 +196,7 @@ TEST_CASE (
     }
     // std::cerr << std::endl;
 
-    if (util::config::verbose)
+    if (test::util::config::verbose)
     {
       std::cerr << "test_SpectralKurtosis_integration: "
         << char_reporter_names[r_idx] << " " << nclose << "/" << size
@@ -209,5 +209,5 @@ TEST_CASE (
 
 
 
-  REQUIRE(util::allclose(out_cuda, out, thresh[0], thresh[1]));
+  REQUIRE(test::util::allclose(out_cuda, out, thresh[0], thresh[1]));
 }

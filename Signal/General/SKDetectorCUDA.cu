@@ -241,11 +241,11 @@ __global__ void reduce_sum_fscr_1pol (
   // as if they were complex number
   const float * in = input + (blockIdx.x * nchan);
 
-  float2 sum = make_float2(0, 0, 0);
+  float2 sum = make_float2(0, 0);
   for (unsigned ichan=threadIdx.x; ichan<nchan; ichan+=blockDim.x)
   {
     if (ichan >= schan && ichan < echan && out[blockIdx.x * nchan + ichan] == 0) {
-      sum.x += in[ichan].x;
+      sum.x += in[ichan];
       sum.y += 1;
     }
   }
@@ -256,12 +256,12 @@ __global__ void reduce_sum_fscr_1pol (
   unsigned warp_num = threadIdx.x / 32;
 
   if (warp_idx == 0) {
-    sdata3[warp_num] = sum;
+    sdata2[warp_num] = sum;
   }
   __syncthreads();
 
   if (warp_num == 0) {
-    sum = sdata3[warp_idx];
+    sum = sdata2[warp_idx];
     sum = warp_reduce_sum(sum);
 
     if (warp_idx == 0) {
@@ -272,16 +272,16 @@ __global__ void reduce_sum_fscr_1pol (
       float lower = 1 - ((1+std_devs) * one_sigma_idat);
       // printf("reduce_sum_fscr_2pol: p0=%f, p1=%f, lower=%f, upper=%f, sk_avg_cnt=%f, pol0 sum=%f, pol1 sum=%f\n", p0, p1, lower, upper, sk_avg_cnt, p0*sk_avg_cnt, p1*sk_avg_cnt);
       if (p0 < lower || p0 > upper) {
-        sdata3[0].x = 1.0;
+        sdata2[0].x = 1.0;
       } else {
-        sdata3[0].x = 0.0;
+        sdata2[0].x = 0.0;
       }
     }
   }
 
   __syncthreads();
 
-  if (sdata3[0].x == 1.0) {
+  if (sdata2[0].x == 1.0) {
     for (unsigned ichan=threadIdx.x; ichan<nchan; ichan+=blockDim.x) {
       out[blockIdx.x * nchan + ichan] = 1;
     }
@@ -396,35 +396,33 @@ void CUDA::SKDetectorEngine::detect_fscr (
 
   // outdat is the bitmask
   unsigned char * outdat = output->get_datptr();
-  std::cerr << "CUDA::SKDetectorEngine::detect_fscr:"
-    << " output->get_ndat()=" << output->get_ndat()
-    << " output->get_npol()=" << output->get_npol()
-    << " output->get_nchan()=" << output->get_nchan() << std::endl;
-  // if (dsp::Operation::verbose)
-  // {
+
+  if (dsp::Operation::verbose)
+  {
     std::cerr << "CUDA::SKDetectorEngine::detect_fscr nchan=" << nchan << " ndat=" << ndat << std::endl;
     std::cerr << "CUDA::SKDetectorEngine::detect_fscr nblocks=" << nblocks << " nthreads=" << nthreads << " shared_bytes=" << shared_bytes << std::endl;
-    // std::cerr << "CUDA::SKDetectorEngine::detect_fscr thresholds [" << lower << " - " << upper << "]" << std::endl;
-  // }
+  }
 
   if (npol == 1) {
-    reduce_sum_fscr_1pol<<<nblocks, nthreads,s hared_bytes, stream>>>(
+    reduce_sum_fscr_1pol<<<nblocks, nthreads, shared_bytes, stream>>>(
       indat, outdat, nchan, mu2, std_devs, schan, echan);
   } else {
     reduce_sum_fscr_2pol<<<nblocks, nthreads, shared_bytes, stream>>>(
       (float2*) indat, outdat, nchan, mu2, std_devs, schan, echan);
   }
 
-  if (dsp::Operation::record_time || dsp::Operation::verbose)
+  if (dsp::Operation::record_time || dsp::Operation::verbose) {
     check_error( "CUDA::SKDetectorEngine::detect_fscr_element" );
+  }
 
 #ifdef _DEBUG
   int sum = count_mask(output);
   cerr << "CUDA::SKDetectorEngine::detect_fscr mask_sum=" << sum << endl;
 #endif
 
-  if (dsp::Operation::record_time || dsp::Operation::verbose)
+  if (dsp::Operation::record_time || dsp::Operation::verbose) {
     check_error( "CUDA::SKDetectorEngine::detect detect_fscr" );
+  }
 }
 
 // nval is output->get_ndat() * nchan
@@ -446,9 +444,9 @@ __global__ void detect_tscr_element (
 
   unsigned int idat  = (blockIdx.x * blockDim.x + threadIdx.x);
   bool all_pol_in_thresh;
-  if (idat ==0) {
-    printf("detect_tscr_element: npol=%u, nchan=%u\n", npol, nchan);
-  }
+  // if (idat ==0) {
+  //   printf("detect_tscr_element: npol=%u, nchan=%u\n", npol, nchan);
+  // }
   if (idat < nval)
   {
     // const unsigned nchanpol = nchan * npol;
@@ -510,13 +508,13 @@ void CUDA::SKDetectorEngine::detect_tscr (const dsp::TimeSeries* input,
   dim3 blocks (nblocks);
   unsigned shared_bytes = nchan*npol*sizeof(char);
 
-  // if (dsp::Operation::verbose)
-  cerr << "CUDA::SKDetectorEngine::detect_tscr_element ndat=" << ndat
-      << " npol=" << npol
-       << " nchan=" << nchan << " nval=" << nval
-       << " max_threads=" << max_threads_per_block
-       << " nblocks=" << nblocks << endl;
-
+  if (dsp::Operation::verbose) {
+    std::cerr << "CUDA::SKDetectorEngine::detect_tscr_element ndat=" << ndat
+        << " npol=" << npol
+         << " nchan=" << nchan << " nval=" << nval
+         << " max_threads=" << max_threads_per_block
+         << " nblocks=" << nblocks << std::endl;
+  }
   detect_tscr_element<<<blocks,threads,shared_bytes,stream>>>(
     indat, outdat, nval, upper_thresh, lower_thresh, npol, nchan);
 

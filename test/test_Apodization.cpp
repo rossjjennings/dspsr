@@ -17,20 +17,33 @@
 #include "dsp/Apodization.h"
 
 #include "util/util.hpp"
+#include "util/TestConfig.hpp"
 
-std::string tukey_file_path = "/home/SWIN/dshaff/ska/test_data/tukey_window.dat";
-std::string tophat_file_path = "/home/SWIN/dshaff/ska/test_data/tophat_window.dat";
+static test::util::TestConfig test_config;
 
 
-TEST_CASE("Apodization produces correct window functions") {
+TEST_CASE("Apodization produces correct window functions", "[Apodization]") {
+
   dsp::Apodization window;
 
   SECTION("Tukey window produces correct output")
   {
+    const std::string tukey_file_name = test_config.get_field<std::string>(
+      "test_Apodization.tukey_window_file_name");
+    const std::string tukey_file_path = test::util::get_test_data_dir() + "/" + tukey_file_name;
+
+    if (test::util::config::verbose) {
+      std::cerr << "test_Apodization: tukey_file_path=" << tukey_file_path << std::endl;
+    }
+
     window.Tukey(1024, 0, 128, false);
     std::vector<float> expected_data;
-    util::load_binary_data(tukey_file_path, expected_data);
-    bool output_equal = util::allclose<float>(
+    test::util::load_binary_data(tukey_file_path, expected_data);
+    if (test::util::config::verbose) {
+      std::cerr << "test_Apodization: expected_data.size()=" << expected_data.size() << std::endl;
+    }
+    REQUIRE(expected_data.size() == 1024);
+    bool output_equal = test::util::allclose<float>(
       window.get_datptr(0, 0),
       expected_data.data(),
       expected_data.size());
@@ -39,10 +52,22 @@ TEST_CASE("Apodization produces correct window functions") {
 
   SECTION("TopHat window produces correct output")
   {
+    const std::string tophat_file_name = test_config.get_field<std::string>(
+      "test_Apodization.tophat_window_file_name");
+    const std::string tophat_file_path = test::util::get_test_data_dir() + "/" + tophat_file_name;
+
+    if (test::util::config::verbose) {
+      std::cerr << "test_Apodization: tophat_file_path=" << tophat_file_path << std::endl;
+    }
+
     window.TopHat(1024, 128, false);
     std::vector<float> expected_data;
-    util::load_binary_data(tophat_file_path, expected_data);
-    bool output_equal = util::allclose<float>(
+    test::util::load_binary_data(tophat_file_path, expected_data);
+    if (test::util::config::verbose) {
+      std::cerr << "test_Apodization: expected_data.size()=" << expected_data.size() << std::endl;
+    }
+    REQUIRE(expected_data.size() == 1024);
+    bool output_equal = test::util::allclose<float>(
       window.get_datptr(0, 0),
       expected_data.data(),
       expected_data.size());
@@ -54,7 +79,7 @@ TEST_CASE("Apodization produces correct window functions") {
   {
     window.None(1024, false);
     std::vector<float> expected_data (1024, 1.0);
-    bool output_equal = util::allclose<float>(
+    bool output_equal = test::util::allclose<float>(
       window.get_datptr(0, 0),
       expected_data.data(),
       expected_data.size());

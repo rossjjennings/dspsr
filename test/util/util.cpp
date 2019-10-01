@@ -8,14 +8,14 @@
 
 void check_error (const char*);
 
-bool util::config::verbose = 0;
+bool test::util::config::verbose = 0;
 
-std::chrono::time_point<std::chrono::high_resolution_clock> util::now ()
+std::chrono::time_point<std::chrono::high_resolution_clock> test::util::now ()
 {
   return std::chrono::high_resolution_clock::now();
 }
 
-void util::load_psr_data (
+void test::util::load_psr_data (
   dsp::IOManager manager,
   unsigned block_size,
   dsp::TimeSeries* ts,
@@ -34,16 +34,16 @@ void util::load_psr_data (
   }
 }
 
-void util::set_verbose (bool val)
+void test::util::set_verbose (bool val)
 {
   dsp::Input::verbose = val;
   dsp::Operation::verbose = val;
   dsp::Observation::verbose = val;
   dsp::Shape::verbose = val;
-  util::config::verbose = val;
+  test::util::config::verbose = val;
 }
 
-std::string util::get_test_env_var (const std::string& env_var_name, const std::string& default_val)
+std::string test::util::get_test_env_var (const std::string& env_var_name, const std::string& default_val)
 {
   const char* env_var = std::getenv(env_var_name.c_str());
   if (env_var) {
@@ -53,53 +53,53 @@ std::string util::get_test_env_var (const std::string& env_var_name, const std::
   }
 }
 
-std::string util::get_test_data_dir ()
+std::string test::util::get_test_data_dir ()
 {
-  return util::get_test_env_var("DSPSR_TEST_DATA_DIR");
+  return test::util::get_test_env_var("DSPSR_TEST_DATA_DIR");
 }
 
-std::string util::get_working_path ()
+std::string test::util::get_working_path ()
 {
   char temp[FILENAME_MAX];
   return (getcwd(temp, sizeof(temp)) ? std::string( temp ) : std::string(""));
 }
 
 
-std::function<void(dsp::TimeSeries*, dsp::TimeSeries*, cudaMemcpyKind)> util::transferTimeSeries (
+std::function<void(dsp::TimeSeries*, dsp::TimeSeries*, cudaMemcpyKind)> test::util::transferTimeSeries (
   cudaStream_t stream, CUDA::DeviceMemory* memory
 )
 {
   return [stream, memory] (dsp::TimeSeries* in, dsp::TimeSeries* out, cudaMemcpyKind k){
-    if (util::config::verbose)
+    if (test::util::config::verbose)
     {
-      std::cerr << "util::transferTimeSeries lambda(" << in << ", " << out << ", " << k << ")" << std::endl;
+      std::cerr << "test::util::transferTimeSeries lambda(" << in << ", " << out << ", " << k << ")" << std::endl;
     }
     dsp::TransferCUDA transfer(stream);
     transfer.set_kind(k);
     if (k == cudaMemcpyHostToDevice) {
-      if (util::config::verbose) {
-        std::cerr << "util::transferTimeSeries setting output memory" << std::endl;
+      if (test::util::config::verbose) {
+        std::cerr << "test::util::transferTimeSeries setting output memory" << std::endl;
       }
       out->set_memory(memory);
     }
     transfer.set_input(in);
     transfer.set_output(out);
-    if (util::config::verbose) {
-      std::cerr << "util::transferTimeSeries prepare" << std::endl;
+    if (test::util::config::verbose) {
+      std::cerr << "test::util::transferTimeSeries prepare" << std::endl;
     }
     transfer.prepare();
-    if (util::config::verbose) {
-      std::cerr << "util::transferTimeSeries operate" << std::endl;
+    if (test::util::config::verbose) {
+      std::cerr << "test::util::transferTimeSeries operate" << std::endl;
     }
     transfer.operate();
-    check_error("util::transferTimeSeries lambda");
+    check_error("test::util::transferTimeSeries lambda");
   };
 }
 
-bool util::allclose (dsp::TimeSeries* a, dsp::TimeSeries* b, float atol, float rtol)
+bool test::util::allclose (dsp::TimeSeries* a, dsp::TimeSeries* b, float atol, float rtol)
 {
-  if (util::config::verbose) {
-    std::cerr << "util::allclose(dsp::TimeSeries*, dsp::TimeSeries*)" << std::endl;
+  if (test::util::config::verbose) {
+    std::cerr << "test::util::allclose(dsp::TimeSeries*, dsp::TimeSeries*)" << std::endl;
   }
 
   bool allclose = true;
@@ -112,10 +112,10 @@ bool util::allclose (dsp::TimeSeries* a, dsp::TimeSeries* b, float atol, float r
   std::vector<unsigned> b_shape = {
       b->get_nchan(), b->get_npol(), (unsigned) b->get_ndat(), b->get_ndim()
   };
-  if (util::config::verbose) {
+  if (test::util::config::verbose) {
 
     auto print_shape = [] (std::vector<unsigned> shape, std::string name) {
-      std::cerr << "util::allclose:" << name << " shape=(";
+      std::cerr << "test::util::allclose:" << name << " shape=(";
       for (unsigned idx=0; idx<shape.size(); idx++) {
         std::cerr << shape[idx];
         if (idx == shape.size() - 1) {
@@ -136,7 +136,7 @@ bool util::allclose (dsp::TimeSeries* a, dsp::TimeSeries* b, float atol, float r
   for (unsigned idx=0; idx<shape_str.size(); idx++) {
     if (a_shape[idx] != b_shape[idx])
     {
-      std::cerr << "util::allclose: " << shape_str[idx] << " dim not equal: "<< a_shape[idx] << " != " << b_shape[idx] << std::endl;
+      std::cerr << "test::util::allclose: " << shape_str[idx] << " dim not equal: "<< a_shape[idx] << " != " << b_shape[idx] << std::endl;
       return false;
     }
   }
@@ -151,8 +151,8 @@ bool util::allclose (dsp::TimeSeries* a, dsp::TimeSeries* b, float atol, float r
       b_ptr = reinterpret_cast<std::complex<float>*> (b->get_datptr(ichan, ipol));
       for (unsigned idat=0; idat<a->get_ndat(); idat++) {
         // std::cerr << "[" << *a_ptr << ", " << *b_ptr << "] ";
-        if (! util::isclose(*a_ptr, *b_ptr, atol, rtol)) {
-          // if (util::config::verbose) {
+        if (! test::util::isclose(*a_ptr, *b_ptr, atol, rtol)) {
+          // if (test::util::config::verbose) {
           //   std::cerr << "[(" << ichan << ", " << ipol << ", " << idat << ")="
           //     << *a_ptr << ", " << *b_ptr << ", " << abs(*a_ptr - *b_ptr) << ", "
           //     << abs(*a_ptr - *b_ptr) / abs(*b_ptr) << "]" << std::endl;
@@ -163,7 +163,7 @@ bool util::allclose (dsp::TimeSeries* a, dsp::TimeSeries* b, float atol, float r
         a_ptr++;
         b_ptr++;
       }
-      // if (util::config::verbose)
+      // if (test::util::config::verbose)
       // {
         // std::cerr << std::endl;
       // }
@@ -172,7 +172,7 @@ bool util::allclose (dsp::TimeSeries* a, dsp::TimeSeries* b, float atol, float r
   return allclose;
 }
 
-// void util::to_json(json& j, const util::TestShape& sh) {
+// void test::util::to_json(json& j, const test::util::TestShape& sh) {
 //   j = json{
 //       {"npart", sh.npart},
 //       {"input_nchan", sh.input_nchan},
@@ -186,7 +186,7 @@ bool util::allclose (dsp::TimeSeries* a, dsp::TimeSeries* b, float atol, float r
 //   };
 // }
 //
-// void util::from_json(const json& j, util::TestShape& sh) {
+// void test::util::from_json(const json& j, test::util::TestShape& sh) {
 //   sh.npart = j["npart"].get<unsigned>();
 //   sh.input_nchan = j["input_nchan"].get<unsigned>();
 //   sh.output_nchan = j["output_nchan"].get<unsigned>();
@@ -207,12 +207,12 @@ bool util::allclose (dsp::TimeSeries* a, dsp::TimeSeries* b, float atol, float r
 //   // j.at("overlap_neg").get_to(sh.overlap_neg);
 // }
 //
-// json util::load_json (std::string file_path)
+// json test::util::load_json (std::string file_path)
 // {
 //
 //   std::ifstream in_stream(file_path);
 //   if (! in_stream.good()) {
-//     throw "util::load_json: file_path is either nonexistent or locked";
+//     throw "test::util::load_json: file_path is either nonexistent or locked";
 //   }
 //   json j;
 //   in_stream >> j;
@@ -220,25 +220,25 @@ bool util::allclose (dsp::TimeSeries* a, dsp::TimeSeries* b, float atol, float r
 //   return j;
 // }
 
-const toml::Value util::load_toml (const std::string& file_path)
+const toml::Value test::util::load_toml (const std::string& file_path)
 {
   std::ifstream ifs(file_path);
   if (! ifs.good()) {
-    throw "util::load_toml: file_path is either nonexistent or locked";
+    throw "test::util::load_toml: file_path is either nonexistent or locked";
   }
   toml::ParseResult pr = toml::parse(ifs);
   ifs.close();
 
   if (! pr.valid())
   {
-    throw "util::load_toml: invalid TOML file";
+    throw "test::util::load_toml: invalid TOML file";
   }
   const toml::Value result = pr.value;
   return result;
 }
 
 
-void util::from_toml (const toml::Value& val, util::TestShape& sh)
+void test::util::from_toml (const toml::Value& val, test::util::TestShape& sh)
 {
   sh.npart = (unsigned) val.get<int>("npart");
   sh.input_nchan = (unsigned) val.get<int>("input_nchan");
@@ -251,7 +251,7 @@ void util::from_toml (const toml::Value& val, util::TestShape& sh)
   sh.overlap_neg = (unsigned) val.get<int>("overlap_neg");
 }
 
-void util::to_toml (toml::Value& val, const util::TestShape& sh)
+void test::util::to_toml (toml::Value& val, const test::util::TestShape& sh)
 {
   val.set("npart", (int) sh.npart);
   val.set("input_nchan", (int) sh.input_nchan);

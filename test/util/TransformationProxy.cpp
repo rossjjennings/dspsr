@@ -2,9 +2,9 @@
 
 #include "util/TransformationProxy.hpp"
 
-util::TransformationProxy::TransformationProxy () {}
+test::util::TransformationProxy::TransformationProxy () {}
 
-util::TransformationProxy::TransformationProxy (
+test::util::TransformationProxy::TransformationProxy (
   unsigned _input_nchan,
   unsigned _output_nchan,
   unsigned _input_npol,
@@ -22,7 +22,7 @@ util::TransformationProxy::TransformationProxy (
   input_ndat(_input_ndat),
   output_ndat(_output_ndat) {}
 
-void util::TransformationProxy::setup (
+void test::util::TransformationProxy::setup (
   dsp::TimeSeries* _input,
   dsp::TimeSeries* _output
 )
@@ -41,7 +41,7 @@ void util::TransformationProxy::setup (
   _output->set_ndim (output_ndim);
   _output->resize (output_ndat);
 
-  auto random_gen = util::random<float>();
+  auto random_gen = test::util::random<float>();
   float* in_ptr;
 
   for (unsigned ichan = 0; ichan < _input->get_nchan(); ichan++) {

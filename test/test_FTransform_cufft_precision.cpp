@@ -12,7 +12,7 @@
 
 #include "util/TestConfig.hpp"
 
-static util::TestConfig test_config;
+static test::util::TestConfig test_config;
 
 void throw_on_error (const cudaError& error, const std::string& msg="")
 {
@@ -35,7 +35,7 @@ TEST_CASE ("Consecutive FFTW and CUFFT calls produce numerically similar results
   float atol = tols[0];
   float rtol = tols[1];
 
-  auto random_gen = util::random<float>();
+  auto random_gen = test::util::random<float>();
 
   typedef std::complex<float> complex_f;
 
@@ -155,16 +155,16 @@ TEST_CASE ("Consecutive FFTW and CUFFT calls produce numerically similar results
   // }
 
   // now compare the results
-  unsigned nclose = util::nclose(out_data_cpu, out_data_gpu, atol, rtol);
-  if (util::config::verbose)
+  unsigned nclose = test::util::nclose(out_data_cpu, out_data_gpu, atol, rtol);
+  if (test::util::config::verbose)
   {
     std::cerr << "test_FTransform_cufft_precision: "
       << nclose << "/" << backward_fft_size << " ("
       << 100 * (float) nclose / backward_fft_size << "%)"
       << std::endl;
     std::cerr << "test_FTransform_cufft_precision: "
-      << " max cpu=" << util::max<float>((float*) out_data_cpu.data(), backward_fft_size * 2)
-      << ", max gpu=" << util::max<float>((float*) out_data_gpu.data(), backward_fft_size * 2)
+      << " max cpu=" << test::util::max<float>((float*) out_data_cpu.data(), backward_fft_size * 2)
+      << ", max gpu=" << test::util::max<float>((float*) out_data_gpu.data(), backward_fft_size * 2)
       << std::endl;
 
   }

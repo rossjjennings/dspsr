@@ -306,7 +306,6 @@ void dsp::SpectralKurtosis::compute ()
 
     float S1_sum, S2_sum;
     const float M_fac = (float)(M+1) / (M-1);
-    std::cerr << "dsp::SpectralKurtosis::compute: M_fac=" << M_fac << std::endl;
     float * outdat = estimates->get_dattfp();
 
     switch (input->get_order())
@@ -363,8 +362,6 @@ void dsp::SpectralKurtosis::compute ()
         if (verbose) {
           std::cerr << "dsp::SpectralKurtosis::compute: OrderFPT" << std::endl;
         }
-        std::cerr << "dsp::SpectralKurtosis::compute: input->get_stride()="
-          <<   input->get_stride() << "input->get_ndat()=" << input->get_ndat() << std::endl;
         const unsigned int nfloat = M * ndim;
         // foreach input channel
         for (unsigned ipart=0; ipart < npart; ipart++)

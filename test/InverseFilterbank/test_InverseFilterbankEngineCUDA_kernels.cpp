@@ -15,7 +15,7 @@
 
 void check_error (const char*);
 
-static util::InverseFilterbank::InverseFilterbankTestConfig test_config;
+static test::util::InverseFilterbank::InverseFilterbankTestConfig test_config;
 
 TEST_CASE (
   "output overlap discard kernel should produce expected output",
@@ -23,10 +23,10 @@ TEST_CASE (
 )
 {
   std::vector<float> thresh = test_config.get_thresh();
-  std::vector<util::TestShape> test_shapes = test_config.get_test_vector_shapes();
+  std::vector<test::util::TestShape> test_shapes = test_config.get_test_vector_shapes();
   auto idx = GENERATE_COPY(range(0, (int) test_shapes.size()));
 
-	util::TestShape test_shape = test_shapes[idx];
+	test::util::TestShape test_shape = test_shapes[idx];
 
   unsigned npart = test_shape.npart;
   unsigned npol = test_shape.input_npol;
@@ -67,30 +67,30 @@ TEST_CASE (
   std::vector<unsigned> in_dim = {nchan, npol, in_total_ndat};
   std::vector<unsigned> out_dim = {nchan, npol, out_total_ndat};
 
-  auto t = util::now();
-  util::InverseFilterbank::overlap_discard_cpu_FPT(
+  auto t = test::util::now();
+  test::util::InverseFilterbank::overlap_discard_cpu_FPT(
     in, out_cpu, overlap, npart, npol, nchan, ndat, in_total_ndat, out_total_ndat
   );
-  util::delta<std::milli> delta_cpu = util::now() - t;
+  test::util::delta<std::milli> delta_cpu = test::util::now() - t;
 
-  t = util::now();
+  t = test::util::now();
   CUDA::InverseFilterbankEngineCUDA::apply_k_overlap_discard(
     in, out_gpu, overlap, npart, npol, nchan, ndat
   );
 
-  // util::print_array<std::complex<float>>(in, in_dim);
-  // util::print_array<std::complex<float>>(out_cpu, out_dim);
-  // util::print_array<std::complex<float>>(out_gpu, out_dim);
+  // test::util::print_array<std::complex<float>>(in, in_dim);
+  // test::util::print_array<std::complex<float>>(out_cpu, out_dim);
+  // test::util::print_array<std::complex<float>>(out_gpu, out_dim);
 
-  util::delta<std::milli> delta_gpu = util::now() - t;
-  if (util::config::verbose) {
+  test::util::delta<std::milli> delta_gpu = test::util::now() - t;
+  if (test::util::config::verbose) {
     std::cerr << "overlap discard GPU: " << delta_gpu.count()
       << " ms; CPU: " << delta_cpu.count()
       << " ms; CPU/GPU: " << delta_cpu.count() / delta_gpu.count()
       << std::endl;
   }
 
-  bool allclose = util::allclose(out_cpu, out_gpu, thresh[0]);
+  bool allclose = test::util::allclose(out_cpu, out_gpu, thresh[0]);
   REQUIRE(allclose == true);
 }
 
@@ -102,10 +102,10 @@ TEST_CASE (
 )
 {
   std::vector<float> thresh = test_config.get_thresh();
-  std::vector<util::TestShape> test_shapes = test_config.get_test_vector_shapes();
+  std::vector<test::util::TestShape> test_shapes = test_config.get_test_vector_shapes();
   auto idx = GENERATE_COPY(range(0, (int) test_shapes.size()));
 
-  util::TestShape test_shape = test_shapes[idx];
+  test::util::TestShape test_shape = test_shapes[idx];
 
   unsigned npart = test_shape.npart;
   unsigned npol = test_shape.input_npol;
@@ -148,31 +148,31 @@ TEST_CASE (
   std::vector<unsigned> in_dim = {nchan, npol, in_total_ndat};
   std::vector<unsigned> out_dim = {nchan, npol, out_total_ndat};
 
-  // util::print_array(in, in_dim);
+  // test::util::print_array(in, in_dim);
 
-  auto t = util::now();
-  util::InverseFilterbank::overlap_save_cpu_FPT< std::complex<float> >(
+  auto t = test::util::now();
+  test::util::InverseFilterbank::overlap_save_cpu_FPT< std::complex<float> >(
     in, out_cpu, overlap, npart, npol, nchan, ndat, in_total_ndat, out_total_ndat
   );
 
-  // util::print_array(out_cpu, out_dim);
+  // test::util::print_array(out_cpu, out_dim);
 
-  util::delta<std::milli> delta_cpu = util::now() - t;
+  test::util::delta<std::milli> delta_cpu = test::util::now() - t;
 
-  t = util::now();
+  t = test::util::now();
   CUDA::InverseFilterbankEngineCUDA::apply_k_overlap_save(
     in, out_gpu, overlap, npart, npol, nchan, ndat
   );
-  util::delta<std::milli> delta_gpu = util::now() - t;
+  test::util::delta<std::milli> delta_gpu = test::util::now() - t;
 
-  if (util::config::verbose) {
+  if (test::util::config::verbose) {
     std::cerr << "overlap save GPU: " << delta_gpu.count()
       << " ms; CPU: " << delta_cpu.count()
       << " ms; CPU/GPU: " << delta_cpu.count() / delta_gpu.count()
       << std::endl;
   }
 
-  bool allclose = util::allclose(out_cpu, out_gpu, thresh[0]);
+  bool allclose = test::util::allclose(out_cpu, out_gpu, thresh[0]);
   REQUIRE(allclose == true);
 }
 
@@ -184,10 +184,10 @@ TEST_CASE (
 )
 {
   std::vector<float> thresh = test_config.get_thresh();
-  std::vector<util::TestShape> test_shapes = test_config.get_test_vector_shapes();
+  std::vector<test::util::TestShape> test_shapes = test_config.get_test_vector_shapes();
   auto idx = GENERATE_COPY(range(0, (int) test_shapes.size()));
 
-	util::TestShape test_shape = test_shapes[idx];
+	test::util::TestShape test_shape = test_shapes[idx];
 
   unsigned npart = test_shape.npart;
   unsigned npol = test_shape.input_npol;
@@ -234,34 +234,34 @@ TEST_CASE (
   std::vector<unsigned> out_dim = {nchan, npol, out_total_ndat};
 
   // apodization filter is just multiplying by 2.
-  auto random_gen = util::random<float>();
+  auto random_gen = test::util::random<float>();
   for (unsigned i=0; i<apod_size; i++) {
     apod_cpu[i] = std::complex<float>(random_gen(), 0.0);
     apod_gpu[i] = std::complex<float>(apod_cpu[i].real(), apod_cpu[i].real());
   }
 
-  auto t = util::now();
-  util::InverseFilterbank::apodization_overlap_cpu_FPT< std::complex<float> >(
+  auto t = test::util::now();
+  test::util::InverseFilterbank::apodization_overlap_cpu_FPT< std::complex<float> >(
     in, apod_cpu, out_cpu, overlap, npart, npol, nchan, ndat, in_total_ndat, out_total_ndat
   );
 
 
-  util::delta<std::milli> delta_cpu = util::now() - t;
+  test::util::delta<std::milli> delta_cpu = test::util::now() - t;
 
-  t = util::now();
+  t = test::util::now();
   CUDA::InverseFilterbankEngineCUDA::apply_k_apodization_overlap(
     in, apod_gpu, out_gpu, overlap, npart, npol, nchan, ndat
   );
-  util::delta<std::milli> delta_gpu = util::now() - t;
+  test::util::delta<std::milli> delta_gpu = test::util::now() - t;
 
-  if (util::config::verbose) {
+  if (test::util::config::verbose) {
     std::cerr << "apodization overlap GPU: " << delta_gpu.count()
       << " ms; CPU: " << delta_cpu.count()
       << " ms; CPU/GPU: " << delta_cpu.count() / delta_gpu.count()
       << std::endl;
   }
 
-  bool allclose = util::allclose(out_cpu, out_gpu, thresh[0]);
+  bool allclose = test::util::allclose(out_cpu, out_gpu, thresh[0]);
   REQUIRE(allclose == true);
 }
 
@@ -271,12 +271,12 @@ TEST_CASE (
 )
 {
   std::vector<float> thresh = test_config.get_thresh();
-  std::vector<util::TestShape> test_shapes = test_config.get_test_vector_shapes();
+  std::vector<test::util::TestShape> test_shapes = test_config.get_test_vector_shapes();
   auto idx = GENERATE_COPY(range(0, (int) test_shapes.size()));
 
-  util::TestShape test_shape = test_shapes[idx];
+  test::util::TestShape test_shape = test_shapes[idx];
 
-  auto rand_gen = util::random<float>();
+  auto rand_gen = test::util::random<float>();
 
   unsigned npart = test_shape.npart;
   unsigned npol = test_shape.input_npol;
@@ -314,7 +314,7 @@ TEST_CASE (
   std::vector<unsigned> in_dim = {nchan, npol, npart*ndat};
   std::vector<unsigned> out_dim = {1, npol, npart*out_ndat};
 
-  // util::print_array(in, in_dim);
+  // test::util::print_array(in, in_dim);
 
   // response is just multiplying by 2.
   for (unsigned i=0; i<out_ndat; i++) {
@@ -333,29 +333,29 @@ TEST_CASE (
       out_cpu.assign(out_cpu.size(), std::complex<float>(0.0, 0.0));
       out_gpu.assign(out_gpu.size(), std::complex<float>(0.0, 0.0));
 
-      auto t = util::now();
-      util::InverseFilterbank::response_stitch_cpu_FPT<std::complex<float>>(
+      auto t = test::util::now();
+      test::util::InverseFilterbank::response_stitch_cpu_FPT<std::complex<float>>(
         in, resp, out_cpu, os_factor, npart, npol, nchan, ndat, *dc_it, *all_it
       );
-      util::delta<std::milli> delta_cpu = util::now() - t;
-      // util::print_array(out_cpu, out_dim);
-      t = util::now();
+      test::util::delta<std::milli> delta_cpu = test::util::now() - t;
+      // test::util::print_array(out_cpu, out_dim);
+      t = test::util::now();
       CUDA::InverseFilterbankEngineCUDA::apply_k_response_stitch(
         in, resp, out_gpu, os_factor, npart, npol, nchan, ndat, *dc_it, *all_it
       );
 
-      util::delta<std::milli> delta_gpu = util::now() - t;
+      test::util::delta<std::milli> delta_gpu = test::util::now() - t;
 
-      if (*dc_it && *all_it && util::config::verbose) {
+      if (*dc_it && *all_it && test::util::config::verbose) {
         std::cerr << "response stitch gpu: " << delta_gpu.count()
           << " ms; CPU: " << delta_cpu.count()
           << " ms; CPU/GPU: " << delta_cpu.count() / delta_gpu.count()
           << std::endl;
       }
-      // util::print_array(out_gpu, out_dim);
-      // util::print_array(out_cpu, out_dim);
+      // test::util::print_array(out_gpu, out_dim);
+      // test::util::print_array(out_cpu, out_dim);
 
-      allclose = util::allclose<std::complex<float>>(out_cpu, out_gpu, thresh[0]);
+      allclose = test::util::allclose<std::complex<float>>(out_cpu, out_gpu, thresh[0]);
 
       REQUIRE(allclose == true);
     }
