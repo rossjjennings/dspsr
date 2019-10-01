@@ -31,11 +31,11 @@ namespace CUDA
     void detect_ft (const dsp::TimeSeries* input, dsp::BitSeries* output,
                     float upper_thresh, float lower_thresh);
 
-    void detect_fscr(const dsp::TimeSeries* input, dsp::BitSeries* output, 
-                     const float lower, const float upper,
+    void detect_fscr(const dsp::TimeSeries* input, dsp::BitSeries* output,
+                     const float mu2, const unsigned std_devs,
                      unsigned schan, unsigned echan);
 
-    void detect_tscr (const dsp::TimeSeries* input, const dsp::TimeSeries* input_tscr, dsp::BitSeries* output, 
+    void detect_tscr (const dsp::TimeSeries* input, const dsp::TimeSeries* input_tscr, dsp::BitSeries* output,
                       float upper_thresh, float lower_thresh);
 
     int count_mask (const dsp::BitSeries* output);

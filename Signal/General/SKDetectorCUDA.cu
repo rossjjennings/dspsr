@@ -197,43 +197,53 @@ __global__ void reduce_sum_fscr_1pol (const float * input, unsigned char * out,
 //! gridDim.x is input->get_ndat(), or npart, os blockIdx.x is ipart
 __global__ void reduce_sum_fscr_2pol (
   const float2 * input, unsigned char * out,
-  const unsigned nchan, float lower, float upper,
-  unsigned schan, unsigned echan
+  const unsigned nchan, const float mu2, const unsigned std_devs,
+  const unsigned schan, const unsigned echan
 )
 {
-  extern __shared__ float2 sdata2[]; // we have nchan * npol * sizeof(float) available bytes
+  extern __shared__ float3 sdata3[]; // we have nchan * npol * sizeof(float) available bytes
 
   // idat = blockIdx.x
   // use float 2 because input is TFP, meaning we can bundle polarizations
   // as if they were complex number
   const float2 * in = input + (blockIdx.x * nchan);
 
-  float2 sum = make_cuComplex(0, 0);
+  float3 sum = make_float3(0, 0, 0);
   for (unsigned ichan=threadIdx.x; ichan<nchan; ichan+=blockDim.x)
   {
-    if (ichan >= schan && ichan < echan)
-      sum = cuCaddf(sum, in[ichan]);
+    if (ichan >= schan && ichan < echan) {
+      sum.x += in[ichan].x;
+      sum.y += in[ichan].y;
+      sum.z += 1;
+    }
   }
 
-  sdata2[threadIdx.x] = sum;
+  sdata3[threadIdx.x] = sum;
   __syncthreads();
 
   // now do a block wide sum across all threads
   int last_offset = blockDim.x / 2;
   for (int offset = last_offset; offset > 0;  offset >>= 1) // bitshift down by one
   {
-    if (threadIdx.x < offset)
-      sdata2[threadIdx.x] = cuCaddf(sdata2[threadIdx.x], sdata2[threadIdx.x + offset]);
+    if (threadIdx.x < offset) {
+      sdata3[threadIdx.x].x += sdata3[threadIdx.x + offset].x;
+      sdata3[threadIdx.x].y += sdata3[threadIdx.x + offset].y;
+      sdata3[threadIdx.x].z += sdata3[threadIdx.x + offset].z;
+    }
     __syncthreads();
   }
 
   if (threadIdx.x == 0)
   {
-    float nvalidchan = float((echan - schan) + 1);
-    float p0 = sdata2[0].x / nvalidchan;
-    float p1 = sdata2[0].y / nvalidchan;
-
+    float sk_avg_cnt = sdata3[0].z;
+    float p0 = sdata3[0].x / sk_avg_cnt;
+    float p1 = sdata3[0].y / sk_avg_cnt;
+    float one_sigma_idat = sqrtf(mu2 / (float) sk_avg_cnt);
+    float upper = 1 + ((1+std_devs) * one_sigma_idat);
+    float lower = 1 - ((1+std_devs) * one_sigma_idat);
+    // printf("reduce_sum_fscr_2pol: p0=%f, p1=%f, lower=%f, upper=%f, nvalidchan=%f, pol0 sum=%f, pol1 sum=%f\n", p0, p1, lower, upper, nvalidchan, p0*nvalidchan, p1*nvalidchan);
     if (p0 < lower || p0 > upper || p1 < lower || p1 > upper) {
+      // printf("reduce_sum_fscr_2pol: setting out[%i] to 1\n", blockIdx.x);
       // for ( unsigned ichan=0; ichan < nchan; ichan++ ) {
       //   out[blockIdx.x * nchan + ichan] = 1;
       // }
@@ -249,21 +259,22 @@ __global__ void reduce_sum_fscr_2pol (
 // Here, npart is the original TimeSeries input ndat divided by ``M``
 void CUDA::SKDetectorEngine::detect_fscr (
   const dsp::TimeSeries* input, dsp::BitSeries* output,
-  const float lower, const float upper,
+  const float mu2, const unsigned std_devs,
   unsigned schan, unsigned echan)
 {
-  // if (dsp::Operation::verbose)
-  cerr << "CUDA::SKDetectorEngine::detect_fscr()" << endl;
+  if (dsp::Operation::verbose) {
+    std::cerr << "CUDA::SKDetectorEngine::detect_fscr()" << std::endl;
+  }
 
   const unsigned nchan = input->get_nchan();
-  const unsigned npol  = input->get_npol();
-  const int64_t ndat   = input->get_ndat();
+  const unsigned npol = input->get_npol();
+  const int64_t ndat = input->get_ndat();
 
   const unsigned nblocks = ndat;
   unsigned nthreads = max_threads_per_block;
   if (nchan < nthreads)
     nthreads = nchan;
-  const size_t shared_bytes = nthreads * npol * sizeof(float);
+  const size_t shared_bytes = nthreads * (npol + 1) * sizeof(float);
 
   // indat is the SK estimatesestimates
   const float * indat    = input->get_dattfp();
@@ -276,20 +287,18 @@ void CUDA::SKDetectorEngine::detect_fscr (
     << " output->get_nchan()=" << output->get_nchan() << std::endl;
   // if (dsp::Operation::verbose)
   // {
-    cerr << "CUDA::SKDetectorEngine::detect_fscr nchan=" << nchan << " ndat=" << ndat << endl;
-    cerr << "CUDA::SKDetectorEngine::detect_fscr nblocks=" << nblocks << " nthreads=" << nthreads << " shared_bytes=" << shared_bytes << endl;
-    cerr << "CUDA::SKDetectorEngine::detect_fscr thresholds [" << lower << " - " << upper << "]" << endl;
+    std::cerr << "CUDA::SKDetectorEngine::detect_fscr nchan=" << nchan << " ndat=" << ndat << std::endl;
+    std::cerr << "CUDA::SKDetectorEngine::detect_fscr nblocks=" << nblocks << " nthreads=" << nthreads << " shared_bytes=" << shared_bytes << std::endl;
+    // std::cerr << "CUDA::SKDetectorEngine::detect_fscr thresholds [" << lower << " - " << upper << "]" << std::endl;
   // }
 
-  if (npol == 1) {
-    std::cerr << "CUDA::SKDetectorEngine::detect_fscr single pol kernel" << std::endl;
-    reduce_sum_fscr_1pol<<<nblocks,nthreads,shared_bytes,stream>>>(
-      indat, outdat, nchan, lower, upper, schan, echan);
-  } else {
-    std::cerr << "CUDA::SKDetectorEngine::detect_fscr double pol kernel" << std::endl;
-    reduce_sum_fscr_2pol<<<nblocks,nthreads,shared_bytes,stream>>>(
-      (float2*) indat, outdat, nchan, lower, upper, schan, echan);
-  }
+  // if (npol == 1) {
+  //   reduce_sum_fscr_1pol<<<nblocks, nthreads,s hared_bytes, stream>>>(
+  //     indat, outdat, nchan, lower, upper, schan, echan);
+  // } else {
+    reduce_sum_fscr_2pol<<<nblocks, nthreads, shared_bytes, stream>>>(
+      (float2*) indat, outdat, nchan, mu2, std_devs, schan, echan);
+  // }
 
   if (dsp::Operation::record_time || dsp::Operation::verbose)
     check_error( "CUDA::SKDetectorEngine::detect_fscr_element" );
