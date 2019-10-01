@@ -27,17 +27,17 @@ public:
   void operator() (float* arr, unsigned nchan, unsigned npol, unsigned ndat, unsigned ndim)
   {
     unsigned total_size = nchan * npol * ndat * ndim;
-    // if (test::util::config::verbose)
-    // {
-    //   std::cerr << "Reporter::operator() ("
-    //     << arr << ", "
-    //     << nchan << ", "
-    //     << npol << ", "
-    //     << ndat << ", "
-    //     << ndim << ")"
-    //     << std::endl;
-    //   std::cerr << "Reporter::operator() total_size=" << total_size << std::endl;
-    // }
+    if (test::util::config::verbose)
+    {
+      std::cerr << "Reporter::operator() ("
+        << arr << ", "
+        << nchan << ", "
+        << npol << ", "
+        << ndat << ", "
+        << ndim << ")"
+        << std::endl;
+      std::cerr << "Reporter::operator() total_size=" << total_size << std::endl;
+    }
     std::vector<float> data (total_size);
     if (iscuda) {
       float* data_ptr = data.data();
@@ -100,7 +100,7 @@ public:
 
 TEST_CASE (
   "InverseFilterbankEngineCPU and InverseFilterbankEngineCUDA produce same output",
-  "[InverseFilterbankEngineCPU]"
+  "[InverseFilterbankEngine]"
 )
 {
 

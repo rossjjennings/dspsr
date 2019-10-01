@@ -57,7 +57,8 @@ TEST_CASE ("InverseFilterbankResponse roll should produce expected result", "[In
 TEST_CASE("InverseFilterbankResponse produces correct derippling response", "[InverseFilterbankResponse]")
 {
 
-  const std::string file_name = test_config.get_field<std::string>("InverseFilterbank.fir_file_name");
+  const std::string file_name = test_config.get_field<std::string>(
+    "InverseFilterbank.test_InverseFilterbankResponse.fir_file_name");
 
   const std::string file_path = test::util::get_test_data_dir() + "/" + file_name;
 

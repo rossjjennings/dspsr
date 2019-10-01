@@ -38,8 +38,8 @@ TEST_CASE (
   CUDA::SpectralKurtosisEngine engine_cuda(device_memory);
 
   int tscrunch = 128;
-  unsigned std_devs = 4;
-  int nparts = 5;
+  unsigned std_devs = 3;
+  int nparts = 100;
   int block_size = tscrunch * nparts;
 
   bool disable_fscr = false;
@@ -47,7 +47,7 @@ TEST_CASE (
   bool disable_ft = false;
 
   unsigned schan = 0;
-  unsigned echan = 2;
+  unsigned echan = 128;
 
   dsp::SpectralKurtosis sk_cpu;
   sk_cpu.set_buffering_policy(nullptr);
@@ -136,6 +136,7 @@ TEST_CASE (
 
   sk_cuda.prepare();
   sk_cuda.operate();
+  check_error("test_SpectralKurtosis_integration");
 
   transfer(out_gpu, out_cuda, cudaMemcpyDeviceToHost);
 
