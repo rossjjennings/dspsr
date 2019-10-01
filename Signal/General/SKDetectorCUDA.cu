@@ -276,27 +276,22 @@ __global__ void reduce_sum_fscr_2pol (
       float p1 = sum.y / sk_avg_cnt;
       float upper = 1 + ((1+std_devs) * one_sigma_idat);
       float lower = 1 - ((1+std_devs) * one_sigma_idat);
-      printf("reduce_sum_fscr_2pol: p0=%f, p1=%f, lower=%f, upper=%f, sk_avg_cnt=%f, pol0 sum=%f, pol1 sum=%f\n", p0, p1, lower, upper, sk_avg_cnt, p0*sk_avg_cnt, p1*sk_avg_cnt);
+      // printf("reduce_sum_fscr_2pol: p0=%f, p1=%f, lower=%f, upper=%f, sk_avg_cnt=%f, pol0 sum=%f, pol1 sum=%f\n", p0, p1, lower, upper, sk_avg_cnt, p0*sk_avg_cnt, p1*sk_avg_cnt);
       if (p0 < lower || p0 > upper || p1 < lower || p1 > upper) {
-        for (unsigned ichan=0; ichan<nchan; ichan+=1) {
-          out[blockIdx.x * nchan + ichan] = 1;
-        }
+        sdata3[0].x = 1.0;
+      } else {
+        sdata3[0].x = 0.0;
       }
     }
   }
-  // sdata3[threadIdx.x] = warp_reduce_sum(sdata3[threadIdx.x]);
 
-  // now do a block wide sum across all threads
-  // int last_offset = blockDim.x / 2;
-  // for (int offset = last_offset; offset > 0;  offset >>= 1) // bitshift down by one
-  // {
-  //   if (threadIdx.x < offset) {
-  //     sdata3[threadIdx.x].x += sdata3[threadIdx.x + offset].x;
-  //     sdata3[threadIdx.x].y += sdata3[threadIdx.x + offset].y;
-  //     sdata3[threadIdx.x].z += sdata3[threadIdx.x + offset].z;
-  //   }
-  //   __syncthreads();
-  // }
+  __syncthreads();
+
+  if (sdata3[0].x == 1.0) {
+    for (unsigned ichan=threadIdx.x; ichan<nchan; ichan+=blockDim.x) {
+      out[blockIdx.x * nchan + ichan] = 1;
+    }
+  }
 }
 
 // schan is the start channel and echan is the end channel. Together these

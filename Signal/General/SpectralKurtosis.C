@@ -809,14 +809,14 @@ void dsp::SpectralKurtosis::detect_fscr ()
         float one_sigma_idat = sqrt(mu2 / (float) sk_avg_cnt);
         float avg_upper_thresh = 1 + ((1+std_devs) * one_sigma_idat);
         float avg_lower_thresh = 1 - ((1+std_devs) * one_sigma_idat);
-        std::cerr << "dsp::SpectralKurtosis::detect_fscr:" <<
-          " avg_upper_thresh=" << avg_upper_thresh <<
-          " avg_lower_thresh=" << avg_lower_thresh <<  std::endl;
-        std::cerr << "dsp::SpectralKurtosis::detect_fscr: ipol=" << ipol
-          << " sk_avg=" << sk_avg << " sk_avg_cnt=" << sk_avg_cnt << " pol sum=" << sk_avg * sk_avg_cnt << std::endl;
+        // std::cerr << "dsp::SpectralKurtosis::detect_fscr:" <<
+        //   " avg_upper_thresh=" << avg_upper_thresh <<
+        //   " avg_lower_thresh=" << avg_lower_thresh <<  std::endl;
+        // std::cerr << "dsp::SpectralKurtosis::detect_fscr: ipol=" << ipol
+        //   << " sk_avg=" << sk_avg << " sk_avg_cnt=" << sk_avg_cnt << " pol sum=" << sk_avg * sk_avg_cnt << std::endl;
         if ((sk_avg > avg_upper_thresh) || (sk_avg < avg_lower_thresh))
         {
-          // if (verbose)
+          if (verbose)
             cerr << "Zapping ipart=" << ipart << " ipol=" << ipol << " sk_avg=" << sk_avg
                  << " [" << avg_lower_thresh << " - " << avg_upper_thresh
                  << "] cnt=" << sk_avg_cnt << endl;

@@ -27,7 +27,8 @@ TEST_CASE (
     dsp::SpectralKurtosis::Reporter<unsigned char>, unsigned char
   > CharSpectralKurtosisReporter;
 
-  std::string file_name = "1644-4559.pre_Convolution.4.dump";
+  // std::string file_name = "1644-4559.pre_Convolution.4.dump"; // four channel for easy testing
+  std::string file_name = "1644-4559.pre_Convolution.dump"; // 128 channel for more realistic testing
   std::string file_path = util::get_test_data_dir() + "/" + file_name;
   std::vector<float> thresh = test_config.get_thresh();
 
@@ -36,8 +37,9 @@ TEST_CASE (
   CUDA::DeviceMemory* device_memory = new CUDA::DeviceMemory(cuda_stream);
   CUDA::SpectralKurtosisEngine engine_cuda(device_memory);
 
-  int tscrunch = 64;
-  int nparts = 2;
+  int tscrunch = 128;
+  unsigned std_devs = 4;
+  int nparts = 5;
   int block_size = tscrunch * nparts;
 
   bool disable_fscr = false;
@@ -49,13 +51,13 @@ TEST_CASE (
 
   dsp::SpectralKurtosis sk_cpu;
   sk_cpu.set_buffering_policy(nullptr);
-  sk_cpu.set_thresholds(tscrunch, 4);
+  sk_cpu.set_thresholds(tscrunch, std_devs);
   sk_cpu.set_options(disable_fscr, disable_tscr, disable_ft);
   sk_cpu.set_channel_range(schan, echan);
 
   dsp::SpectralKurtosis sk_cuda;
   sk_cuda.set_buffering_policy(nullptr);
-  sk_cuda.set_thresholds(tscrunch, 4);
+  sk_cuda.set_thresholds(tscrunch, std_devs);
   sk_cuda.set_engine(&engine_cuda);
   sk_cuda.set_options(disable_fscr, disable_tscr, disable_ft);
   sk_cuda.set_channel_range(schan, echan);
@@ -186,21 +188,12 @@ TEST_CASE (
     nclose = 0;
 
     for (unsigned idx=0; idx<size; idx++) {
-      std::cerr << "(" << (unsigned) char_cpu_vector[idx] << ", "
-        << (unsigned) char_cuda_vector[idx] << ") ";
+      // std::cerr << "(" << (unsigned) char_cpu_vector[idx] << ", "
+      //   << (unsigned) char_cuda_vector[idx] << ") ";
       if (char_cpu_vector[idx] == char_cuda_vector[idx]) {
         nclose += 1;
       }
     }
-    std::cerr << std::endl;
-
-    // for (unsigned idx=0; idx<char_cpu_vector.size(); idx++)
-    // {
-    //   // if (util::isclose(char_cpu_vector[idx], char_cuda_vector[idx], thresh[0], thresh[1])) {
-    //   //   std::cerr << "idx=" << idx << std::endl;
-    //   // }
-    //   std::cerr << "(" << char_cpu_vector[idx] << ", " << char_cuda_vector[idx] << ") ";
-    // }
     // std::cerr << std::endl;
 
     if (util::config::verbose)
