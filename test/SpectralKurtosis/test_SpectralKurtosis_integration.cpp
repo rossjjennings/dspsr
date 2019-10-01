@@ -27,8 +27,10 @@ TEST_CASE (
     dsp::SpectralKurtosis::Reporter<unsigned char>, unsigned char
   > CharSpectralKurtosisReporter;
 
+
   // std::string file_name = "1644-4559.pre_Convolution.4.dump"; // four channel for easy testing
-  std::string file_name = "1644-4559.pre_Convolution.dump"; // 128 channel for more realistic testing
+  std::string file_name = test_config.get_field<std::string>(
+    "SpectralKurtosis.test_SpectralKurtosis_integration.file_name"); // 128 channel for more realistic testing
   std::string file_path = test::util::get_test_data_dir() + "/" + file_name;
   std::vector<float> thresh = test_config.get_thresh();
 
@@ -37,17 +39,26 @@ TEST_CASE (
   CUDA::DeviceMemory* device_memory = new CUDA::DeviceMemory(cuda_stream);
   CUDA::SpectralKurtosisEngine engine_cuda(device_memory);
 
-  int tscrunch = 128;
-  unsigned std_devs = 3;
-  int nparts = 100;
+  unsigned tscrunch = test_config.get_field<unsigned>(
+    "SpectralKurtosis.test_SpectralKurtosis_integration.tscrunch");
+  unsigned std_devs = test_config.get_field<unsigned>(
+    "SpectralKurtosis.test_SpectralKurtosis_integration.std_devs");
+  unsigned nparts = test_config.get_field<unsigned>(
+    "SpectralKurtosis.test_SpectralKurtosis_integration.nparts");
+
+  unsigned schan = test_config.get_field<unsigned>(
+    "SpectralKurtosis.test_SpectralKurtosis_integration.s_chan");
+  unsigned echan = test_config.get_field<unsigned>(
+    "SpectralKurtosis.test_SpectralKurtosis_integration.e_chan");
+
+  bool disable_fscr = test_config.get_field<bool>(
+    "SpectralKurtosis.test_SpectralKurtosis_integration.disable_fscr");
+  bool disable_tscr = test_config.get_field<bool>(
+    "SpectralKurtosis.test_SpectralKurtosis_integration.disable_tscr");;
+  bool disable_ft = test_config.get_field<bool>(
+    "SpectralKurtosis.test_SpectralKurtosis_integration.disable_ft");;
+
   int block_size = tscrunch * nparts;
-
-  bool disable_fscr = false;
-  bool disable_tscr = false;
-  bool disable_ft = false;
-
-  unsigned schan = 0;
-  unsigned echan = 128;
 
   dsp::SpectralKurtosis sk_cpu;
   sk_cpu.set_buffering_policy(nullptr);

@@ -155,8 +155,20 @@ void CUDA::SKDetectorEngine::detect_ft (const dsp::TimeSeries* input,
 #endif
 }
 
+__device__ float warp_reduce_sum_float (float val) {
+  for (int offset = warpSize/2; offset > 0; offset >>= 1) {
+    #if (__CUDACC_VER_MAJOR__>= 9)
+    val += __shfl_down_sync(FULL_MASK, val, offset);
+    #else
+    val += __shfl_down (val, offset);
+    #endif
+  }
+  return val;
+}
+
+
 __device__ float2 warp_reduce_sum (float2 val) {
-  for (int offset = warpSize/2; offset > 0; offset /= 2) {
+  for (int offset = warpSize/2; offset > 0; offset >>= 1) {
     #if (__CUDACC_VER_MAJOR__>= 9)
     val.x += __shfl_down_sync(FULL_MASK, val.x, offset);
     val.y += __shfl_down_sync(FULL_MASK, val.y, offset);
@@ -169,7 +181,7 @@ __device__ float2 warp_reduce_sum (float2 val) {
 }
 
 __device__ float3 warp_reduce_sum (float3 val) {
-  for (int offset = warpSize/2; offset > 0; offset /= 2) {
+  for (int offset = warpSize/2; offset > 0; offset >>= 1) {
     #if (__CUDACC_VER_MAJOR__>= 9)
     val.x += __shfl_down_sync(FULL_MASK, val.x, offset);
     val.y += __shfl_down_sync(FULL_MASK, val.y, offset);
@@ -252,6 +264,7 @@ __global__ void reduce_sum_fscr_1pol (
 
   sum = warp_reduce_sum(sum);
 
+
   unsigned warp_idx = threadIdx.x % 32;
   unsigned warp_num = threadIdx.x / 32;
 
@@ -324,14 +337,14 @@ __global__ void reduce_sum_fscr_2pol (
     if (ichan >= schan && ichan < echan && out[blockIdx.x * nchan + ichan] == 0) {
       sum.x += in[ichan].x;
       sum.y += in[ichan].y;
-      sum.z += 1;
+      sum.z += 1.0;
     }
   }
-
   sum = warp_reduce_sum(sum);
 
-  unsigned warp_idx = threadIdx.x % 32;
-  unsigned warp_num = threadIdx.x / 32;
+  unsigned warp_idx = threadIdx.x % warpSize;
+  unsigned warp_num = threadIdx.x / warpSize;
+  unsigned max_warp_num = blockDim.x / warpSize;
 
   if (warp_idx == 0) {
     sdata3[warp_num] = sum;
@@ -339,16 +352,28 @@ __global__ void reduce_sum_fscr_2pol (
   __syncthreads();
 
   if (warp_num == 0) {
-    sum = sdata3[warp_idx];
+    if (warp_idx > max_warp_num) {
+      sum = make_float3(0, 0, 0);
+    } else {
+      sum = sdata3[warp_idx];
+    }
     sum = warp_reduce_sum(sum);
 
     if (warp_idx == 0) {
       float sk_avg_cnt = sum.z;
-      float one_sigma_idat = sqrtf(mu2 / (float) sk_avg_cnt);
+      float one_sigma_idat = sqrtf(mu2 / sk_avg_cnt);
       float p0 = sum.x / sk_avg_cnt;
       float p1 = sum.y / sk_avg_cnt;
       float upper = 1 + ((1+std_devs) * one_sigma_idat);
       float lower = 1 - ((1+std_devs) * one_sigma_idat);
+      if (p0 < lower || p0 > upper || p1 < lower || p1 > upper) {
+        printf("Zapping ipart=%u p0=%f, p1=%f [%f - %f] cnt=%f\n",
+          blockIdx.x, p0, p1, lower, upper, sk_avg_cnt);
+        // out[blockIdx.x] = 1;
+        // for (unsigned ichan=0; ichan < nchan; ichan++) {
+        //   out[blockIdx.x * nchan + ichan] = 1;
+        // }
+      }
       // printf("reduce_sum_fscr_2pol: p0=%f, p1=%f, lower=%f, upper=%f, sk_avg_cnt=%f, pol0 sum=%f, pol1 sum=%f\n", p0, p1, lower, upper, sk_avg_cnt, p0*sk_avg_cnt, p1*sk_avg_cnt);
       if (p0 < lower || p0 > upper || p1 < lower || p1 > upper) {
         sdata3[0].x = 1.0;
@@ -389,16 +414,22 @@ void CUDA::SKDetectorEngine::detect_fscr (
   unsigned nthreads = max_threads_per_block;
   if (nchan < nthreads)
     nthreads = nchan;
-  const size_t shared_bytes = nthreads * (npol + 1) * sizeof(float);
+  // const size_t shared_bytes = nthreads * (npol + 1) * sizeof(float);
+  const size_t shared_bytes = 32 * (npol + 1) * sizeof(float);
 
-  // indat is the SK estimatesestimates
-  const float * indat    = input->get_dattfp();
+  // indat is the SK estimates
+  const float * indat = input->get_dattfp();
 
   // outdat is the bitmask
   unsigned char * outdat = output->get_datptr();
 
   if (dsp::Operation::verbose)
   {
+    std::cerr << "CUDA::SKDetectorEngine::detect_fscr" <<
+      " output->get_ndat()=" << output->get_ndat() <<
+      " output->get_nchan()=" << output->get_nchan() <<
+      " output->get_npol()=" << output->get_npol() << std::endl;
+
     std::cerr << "CUDA::SKDetectorEngine::detect_fscr nchan=" << nchan << " ndat=" << ndat << std::endl;
     std::cerr << "CUDA::SKDetectorEngine::detect_fscr nblocks=" << nblocks << " nthreads=" << nthreads << " shared_bytes=" << shared_bytes << std::endl;
   }
