@@ -43,8 +43,8 @@ TEST_CASE (
   int block_size = tscrunch * nparts;
 
   bool disable_fscr = false;
-  bool disable_tscr = true;
-  bool disable_ft = true;
+  bool disable_tscr = false;
+  bool disable_ft = false;
 
   unsigned schan = 0;
   unsigned echan = 2;
@@ -69,10 +69,10 @@ TEST_CASE (
   };
 
   std::vector<std::string> char_reporter_names = {
-    // "zapmask_tscr",
-    // "zapmask_skfb",
-    "zapmask_fscr"
-    // "zapmask"
+    "zapmask_tscr",
+    "zapmask_skfb",
+    "zapmask_fscr",
+    "zapmask"
   };
 
   std::vector<FloatSpectralKurtosisReporter> float_reporters = {
@@ -85,12 +85,12 @@ TEST_CASE (
   };
 
   std::vector<CharSpectralKurtosisReporter> char_reporters = {
-    // CharSpectralKurtosisReporter(),
-    // CharSpectralKurtosisReporter(cuda_stream),
-    // CharSpectralKurtosisReporter(),
-    // CharSpectralKurtosisReporter(cuda_stream),
-    // CharSpectralKurtosisReporter(),
-    // CharSpectralKurtosisReporter(cuda_stream),
+    CharSpectralKurtosisReporter(),
+    CharSpectralKurtosisReporter(cuda_stream),
+    CharSpectralKurtosisReporter(),
+    CharSpectralKurtosisReporter(cuda_stream),
+    CharSpectralKurtosisReporter(),
+    CharSpectralKurtosisReporter(cuda_stream),
     CharSpectralKurtosisReporter(),
     CharSpectralKurtosisReporter(cuda_stream)
   };
