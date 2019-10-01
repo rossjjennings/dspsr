@@ -191,47 +191,120 @@ __device__ float3 warp_reduce_sum (float3 val) {
 // then do a block-wide sum
 
 // input data are stored TFP, 1 warp per time sample, 32 warps / block to sum across channels
-__global__ void reduce_sum_fscr_1pol (const float * input, unsigned char * out,
-                                      const unsigned nchan, float lower, float upper,
-                                      unsigned schan, unsigned echan)
+// __global__ void reduce_sum_fscr_1pol (const float * input, unsigned char * out,
+//                                       const unsigned nchan, float lower, float upper,
+//                                       unsigned schan, unsigned echan)
+// {
+//   extern __shared__ float sdata[];
+//
+//   unsigned idat = blockIdx.x;
+//   const float * in = input + (idat * nchan);
+//
+//   float sum = 0;
+//   for (unsigned ichan=threadIdx.x; ichan<nchan; ichan+=blockDim.x)
+//   {
+//     if (ichan >= schan && ichan < echan)
+//       sum += in[ichan];
+//   }
+//
+//   sdata[threadIdx.x] = sum;
+//   __syncthreads();
+//
+//   // now do a block wide sum across all threads
+//   int last_offset = blockDim.x / 2 ;
+//   for (int offset = last_offset; offset > 0;  offset >>= 1)
+//   {
+//     if (threadIdx.x < offset)
+//       sdata[threadIdx.x] += sdata[threadIdx.x + offset];
+//
+//     __syncthreads();
+//   }
+//
+//   if (threadIdx.x == 0)
+//   {
+//     float val = sdata[0] / float((echan - schan) + 1);
+//     if (val < lower || val > upper)
+//       out[idat] = 1;
+//   }
+// }
+
+__global__ void reduce_sum_fscr_1pol (
+  const float * input, unsigned char * out,
+  const unsigned nchan, const float mu2, const unsigned std_devs,
+  const unsigned schan, const unsigned echan
+)
 {
-  extern __shared__ float sdata[];
+  extern __shared__ float2 sdata2[]; // we have nchan * (npol + 1) * sizeof(float) available bytes
 
-  unsigned idat = blockIdx.x;
-  const float * in = input + (idat * nchan);
+  // idat = blockIdx.x
+  // use float 2 because input is TFP, meaning we can bundle polarizations
+  // as if they were complex number
+  const float * in = input + (blockIdx.x * nchan);
 
-  float sum = 0;
+  float2 sum = make_float2(0, 0, 0);
   for (unsigned ichan=threadIdx.x; ichan<nchan; ichan+=blockDim.x)
   {
-    if (ichan >= schan && ichan < echan)
-      sum += in[ichan];
+    if (ichan >= schan && ichan < echan && out[blockIdx.x * nchan + ichan] == 0) {
+      sum.x += in[ichan].x;
+      sum.y += 1;
+    }
   }
 
-  sdata[threadIdx.x] = sum;
+  sum = warp_reduce_sum(sum);
+
+  unsigned warp_idx = threadIdx.x % 32;
+  unsigned warp_num = threadIdx.x / 32;
+
+  if (warp_idx == 0) {
+    sdata3[warp_num] = sum;
+  }
   __syncthreads();
 
-  // now do a block wide sum across all threads
-  int last_offset = blockDim.x / 2 ;
-  for (int offset = last_offset; offset > 0;  offset >>= 1)
-  {
-    if (threadIdx.x < offset)
-      sdata[threadIdx.x] += sdata[threadIdx.x + offset];
+  if (warp_num == 0) {
+    sum = sdata3[warp_idx];
+    sum = warp_reduce_sum(sum);
 
-    __syncthreads();
+    if (warp_idx == 0) {
+      float sk_avg_cnt = sum.y;
+      float one_sigma_idat = sqrtf(mu2 / (float) sk_avg_cnt);
+      float p0 = sum.x / sk_avg_cnt;
+      float upper = 1 + ((1+std_devs) * one_sigma_idat);
+      float lower = 1 - ((1+std_devs) * one_sigma_idat);
+      // printf("reduce_sum_fscr_2pol: p0=%f, p1=%f, lower=%f, upper=%f, sk_avg_cnt=%f, pol0 sum=%f, pol1 sum=%f\n", p0, p1, lower, upper, sk_avg_cnt, p0*sk_avg_cnt, p1*sk_avg_cnt);
+      if (p0 < lower || p0 > upper) {
+        sdata3[0].x = 1.0;
+      } else {
+        sdata3[0].x = 0.0;
+      }
+    }
   }
 
-  if (threadIdx.x == 0)
-  {
-    float val = sdata[0] / float((echan - schan) + 1);
-    if (val < lower || val > upper)
-      out[idat] = 1;
+  __syncthreads();
+
+  if (sdata3[0].x == 1.0) {
+    for (unsigned ichan=threadIdx.x; ichan<nchan; ichan+=blockDim.x) {
+      out[blockIdx.x * nchan + ichan] = 1;
+    }
   }
 }
 
+
+
+//! @method reduce_sum_fscr_2pol Determine whether SK statistic is outside
+//! of bounds for two polarization input data.
 //! blockDim.x is nchan, so threadIdx.x is ichan
 //! gridDim.x is input->get_ndat(), or npart, os blockIdx.x is ipart
-//! input is TFP (npart, nchan, npol)
-//! out is TFP (npart, nchan, 1)
+//! This kernel packs polarization data into float3 data.
+//! @param input (npart, nchan, npol) TFP ordered SK statistic
+//! @param out (npart, nchan, 1) TFP ordered zapmask
+//! @param nchan number of channels present in data
+//! @param mu2 value used to calculate bounds for SK statistic
+//! @param std_devs number of standard deviations outside of which SK statistic
+//!   will be rejected
+//! @param schan start channel. Defines the start of the frequency domain
+//!   analysis region
+//! @param echan end channel. Defines the end of the frequency domain
+//!   analysis region
 __global__ void reduce_sum_fscr_2pol (
   const float2 * input, unsigned char * out,
   const unsigned nchan, const float mu2, const unsigned std_devs,
@@ -334,13 +407,13 @@ void CUDA::SKDetectorEngine::detect_fscr (
     // std::cerr << "CUDA::SKDetectorEngine::detect_fscr thresholds [" << lower << " - " << upper << "]" << std::endl;
   // }
 
-  // if (npol == 1) {
-  //   reduce_sum_fscr_1pol<<<nblocks, nthreads,s hared_bytes, stream>>>(
-  //     indat, outdat, nchan, lower, upper, schan, echan);
-  // } else {
+  if (npol == 1) {
+    reduce_sum_fscr_1pol<<<nblocks, nthreads,s hared_bytes, stream>>>(
+      indat, outdat, nchan, mu2, std_devs, schan, echan);
+  } else {
     reduce_sum_fscr_2pol<<<nblocks, nthreads, shared_bytes, stream>>>(
       (float2*) indat, outdat, nchan, mu2, std_devs, schan, echan);
-  // }
+  }
 
   if (dsp::Operation::record_time || dsp::Operation::verbose)
     check_error( "CUDA::SKDetectorEngine::detect_fscr_element" );
