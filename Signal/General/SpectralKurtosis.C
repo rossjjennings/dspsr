@@ -205,10 +205,10 @@ void dsp::SpectralKurtosis::transformation ()
   npart = ndat / M;
   output_ndat = npart * M;
 
-  if (verbose || debugd < 1)
+  if (verbose || debugd < 1) {
     cerr << "dsp::SpectralKurtosis::transformation input npart=" << npart
          << " output_ndat=" << output_ndat << endl;
-
+  }
   if (has_buffering_policy())
   {
     if (verbose || debugd < 1)
@@ -241,6 +241,14 @@ void dsp::SpectralKurtosis::transformation ()
   if (verbose) {
     std::cerr << "dsp::SpectralKurtosis::transformation: calling detect" << std::endl;
   }
+
+  float_reporter.emit(
+    "input",
+    (float*) input->get_datptr(),
+    input->get_nchan(),
+    input->get_npol(),
+    input->get_ndat(),
+    input->get_ndim());
 
   float_reporter.emit(
     "estimates",
@@ -380,7 +388,8 @@ void dsp::SpectralKurtosis::compute ()
               // Square Law Detect for S1 + S2
               for (unsigned i=0; i<nfloat; i+=2)
               {
-                // std::cerr << indat[i] << ", " << indat[i+1] << std::endl;
+                // std::cerr << "  ichan=" << ichan << ", ipol=" << ipol << ", ipart=" << ipart;
+                // std::cerr << " " << indat[i] << ", " << indat[i+1] << std::endl;
                 float sqld = (indat[i] * indat[i]) + (indat[i+1] * indat[i+1]);
                 S1_sum += sqld;
                 S2_sum += (sqld * sqld);
@@ -845,7 +854,7 @@ void dsp::SpectralKurtosis::mask ()
   if (engine)
   {
     if (verbose)
-      cerr << "dsp::SpectralKurtosis::transformation output->resize(" << output->get_ndat() << ")" << endl;
+      cerr << "dsp::SpectralKurtosis::transformation: output->resize(" << output->get_ndat() << ")" << endl;
     output->resize (output->get_ndat());
   }
 

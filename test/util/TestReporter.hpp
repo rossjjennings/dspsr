@@ -43,13 +43,13 @@ namespace util {
         if (stream) {
           error = cudaMemcpyAsync(data_ptr, arr, total_size_bytes, cudaMemcpyDeviceToHost, stream);
           if (error != 0) {
-            throw "cudaMemcpyAsync error";
+            throw "TestReporter::operator() cudaMemcpyAsync error";
           }
           error = cudaStreamSynchronize(stream);
         } else {
           error = cudaMemcpy(data_ptr, arr, total_size_bytes, cudaMemcpyDeviceToHost);
           if (error != 0) {
-            throw "cudaMemcpy error";
+            throw "TestReporter::operator() cudaMemcpy error";
           }
           error = cudaThreadSynchronize();
         }

@@ -155,18 +155,6 @@ void CUDA::SKDetectorEngine::detect_ft (const dsp::TimeSeries* input,
 #endif
 }
 
-__device__ float warp_reduce_sum_float (float val) {
-  for (int offset = warpSize/2; offset > 0; offset >>= 1) {
-    #if (__CUDACC_VER_MAJOR__>= 9)
-    val += __shfl_down_sync(FULL_MASK, val, offset);
-    #else
-    val += __shfl_down (val, offset);
-    #endif
-  }
-  return val;
-}
-
-
 __device__ float2 warp_reduce_sum (float2 val) {
   for (int offset = warpSize/2; offset > 0; offset >>= 1) {
     #if (__CUDACC_VER_MAJOR__>= 9)
@@ -352,7 +340,7 @@ __global__ void reduce_sum_fscr_2pol (
   __syncthreads();
 
   if (warp_num == 0) {
-    if (warp_idx > max_warp_num) {
+    if (warp_idx >= max_warp_num) {
       sum = make_float3(0, 0, 0);
     } else {
       sum = sdata3[warp_idx];
@@ -517,11 +505,13 @@ void CUDA::SKDetectorEngine::detect_tscr (const dsp::TimeSeries* input,
       const dsp::TimeSeries* input_tscr, dsp::BitSeries* output,
       float upper_thresh, float lower_thresh)
 {
-  if (dsp::Operation::verbose)
+  if (dsp::Operation::verbose) {
     cerr << "CUDA::SKDetectorEngine::detect_tscr()" << endl;
-  const unsigned nchan   = input->get_nchan();
-  const unsigned npol    = input->get_npol();
-  const int64_t ndat     = output->get_ndat();
+  }
+
+  const unsigned nchan = input->get_nchan();
+  const unsigned npol = input->get_npol();
+  const int64_t ndat = output->get_ndat();
 
   // indat is the tscr mask [nchan vals]
   const float * indat    = input_tscr->get_dattfp();
@@ -546,7 +536,7 @@ void CUDA::SKDetectorEngine::detect_tscr (const dsp::TimeSeries* input,
          << " max_threads=" << max_threads_per_block
          << " nblocks=" << nblocks << std::endl;
   }
-  detect_tscr_element<<<blocks,threads,shared_bytes,stream>>>(
+  detect_tscr_element<<<blocks, threads, shared_bytes, stream>>>(
     indat, outdat, nval, upper_thresh, lower_thresh, npol, nchan);
 
   if (dsp::Operation::record_time || dsp::Operation::verbose)

@@ -58,22 +58,21 @@ TEST_CASE (
   bool disable_ft = test_config.get_field<bool>(
     "SpectralKurtosis.test_SpectralKurtosis_integration.disable_ft");;
 
-  int block_size = tscrunch * nparts;
-
   dsp::SpectralKurtosis sk_cpu;
-  sk_cpu.set_buffering_policy(nullptr);
+  // sk_cpu.set_buffering_policy(nullptr);
   sk_cpu.set_thresholds(tscrunch, std_devs);
   sk_cpu.set_options(disable_fscr, disable_tscr, disable_ft);
   sk_cpu.set_channel_range(schan, echan);
 
   dsp::SpectralKurtosis sk_cuda;
-  sk_cuda.set_buffering_policy(nullptr);
+  // sk_cuda.set_buffering_policy(nullptr);
   sk_cuda.set_thresholds(tscrunch, std_devs);
   sk_cuda.set_engine(&engine_cuda);
   sk_cuda.set_options(disable_fscr, disable_tscr, disable_ft);
   sk_cuda.set_channel_range(schan, echan);
 
   std::vector<std::string> float_reporter_names = {
+    "input",
     "estimates",
     "estimates_tscr",
     "output"
@@ -87,6 +86,8 @@ TEST_CASE (
   };
 
   std::vector<FloatSpectralKurtosisReporter> float_reporters = {
+    FloatSpectralKurtosisReporter(),
+    FloatSpectralKurtosisReporter(cuda_stream),
     FloatSpectralKurtosisReporter(),
     FloatSpectralKurtosisReporter(cuda_stream),
     FloatSpectralKurtosisReporter(),
@@ -125,37 +126,56 @@ TEST_CASE (
   Reference::To<dsp::TimeSeries> out = new dsp::TimeSeries;
   Reference::To<dsp::TimeSeries> in_gpu = new dsp::TimeSeries;
   Reference::To<dsp::TimeSeries> out_gpu = new dsp::TimeSeries;
-  Reference::To<dsp::TimeSeries> out_cuda = new dsp::TimeSeries;
+  // Reference::To<dsp::TimeSeries> out_cuda = new dsp::TimeSeries;
+
+  auto transfer = test::util::transferTimeSeries(cuda_stream, device_memory);
 
   dsp::IOManager manager;
-  manager.open(file_path);
 
-  test::util::load_psr_data(manager, block_size, in, 1);
+  manager.set_output(in);
 
   sk_cpu.set_input(in);
   sk_cpu.set_output(out);
 
-  sk_cpu.prepare();
-  sk_cpu.operate();
-  sk_cpu.prepare();
-  sk_cpu.operate();
-
-  auto transfer = test::util::transferTimeSeries(cuda_stream, device_memory);
-  transfer(in, in_gpu, cudaMemcpyHostToDevice);
-  transfer(out, out_gpu, cudaMemcpyHostToDevice);
-
   sk_cuda.set_input(in_gpu);
   sk_cuda.set_output(out_gpu);
 
-  sk_cuda.prepare();
-  sk_cuda.operate();
-  check_error("test_SpectralKurtosis_integration");
-  sk_cuda.prepare();
-  sk_cuda.operate();
-  check_error("test_SpectralKurtosis_integration");
+  manager.open(file_path);
+  manager.set_block_size(tscrunch);
 
-  transfer(out_gpu, out_cuda, cudaMemcpyDeviceToHost);
+  for (unsigned ipart=0; ipart<nparts; ipart++) {
+    manager.operate();
+    sk_cpu.operate();
+    transfer(in, in_gpu, cudaMemcpyHostToDevice);
+    transfer(out, out_gpu, cudaMemcpyHostToDevice); // for some reason this is necessary
+    sk_cuda.operate();
+  }
 
+
+  // test::util::load_psr_data(manager, nparts*tscrunch, in, 1);
+
+  // sk_cpu.set_input(in);
+  // sk_cpu.set_output(out);
+  //
+  // sk_cpu.prepare();
+  // sk_cpu.operate();
+  // sk_cpu.operate();
+  //
+  // auto transfer = test::util::transferTimeSeries(cuda_stream, device_memory);
+  // transfer(in, in_gpu, cudaMemcpyHostToDevice);
+  // transfer(out, out_gpu, cudaMemcpyHostToDevice);
+  //
+  // sk_cuda.set_input(in_gpu);
+  // sk_cuda.set_output(out_gpu);
+  //
+  // sk_cuda.prepare();
+  // sk_cuda.operate();
+  // check_error("test_SpectralKurtosis_integration");
+  // sk_cuda.operate();
+  // check_error("test_SpectralKurtosis_integration");
+  //
+  // transfer(out_gpu, out_cuda, cudaMemcpyDeviceToHost);
+  //
   unsigned nclose;
   unsigned size;
   std::vector<float> float_cpu_vector;
@@ -165,6 +185,10 @@ TEST_CASE (
 
   for (unsigned r_idx=0; r_idx<float_reporter_names.size(); r_idx++)
   {
+    // if (test::util::config::verbose) {
+    //   std::cerr << "test_SpectralKurtosis_integration: Checking "
+    //     << float_reporter_names[r_idx]   << std::endl;
+    // }
     float_reporters[r_idx*2].concatenate_data_vectors(float_cpu_vector);
     float_reporters[r_idx*2 + 1].concatenate_data_vectors(float_cuda_vector);
 
@@ -204,8 +228,13 @@ TEST_CASE (
     char_reporters[r_idx*2].concatenate_data_vectors(char_cpu_vector);
     char_reporters[r_idx*2 + 1].concatenate_data_vectors(char_cuda_vector);
 
+    if (char_cpu_vector.size() != char_cuda_vector.size()) {
+      throw "Vectors are not the same size!";
+    }
+
     size = char_cpu_vector.size();
     nclose = 0;
+
 
     for (unsigned idx=0; idx<size; idx++) {
       // std::cerr << "(" << (unsigned) char_cpu_vector[idx] << ", "
@@ -229,5 +258,5 @@ TEST_CASE (
 
 
 
-  REQUIRE(test::util::allclose(out_cuda, out, thresh[0], thresh[1]));
+  // REQUIRE(test::util::allclose(out_cuda, out, thresh[0], thresh[1]));
 }
