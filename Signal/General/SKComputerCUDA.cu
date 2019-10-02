@@ -634,14 +634,6 @@ void CUDA::SKComputerEngine::compute (const dsp::TimeSeries* input,
           << " npart=" << npart
           << " input_ndat=" << input_ndat
           << std::endl;
-        if (input->get_npol() > 1) {
-          std::cerr << "CUDA::SKComputerEngine::compute "
-            << " input->get_datptr(0, 1) - input->get_datptr(0, 0) = " <<
-            input->get_datptr(0, 1) - input->get_datptr(0, 0) << std::endl;
-          std::cerr << "CUDA::SKComputerEngine::compute "
-            << " input->get_datptr(1, 0) - input->get_datptr(0, 0) = " <<
-            input->get_datptr(1, 0) - input->get_datptr(0, 0) << std::endl;
-        }
       }
       // for float2
       in_stride /= 2;

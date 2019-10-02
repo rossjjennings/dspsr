@@ -45,6 +45,8 @@ TEST_CASE (
     "SpectralKurtosis.test_SpectralKurtosis_integration.std_devs");
   unsigned nparts = test_config.get_field<unsigned>(
     "SpectralKurtosis.test_SpectralKurtosis_integration.nparts");
+  unsigned block_size = test_config.get_field<unsigned>(
+    "SpectralKurtosis.test_SpectralKurtosis_integration.block_size");
 
   unsigned schan = test_config.get_field<unsigned>(
     "SpectralKurtosis.test_SpectralKurtosis_integration.s_chan");
@@ -141,7 +143,7 @@ TEST_CASE (
   sk_cuda.set_output(out_gpu);
 
   manager.open(file_path);
-  manager.set_block_size(tscrunch);
+  manager.set_block_size(block_size);
 
   for (unsigned ipart=0; ipart<nparts; ipart++) {
     manager.operate();
@@ -151,31 +153,6 @@ TEST_CASE (
     sk_cuda.operate();
   }
 
-
-  // test::util::load_psr_data(manager, nparts*tscrunch, in, 1);
-
-  // sk_cpu.set_input(in);
-  // sk_cpu.set_output(out);
-  //
-  // sk_cpu.prepare();
-  // sk_cpu.operate();
-  // sk_cpu.operate();
-  //
-  // auto transfer = test::util::transferTimeSeries(cuda_stream, device_memory);
-  // transfer(in, in_gpu, cudaMemcpyHostToDevice);
-  // transfer(out, out_gpu, cudaMemcpyHostToDevice);
-  //
-  // sk_cuda.set_input(in_gpu);
-  // sk_cuda.set_output(out_gpu);
-  //
-  // sk_cuda.prepare();
-  // sk_cuda.operate();
-  // check_error("test_SpectralKurtosis_integration");
-  // sk_cuda.operate();
-  // check_error("test_SpectralKurtosis_integration");
-  //
-  // transfer(out_gpu, out_cuda, cudaMemcpyDeviceToHost);
-  //
   unsigned nclose;
   unsigned size;
   std::vector<float> float_cpu_vector;
@@ -185,10 +162,10 @@ TEST_CASE (
 
   for (unsigned r_idx=0; r_idx<float_reporter_names.size(); r_idx++)
   {
-    // if (test::util::config::verbose) {
-    //   std::cerr << "test_SpectralKurtosis_integration: Checking "
-    //     << float_reporter_names[r_idx]   << std::endl;
-    // }
+    if (test::util::config::verbose) {
+      std::cerr << "test_SpectralKurtosis_integration: Checking "
+        << float_reporter_names[r_idx]   << std::endl;
+    }
     float_reporters[r_idx*2].concatenate_data_vectors(float_cpu_vector);
     float_reporters[r_idx*2 + 1].concatenate_data_vectors(float_cuda_vector);
 
