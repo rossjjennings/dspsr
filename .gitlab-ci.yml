@@ -11,23 +11,21 @@ variables:
 
 stages:
   - build
-  - test
   - deploy
 
 build:
   stage: build
   script:
+    - base_dir=${PWD}
     - ./bootstrap
-    - echo "apsr bpsr cpsr2 caspsr mopsr sigproc dada" > backends.list && ./configure --enable-shared
+    - mkdir install
+    - echo "apsr bpsr cpsr2 caspsr mopsr sigproc dada" > backends.list && ./configure --enable-shared --prefix=${base_dir}/install
     - make
+    - make install
+    - curl -X POST -F token=${CI_JOB_TOKEN} -F ref=master https://gitlab.com/api/v4/projects/${DSPSR_TEST_ID}/trigger/pipeline
   artifacts:
     paths:
-      - ./
-
-test:
-  stage: test
-  script:
-    - ls 
+      - install
 
 deploy:
   stage: deploy
@@ -37,8 +35,8 @@ deploy:
     - image=$DOCKER_REGISTRY_HOST/$DOCKER_REGISTRY_FOLDER/$IMAGE_NAME
     - version="2.0.0-$CI_COMMIT_SHORT_SHA"
     - docker build -t $image:$version .
-    - docker tag $image:$version $image:latest 
-    - docker push $image:$version 
-    - docker push $image:latest 
+    - docker tag $image:$version $image:latest
+    - docker push $image:$version
+    - docker push $image:latest
   only:
     - master
