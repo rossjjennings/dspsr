@@ -126,25 +126,28 @@ TEST_CASE (
   engine_cuda.set_report(true);
   engine_cpu.set_report(true);
 
-  Reporter reporter_cpu_fft_window;
-  Reporter reporter_cuda_fft_window(cuda_stream);
-  engine_cpu.reporter.on("fft_window", &reporter_cpu_fft_window);
-  engine_cuda.reporter.on("fft_window", &reporter_cuda_fft_window);
+  std::vector<std::string> reporter_names = {
+    // "fft_window",
+    // "fft",
+    // "response_stitch",
+    // "ifft"
+  };
 
-  Reporter reporter_cpu_fft;
-  Reporter reporter_cuda_fft(cuda_stream);
-  engine_cpu.reporter.on("fft", &reporter_cpu_fft);
-  engine_cuda.reporter.on("fft", &reporter_cuda_fft);
+  std::vector<Reporter> reporters = {
+    Reporter(),
+    Reporter(cuda_stream),
+    Reporter(),
+    Reporter(cuda_stream),
+    Reporter(),
+    Reporter(cuda_stream),
+    Reporter(),
+    Reporter(cuda_stream)
+  };
 
-  Reporter reporter_cpu_response_stitch;
-  Reporter reporter_cuda_response_stitch(cuda_stream);
-  engine_cpu.reporter.on("response_stitch", &reporter_cpu_response_stitch);
-  engine_cuda.reporter.on("response_stitch", &reporter_cuda_response_stitch);
-
-  Reporter reporter_cpu_ifft;
-  Reporter reporter_cuda_ifft(cuda_stream);
-  engine_cpu.reporter.on("ifft", &reporter_cpu_ifft);
-  engine_cuda.reporter.on("ifft", &reporter_cuda_ifft);
+  for (unsigned idx=0; idx<reporter_names.size(); idx++) {
+    engine_cpu.reporter.on(reporter_names[idx], &reporters[2*idx]);
+    engine_cuda.reporter.on(reporter_names[idx], &reporters[2*idx + 1]);
+  }
 
   Reference::To<dsp::TimeSeries> in = new dsp::TimeSeries;
   Reference::To<dsp::TimeSeries> out = new dsp::TimeSeries;
@@ -177,7 +180,6 @@ TEST_CASE (
   transfer(in, in_gpu, cudaMemcpyHostToDevice);
   transfer(out, out_gpu, cudaMemcpyHostToDevice);
 
-  // proxy.filterbank->set_device(device_memory);
   engine_cuda.setup(proxy.filterbank);
   proxy.set_memory<CUDA::DeviceMemory>(device_memory);
   float * scratch_cuda = proxy.allocate_scratch(engine_cuda.get_total_scratch_needed());
@@ -186,27 +188,8 @@ TEST_CASE (
     in_gpu, out_gpu, npart
   );
   engine_cuda.finish();
-  // now lets compare the two time series
   transfer(out_gpu, out_cuda, cudaMemcpyDeviceToHost);
 
-  // std::vector<Reporter> reporters = {
-  //   reporter_cpu_fft_window,
-  //   reporter_cuda_fft_window,
-  //   reporter_cpu_fft,
-  //   reporter_cuda_fft,
-  //   reporter_cpu_response_stitch,
-  //   reporter_cuda_response_stitch,
-  //   reporter_cpu_ifft,
-  //   reporter_cuda_ifft
-  // };
-  //
-  // std::vector<std::string> reporter_names = {
-  //   "fft_window",
-  //   "fft",
-  //   "response_stitch",
-  //   "ifft"
-  // };
-  //
   // if (npol == 2) {
   //   reporters = {
   //     reporter_cpu_response_stitch,

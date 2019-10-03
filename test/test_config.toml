@@ -1,5 +1,5 @@
-atol = 1e-5
-rtol = 1e-5
+atol = 1e-3
+rtol = 1e-3
 
 [SpectralKurtosis.test_SpectralKurtosis_integration]
 tscrunch = 128
@@ -9,9 +9,9 @@ s_chan = 0
 e_chan = 128
 nparts = 6
 block_size = 1024
-disable_fscr = true
+disable_fscr = false
 disable_tscr = false
-disable_ft = true
+disable_ft = false
 
 [test_Apodization]
 tukey_window_file_name = "tukey_window.dat"
@@ -44,39 +44,39 @@ input_ndat = 128
 output_ndat = 0
 overlap_pos = 16
 overlap_neg = 16
-
-[[InverseFilterbank.test_shapes]]
-npart = 10
-input_nchan = 256
-output_nchan = 1
-input_npol = 2
-output_npol = 2
-input_ndat = 128
-output_ndat = 0
-overlap_pos = 16
-overlap_neg = 16
-
-[[InverseFilterbank.test_shapes]]
-npart = 10
-input_nchan = 256
-output_nchan = 16
-input_npol = 1
-output_npol = 1
-input_ndat = 128
-output_ndat = 0
-overlap_pos = 16
-overlap_neg = 16
-
-[[InverseFilterbank.test_shapes]]
-npart = 10
-input_nchan = 256
-output_nchan = 16
-input_npol = 2
-output_npol = 2
-input_ndat = 128
-output_ndat = 0
-overlap_pos = 16
-overlap_neg = 16
+#
+# [[InverseFilterbank.test_shapes]]
+# npart = 10
+# input_nchan = 256
+# output_nchan = 1
+# input_npol = 2
+# output_npol = 2
+# input_ndat = 128
+# output_ndat = 0
+# overlap_pos = 16
+# overlap_neg = 16
+#
+# [[InverseFilterbank.test_shapes]]
+# npart = 10
+# input_nchan = 256
+# output_nchan = 16
+# input_npol = 1
+# output_npol = 1
+# input_ndat = 128
+# output_ndat = 0
+# overlap_pos = 16
+# overlap_neg = 16
+#
+# [[InverseFilterbank.test_shapes]]
+# npart = 10
+# input_nchan = 256
+# output_nchan = 16
+# input_npol = 2
+# output_npol = 2
+# input_ndat = 128
+# output_ndat = 0
+# overlap_pos = 16
+# overlap_neg = 16
 
 # [[InverseFilterbank.test_shapes]]
 # npart = 2

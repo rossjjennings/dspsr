@@ -93,8 +93,13 @@ namespace dsp {
     // A event emitter that takes a data array, and the nchan, npol, ndat and ndim
     // associated with the data array
     EventEmitter<Reporter<float>> float_reporter;
+
+    // This is for reporting the state of the bit zapmask
     EventEmitter<Reporter<unsigned char>> char_reporter;
 
+    bool get_report () const { return report; }
+
+    void set_report (bool _report) { report = _report; }
 
   protected:
 
@@ -188,6 +193,10 @@ namespace dsp {
     std::vector<bool> detection_flags;
 
     bool prepared;
+
+    //! flag that indicates whether or not to report intermediate data products
+    //! via the *_report EventEmitter objects.
+    bool report;
 
   };
 

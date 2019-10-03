@@ -242,54 +242,61 @@ void dsp::SpectralKurtosis::transformation ()
     std::cerr << "dsp::SpectralKurtosis::transformation: calling detect" << std::endl;
   }
 
-  float_reporter.emit(
-    "input",
-    (float*) input->get_datptr(),
-    input->get_nchan(),
-    input->get_npol(),
-    input->get_ndat(),
-    input->get_ndim());
+  if (report) {
+    float_reporter.emit(
+      "input",
+      (float*) input->get_datptr(),
+      input->get_nchan(),
+      input->get_npol(),
+      input->get_ndat(),
+      input->get_ndim());
 
-  float_reporter.emit(
-    "estimates",
-    estimates->get_dattfp(),
-    estimates->get_nchan(),
-    estimates->get_npol(),
-    estimates->get_ndat(),
-    estimates->get_ndim());
+    float_reporter.emit(
+      "estimates",
+      estimates->get_dattfp(),
+      estimates->get_nchan(),
+      estimates->get_npol(),
+      estimates->get_ndat(),
+      estimates->get_ndim());
 
-  float_reporter.emit(
-    "estimates_tscr",
-    estimates_tscr->get_dattfp(),
-    estimates_tscr->get_nchan(),
-    estimates_tscr->get_npol(),
-    estimates_tscr->get_ndat(),
-    estimates_tscr->get_ndim());
+    float_reporter.emit(
+      "estimates_tscr",
+      estimates_tscr->get_dattfp(),
+      estimates_tscr->get_nchan(),
+      estimates_tscr->get_npol(),
+      estimates_tscr->get_ndat(),
+      estimates_tscr->get_ndim());
+  }
+
 
   detect ();
   if (verbose) {
     std::cerr << "dsp::SpectralKurtosis::transformation: calling mask" << std::endl;
   }
-
-  char_reporter.emit(
-    "zapmask",
-    zapmask->get_datptr(),
-    zapmask->get_nchan(),
-    zapmask->get_npol(),
-    zapmask->get_ndat(),
-    zapmask->get_ndim());
+  if (report) {
+    char_reporter.emit(
+      "zapmask",
+      zapmask->get_datptr(),
+      zapmask->get_nchan(),
+      zapmask->get_npol(),
+      zapmask->get_ndat(),
+      zapmask->get_ndim());
+  }
 
   mask ();
   if (verbose) {
     std::cerr << "dsp::SpectralKurtosis::transformation: done" << std::endl;
   }
-  float_reporter.emit(
-    "output",
-    output->get_datptr(),
-    output->get_nchan(),
-    output->get_npol(),
-    output->get_ndat(),
-    output->get_ndim());
+
+  if (report) {
+    float_reporter.emit(
+      "output",
+      output->get_datptr(),
+      output->get_nchan(),
+      output->get_npol(),
+      output->get_ndat(),
+      output->get_ndim());
+  }
 
   //insertsk();
 }
@@ -511,36 +518,42 @@ void dsp::SpectralKurtosis::detect ()
   // apply the tscrunches SKFB estimates to the mask
   if (!detection_flags[1])
     detect_tscr ();
-  char_reporter.emit(
-    "zapmask_tscr",
-    zapmask->get_datptr(),
-    zapmask->get_nchan(),
-    zapmask->get_npol(),
-    zapmask->get_ndat(),
-    zapmask->get_ndim());
+  if (report) {
+    char_reporter.emit(
+      "zapmask_tscr",
+      zapmask->get_datptr(),
+      zapmask->get_nchan(),
+      zapmask->get_npol(),
+      zapmask->get_ndat(),
+      zapmask->get_ndim());
+  }
 
   // apply the SKFB estimates to the mask
   if (!detection_flags[2])
     detect_skfb ();
 
-  char_reporter.emit(
-    "zapmask_skfb",
-    zapmask->get_datptr(),
-    zapmask->get_nchan(),
-    zapmask->get_npol(),
-    zapmask->get_ndat(),
-    zapmask->get_ndim());
+  if (report ){
+    char_reporter.emit(
+      "zapmask_skfb",
+      zapmask->get_datptr(),
+      zapmask->get_nchan(),
+      zapmask->get_npol(),
+      zapmask->get_ndat(),
+      zapmask->get_ndim());
+  }
 
   if (!detection_flags[0])
     detect_fscr ();
 
-  char_reporter.emit(
-    "zapmask_fscr",
-    zapmask->get_datptr(),
-    zapmask->get_nchan(),
-    zapmask->get_npol(),
-    zapmask->get_ndat(),
-    zapmask->get_ndim());
+  if (report) {
+    char_reporter.emit(
+      "zapmask_fscr",
+      zapmask->get_datptr(),
+      zapmask->get_nchan(),
+      zapmask->get_npol(),
+      zapmask->get_ndat(),
+      zapmask->get_ndim());
+  }
   count_zapped ();
 
   if (debugd < 1)

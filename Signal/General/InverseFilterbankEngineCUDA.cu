@@ -12,7 +12,6 @@
 #include "CUFFTError.h"
 #include "dsp/InverseFilterbankEngineCUDA.h"
 
-
 void check_error (const char*);
 
 void check_error_stream (const char*, cudaStream_t);
