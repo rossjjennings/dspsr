@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <time.h>
 #include <cstdlib>
+#include <functional>
 
 // #include "json.hpp"
 #include "toml.h"
