@@ -15,7 +15,7 @@ CUDA::SpectralKurtosisEngine::SpectralKurtosisEngine (dsp::Memory * memory)
 {
   work_buffer_size = 0;
   work_buffer = 0;
-  
+
   device_memory = dynamic_cast<CUDA::DeviceMemory*>(memory);
   stream = device_memory->get_stream ();
 
@@ -54,13 +54,14 @@ void CUDA::SpectralKurtosisEngine::detect_ft (const dsp::TimeSeries* input,
   detector->detect_ft (input, output, upper_thresh, lower_thresh);
 }
 
-void CUDA::SpectralKurtosisEngine::detect_fscr (const dsp::TimeSeries* input, 
-                                                dsp::BitSeries* output, 
-                                                const float lower, const float upper,
-                                                unsigned schan, unsigned echan)
+void CUDA::SpectralKurtosisEngine::detect_fscr (
+  const dsp::TimeSeries* input,
+  dsp::BitSeries* output,
+  const float mu2, const unsigned std_devs,
+  unsigned schan, unsigned echan)
 
 {
-  detector->detect_fscr(input, output, upper, lower, schan, echan);
+  detector->detect_fscr(input, output, mu2, std_devs, schan, echan);
 }
 
 void CUDA::SpectralKurtosisEngine::detect_tscr (const dsp::TimeSeries* input,
@@ -82,14 +83,14 @@ int CUDA::SpectralKurtosisEngine::count_mask (const dsp::BitSeries* output)
 }
 
 float * CUDA::SpectralKurtosisEngine::get_estimates (const dsp::TimeSeries* estimates_device)
-{ 
+{
   return detector->get_estimates (estimates_device);
-} 
+}
 
 unsigned char * CUDA::SpectralKurtosisEngine::get_zapmask (const dsp::BitSeries* zapmask_device)
-{ 
+{
   return detector->get_zapmask (zapmask_device);
-} 
+}
 
 void CUDA::SpectralKurtosisEngine::mask (dsp::BitSeries* mask, const dsp::TimeSeries * input,
            dsp::TimeSeries * output, unsigned M)
@@ -101,4 +102,3 @@ void CUDA::SpectralKurtosisEngine::insertsk (const dsp::TimeSeries* input, dsp::
 {
   computer->insertsk (input, out, M);
 }
-

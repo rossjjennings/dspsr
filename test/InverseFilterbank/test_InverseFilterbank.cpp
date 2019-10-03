@@ -16,9 +16,9 @@
 #include "dsp/InverseFilterbankEngineCPU.h"
 #include "dsp/InverseFilterbankResponse.h"
 
-#include "util.hpp"
+#include "util/util.hpp"
 
-const std::string file_path = util::get_test_data_dir() + "/channelized.simulated_pulsar.noise_0.0.nseries_3.ndim_2.dump";
+const std::string file_path = test::util::get_test_data_dir() + "/channelized.simulated_pulsar.noise_0.0.nseries_3.ndim_2.dump";
 const unsigned block_size = 699048; // this is taken from dspsr logs
 const double dm = 2.64476;
 const unsigned freq_res = 1024;
@@ -59,13 +59,13 @@ TEST_CASE ("InverseFilterbank") {
 
 TEST_CASE ("InverseFilterbank runs on channelized data", "")
 {
-  // util::set_verbose(true);
+  // test::util::set_verbose(true);
 
   dsp::IOManager manager;
   manager.open(file_path);
 
   dsp::TimeSeries* unpacked = new dsp::TimeSeries;
-  util::load_psr_data(manager, block_size, unpacked);
+  test::util::load_psr_data(manager, block_size, unpacked);
 
   dsp::Observation* info = manager.get_input()->get_info();
   info->set_dispersion_measure(dm);

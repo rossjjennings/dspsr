@@ -3,8 +3,9 @@
 
 #include <vector>
 
-#include "util.hpp"
+#include "util/util.hpp"
 
+namespace test {
 namespace util {
 
   class TestConfig {
@@ -33,7 +34,7 @@ namespace util {
     bool toml_config_loaded;
 
   };
-
+}
 }
 
 #endif

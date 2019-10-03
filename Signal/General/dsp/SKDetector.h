@@ -136,13 +136,13 @@ namespace dsp {
     uint64_t ndat_zapped;
 
     uint64_t ndat_zapped_skfb;
-    
+
     uint64_t ndat_zapped_mega;
 
     uint64_t ndat_zapped_fscr;
 
     uint64_t ndat_zapped_tscr;
-    
+
     uint64_t ndat_total;
 
     bool disable_fscr;
@@ -156,7 +156,7 @@ namespace dsp {
   private:
 
   };
-  
+
   class SKDetector::Engine : public Reference::Able
   {
   public:
@@ -169,7 +169,7 @@ namespace dsp {
                             float upper_thresh, float lower_thresh) = 0;
 
     virtual void detect_fscr (const dsp::TimeSeries* input, dsp::BitSeries* output,
-                              const float lower, const float upper,
+                              const float mu2, const unsigned std_devs,
                               unsigned s_chan, unsigned e_chan) = 0;
 
     virtual void detect_tscr (const dsp::TimeSeries* input,
