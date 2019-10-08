@@ -14,6 +14,10 @@
 #include "dsp/IOManager.h"
 #include "dsp/Unpacker.h"
 
+#include "dsp/FITSFile.h"
+#include "dsp/MultiFile.h"
+#include "dsp/FITSUnpacker.h"
+
 #include "dsp/TFPFilterbank.h"
 #include "dsp/Filterbank.h"
 #include "dsp/Detection.h"
@@ -77,6 +81,9 @@ dsp::LoadToFITS::Config::Config()
   block_size = 2.0;
 
   order = dsp::TimeSeries::OrderTFP;
+
+  // by default, do not denormalize using DAT_SCL and DAT_OFFS
+  apply_FITS_scale_and_offset = false;
 
   filterbank.set_nchan(0);
   filterbank.set_freq_res(0);
@@ -236,6 +243,47 @@ void dsp::LoadToFITS::construct () try
          << " MB " << "(" << nsample << " samp)" << endl;
 
   manager->set_block_size ( nsample );
+
+  // Use callback to handle scales/offsets for read-in
+  if (config->apply_FITS_scale_and_offset &&
+      manager->get_info()->get_machine() == "FITS")
+  {
+    if (config->get_total_nthread() > 1)
+      throw Error (InvalidState, "",
+                   "cannot apply FITS scales and offsets"
+                   " in multi-threaded mode");
+
+    if (Operation::verbose)
+      cerr << "Using callback to read PSRFITS file." << endl;
+    // connect a callback
+    bool success = false;
+    FITSUnpacker* funp = dynamic_cast<FITSUnpacker*> (
+        manager->get_unpacker());
+    FITSFile* ffile = dynamic_cast<FITSFile*> (manager->get_input());
+    if (funp && ffile)
+    {
+      ffile->update.connect ( funp, &FITSUnpacker::set_parameters );
+      success = true;
+    }
+    else
+    {
+      MultiFile* mfile = dynamic_cast<MultiFile*> (manager->get_input());
+      if (mfile)
+      {
+        for (unsigned i=0; i < mfile->nfiles(); ++i)
+        {
+          ffile = dynamic_cast<FITSFile*> (mfile->get_files()[i].get());
+          if (funp && ffile) {
+            ffile->update.connect (
+                funp, &FITSUnpacker::set_parameters );
+            success = true;
+          }
+        }
+      }
+    }
+    if (not success)
+      cerr << "digifits: WARNING: FITS input but unable to apply scales and offsets." << endl;
+  }
 
   // if running on multiple GPUs, make nsblk such that no buffering is
   // required

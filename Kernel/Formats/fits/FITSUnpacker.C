@@ -119,7 +119,36 @@ void dsp::FITSUnpacker::unpack()
   const unsigned char* from = input->get_rawptr();
   const int16_t* from16 = (int16_t *)input->get_rawptr();
 
-  if (nbit<=8) {
+  // more optimal 8-bit unpacker
+  if (nbit == 8)
+  {
+    const unsigned nchanpol = nchan * npol;
+    for (unsigned ipol = 0; ipol < npol; ++ipol)
+    {
+#ifdef HAVE_OPENMP
+      #pragma omp parallel for
+#endif
+      for (unsigned ichan = 0; ichan < nchan; ++ichan)
+      {
+        const unsigned ipolchan = ipol * nchan + ichan;
+        const float scl = dat_scl[ipolchan];
+        const float off = dat_offs[ipolchan];
+
+        // unpacking from TPF order to FPT
+        float* into = output->get_datptr(ichan, ipol);
+        const unsigned char * from_ptr = from + ipolchan;
+
+        // samples stored in TPF order
+        for (unsigned idat = 0; idat < ndat; ++idat)
+        {
+          into[idat] = ((*this.*p)(*from_ptr)) * scl + off;
+          from_ptr += nchanpol;
+        }
+      }
+    }
+  }
+  else if (nbit<8)
+  {
 
     // Iterate through input data, split the byte depending on number of
     // samples per byte, get corresponding mapped value and store it
