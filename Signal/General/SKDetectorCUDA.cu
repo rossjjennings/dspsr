@@ -468,7 +468,7 @@ __global__ void detect_tscr_element (
 
   extern __shared__ char sk_tscr[];
 
-  unsigned int idat  = (blockIdx.x * blockDim.x + threadIdx.x);
+  const unsigned idat  = (blockIdx.x * blockDim.x + threadIdx.x);
   // if (idat ==0) {
   //   printf("detect_tscr_element: npol=%u, nchan=%u\n", npol, nchan);
   // }
@@ -490,27 +490,32 @@ __global__ void detect_tscr_element (
     // }
     // __syncthreads();
     // outdat[idat/npol] = sk_tscr[ichanpol];
-
-    if (threadIdx.x < nchan)
+    const unsigned ichan = idat % nchan;
+    if (ichan < nchan)
     {
       bool all_pol_in_thresh = false;
       for (unsigned ipol=0; ipol<npol; ipol++) {
         all_pol_in_thresh = (all_pol_in_thresh ||
-          (indat[threadIdx.x*npol + ipol] > upper ||
-           indat[threadIdx.x*npol + ipol] < lower));
+          (indat[ichan*npol + ipol] > upper ||
+           indat[ichan*npol + ipol] < lower));
       }
-      sk_tscr[threadIdx.x] = (char) all_pol_in_thresh;
+      sk_tscr[ichan] = (char) all_pol_in_thresh;
     }
     __syncthreads();
-    outdat[idat] = sk_tscr[idat % nchan];
-
+    outdat[idat] = sk_tscr[ichan];
   }
 }
 
 
-void CUDA::SKDetectorEngine::detect_tscr (const dsp::TimeSeries* input,
-      const dsp::TimeSeries* input_tscr, dsp::BitSeries* output,
-      float upper_thresh, float lower_thresh)
+void CUDA::SKDetectorEngine::detect_tscr (
+  const dsp::TimeSeries* input,
+  const dsp::TimeSeries* input_tscr,
+  dsp::BitSeries* output,
+  float upper_thresh,
+  float lower_thresh//,
+  // unsigned schan,
+  // unsigned echan
+)
 {
   if (dsp::Operation::verbose) {
     cerr << "CUDA::SKDetectorEngine::detect_tscr()" << endl;

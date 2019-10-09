@@ -12,7 +12,7 @@ using namespace std;
 
 //! Constructor
 dsp::Unpacker::Unpacker (const char* name)
-  : Transformation <BitSeries, TimeSeries> (name, outofplace) 
+  : Transformation <BitSeries, TimeSeries> (name, outofplace)
 {
   output_order = TimeSeries::OrderFPT;
 }
@@ -35,7 +35,13 @@ void dsp::Unpacker::prepare ()
 
   // ensure the shape matches the required input, in-place operations
   // can cause distortions in pipeline setup phase
-  output->reshape();
+  if (output->internal_get_size() > 0) {
+    output->reshape();
+  }
+
+  if (verbose) {
+    std::cerr << "dsp::Unpacker::prepare done reshaping" << std::endl;
+  }
 
   if (verbose)
     cerr << "dsp::Unpacker::prepare output start_time="

@@ -3,11 +3,20 @@
 // #include "catch.hpp"
 #include <string.h>
 #include <iostream>
+#include <sstream>
 
 #define CATCH_CONFIG_RUNNER
 #include "catch.hpp"
+#include "Error.h"
 
 #include "util/util.hpp"
+
+CATCH_TRANSLATE_EXCEPTION( Error& ex ) {
+  std::stringstream strs;
+  ex.report(strs);
+  return strs.str();
+}
+
 
 int main( int argc, char* argv[] )
 {
