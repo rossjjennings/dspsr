@@ -60,6 +60,19 @@ TEST_CASE (
   bool disable_ft = test_config.get_field<bool>(
     "SpectralKurtosis.test_SpectralKurtosis_integration.disable_ft");;
 
+  if (test::util::config::verbose) {
+    std::cerr << "test_SpectralKurtosis_integration: tscrunch=" << tscrunch << std::endl;
+    std::cerr << "test_SpectralKurtosis_integration: std_devs=" << std_devs << std::endl;
+    std::cerr << "test_SpectralKurtosis_integration: nparts=" << nparts << std::endl;
+    std::cerr << "test_SpectralKurtosis_integration: block_size=" << block_size << std::endl;
+    std::cerr << "test_SpectralKurtosis_integration: schan=" << schan << std::endl;
+    std::cerr << "test_SpectralKurtosis_integration: echan=" << echan << std::endl;
+    std::cerr << "test_SpectralKurtosis_integration: disable_fscr=" << disable_fscr << std::endl;
+    std::cerr << "test_SpectralKurtosis_integration: disable_tscr=" << disable_tscr << std::endl;
+    std::cerr << "test_SpectralKurtosis_integration: disable_ft=" << disable_ft << std::endl;
+  }
+
+
   dsp::SpectralKurtosis sk_cpu;
   sk_cpu.set_report(true);
   sk_cpu.set_thresholds(tscrunch, std_devs);
@@ -128,7 +141,6 @@ TEST_CASE (
   Reference::To<dsp::TimeSeries> out = new dsp::TimeSeries;
   Reference::To<dsp::TimeSeries> in_gpu = new dsp::TimeSeries;
   Reference::To<dsp::TimeSeries> out_gpu = new dsp::TimeSeries;
-  // Reference::To<dsp::TimeSeries> out_cuda = new dsp::TimeSeries;
 
   auto transfer = test::util::transferTimeSeries(cuda_stream, device_memory);
 
@@ -146,6 +158,9 @@ TEST_CASE (
   manager.set_block_size(block_size);
 
   for (unsigned ipart=0; ipart<nparts; ipart++) {
+    if (test::util::config::verbose) {
+      std::cerr << "test_SpectralKurtosis_integration: ipart=" << ipart << std::endl;
+    }
     manager.operate();
     sk_cpu.operate();
     transfer(in, in_gpu, cudaMemcpyHostToDevice);
@@ -232,8 +247,4 @@ TEST_CASE (
     CHECK (nclose == size);
   }
 
-
-
-
-  // REQUIRE(test::util::allclose(out_cuda, out, thresh[0], thresh[1]));
 }
