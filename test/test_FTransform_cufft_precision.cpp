@@ -23,8 +23,13 @@ void throw_on_error (const cudaError& error, const std::string& msg="")
   }
 }
 
-TEST_CASE ("Consecutive FFTW and CUFFT calls produce numerically similar results")
+TEST_CASE ("Consecutive FFTW and CUFFT calls produce numerically similar results", "[cuda][cufft_precision]")
 {
+  
+
+  if (test::util::config::verbose) {
+    std::cerr << "test_FTransform_cufft_precision" << std::endl;
+  }
 
   std::vector<float> tols = test_config.get_thresh();
   int nchan = test_config.get_field<int>("test_FTransform_cufft_precision.nchan");

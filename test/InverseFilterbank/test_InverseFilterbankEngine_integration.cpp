@@ -100,14 +100,16 @@ public:
 
 TEST_CASE (
   "InverseFilterbankEngineCPU and InverseFilterbankEngineCUDA produce same output",
-  "[InverseFilterbankEngine]"
+  "[cuda][InverseFilterbankEngine_integration]"
 )
 {
 
   std::vector<float> thresh = test_config.get_thresh();
   std::vector<test::util::TestShape> test_shapes = test_config.get_test_vector_shapes();
-  bool do_fft_window = test_config.get_field<bool>("InverseFilterbank.do_fft_window");
-  bool do_response = test_config.get_field<bool>("InverseFilterbank.do_response");
+  bool do_fft_window = test_config.get_field<bool>(
+    "InverseFilterbank.test_InverseFilterbankEngine_integration.do_fft_window");
+  bool do_response = test_config.get_field<bool>(
+    "InverseFilterbank.test_InverseFilterbankEngine_integration.do_response");
 
   auto idx = GENERATE_COPY(range(0, (int) test_shapes.size()));
   if (test::util::config::verbose) {

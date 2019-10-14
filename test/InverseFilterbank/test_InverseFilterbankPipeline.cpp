@@ -84,7 +84,10 @@ void PipelineConfig::setup_input (std::string file_path) {
 }
 
 
-TEST_CASE("InverseFilterbank works in larger LoadToFold context", "[InverseFilterbankPipeline]")
+TEST_CASE(
+  "InverseFilterbank works in larger LoadToFold context",
+  "[InverseFilterbankPipeline]"
+)
 {
 
   const double dm = test_config.get_field<double>(
@@ -93,7 +96,7 @@ TEST_CASE("InverseFilterbank works in larger LoadToFold context", "[InverseFilte
     "InverseFilterbank.test_InverseFilterbankPipeline.period");
 
   const std::string file_name = test_config.get_field<std::string>(
-    "InverseFilterbank.test_InverseFilterbankPipeline.pipeline_file_name");
+    "InverseFilterbank.test_InverseFilterbankPipeline.file_name");
 
   const std::string file_path = (
     test::util::get_test_data_dir() + "/" + file_name);

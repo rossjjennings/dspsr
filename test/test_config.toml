@@ -25,7 +25,7 @@ nchan = 256
 fft_size = 256
 scale = 500.0
 
-[InverseFilterbank]
+[InverseFilterbank.test_InverseFilterbankEngine_integration]
 do_fft_window = true
 do_response = true
 
@@ -33,9 +33,15 @@ do_response = true
 fir_file_name = "fir.768.dada"
 
 [InverseFilterbank.test_InverseFilterbankPipeline]
-pipeline_file_name = "channelized.simulated_pulsar.noise_0.0.nseries_3.ndim_2.dump"
+file_name = "channelized.simulated_pulsar.noise_0.0.nseries_3.ndim_2.dump"
 dm = 2.64476
 period = 0.00575745
+
+[InverseFilterbank.test_InverseFilterbank]
+file_name = "channelized.simulated_pulsar.noise_0.0.nseries_3.ndim_2.dump"
+dm = 2.64476
+block_size = 699048
+freq_res = 1024
 
 [[InverseFilterbank.test_shapes]]
 npart = 2

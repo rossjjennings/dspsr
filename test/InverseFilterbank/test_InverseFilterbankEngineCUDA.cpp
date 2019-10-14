@@ -17,7 +17,7 @@ static test::util::InverseFilterbank::InverseFilterbankTestConfig test_config;
 
 void check_error (const char*);
 
-TEST_CASE ("InverseFilterbankEngineCUDA", "") {
+TEST_CASE ("InverseFilterbankEngineCUDA", "[cuda][InverseFilterbankEngineCUDA]") {
   void* stream = 0;
   cudaStream_t cuda_stream = reinterpret_cast<cudaStream_t>(stream);
 

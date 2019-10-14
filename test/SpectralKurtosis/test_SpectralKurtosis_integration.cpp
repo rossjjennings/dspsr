@@ -17,7 +17,7 @@ static test::util::TestConfig test_config;
 
 TEST_CASE (
   "SpectralKurtosis CPU and CUDA implementations produce same output",
-  "[SpectralKurtosis]"
+  "[cuda][SpectralKurtosis]"
 )
 {
   typedef test::util::TestReporter<
