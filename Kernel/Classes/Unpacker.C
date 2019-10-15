@@ -33,16 +33,6 @@ void dsp::Unpacker::prepare ()
   // set the Observation information
   output->Observation::operator=(*input);
 
-  // ensure the shape matches the required input, in-place operations
-  // can cause distortions in pipeline setup phase
-  if (output->internal_get_size() > 0) {
-    output->reshape();
-  }
-
-  if (verbose) {
-    std::cerr << "dsp::Unpacker::prepare done reshaping" << std::endl;
-  }
-
   if (verbose)
     cerr << "dsp::Unpacker::prepare output start_time="
 	 << output->get_start_time() << endl;
