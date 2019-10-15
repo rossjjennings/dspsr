@@ -36,7 +36,8 @@ test:
   script:
     - base_dir=${PWD}
     - ls ${base_dir}/install/
-    - ${base_dir}/install/test_main ~[cuda][unit],~[cuda][no_file] -v high
+    - ls ${base_dir}/install/bin
+    - ${base_dir}/install/bin/test_main ~[cuda][unit],~[cuda][no_file] -v high
     - curl -X POST -F token=${CI_JOB_TOKEN} -F ref=master https://gitlab.com/api/v4/projects/${DSPSR_TEST_ID}/trigger/pipeline
   dependencies:
     - build
