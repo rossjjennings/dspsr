@@ -20,8 +20,8 @@ build:
     - base_dir=${PWD}
     - ./bootstrap
     - mkdir install
-    - echo "apsr bpsr cpsr2 caspsr mopsr sigproc dada" > backends.list && ./configure \
-      --enable-shared --prefix=${base_dir}/install \
+    - echo "apsr bpsr cpsr2 caspsr mopsr sigproc dada" > backends.list
+    - ./configure --enable-shared --prefix=${base_dir}/install \
       --with-cuda-include-dir=$CUDA_INCLUDE_DIR --with-cuda-lib-dir=$CUDA_LIB_DIR
     - make
     - make install
