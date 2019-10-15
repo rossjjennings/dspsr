@@ -27,7 +27,8 @@ const Rational os_factor = Rational(4, 3);
 const unsigned nchan = 8;
 const unsigned freq_response_size = nchan * os_factor.normalize(input_fft_length);
 
-TEST_CASE("InverseFilterbankResponse attributes can be manipulated", "[InverseFilterbankResponse]")
+TEST_CASE("InverseFilterbankResponse attributes can be manipulated",
+          "[InverseFilterbankResponse]")
 {
   dsp::InverseFilterbankResponse deripple_response;
 
@@ -48,13 +49,15 @@ TEST_CASE("InverseFilterbankResponse attributes can be manipulated", "[InverseFi
   }
 }
 
-TEST_CASE ("InverseFilterbankResponse roll should produce expected result", "[InverseFilterbankResponse]")
+TEST_CASE ("InverseFilterbankResponse roll should produce expected result",
+           "[InverseFilterbankResponse]")
 {
 
 }
 
 
-TEST_CASE("InverseFilterbankResponse produces correct derippling response", "[InverseFilterbankResponse]")
+TEST_CASE("InverseFilterbankResponse produces correct derippling response",
+          "[InverseFilterbankResponse]")
 {
 
   const std::string file_name = test_config.get_field<std::string>(

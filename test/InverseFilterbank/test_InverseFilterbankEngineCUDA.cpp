@@ -17,7 +17,11 @@ static test::util::InverseFilterbank::InverseFilterbankTestConfig test_config;
 
 void check_error (const char*);
 
-TEST_CASE ("InverseFilterbankEngineCUDA", "[cuda][InverseFilterbankEngineCUDA]") {
+TEST_CASE (
+  "InverseFilterbankEngineCUDA",
+  "[cuda][InverseFilterbankEngineCUDA]"
+)
+{
   void* stream = 0;
   cudaStream_t cuda_stream = reinterpret_cast<cudaStream_t>(stream);
 
@@ -43,7 +47,10 @@ TEST_CASE ("InverseFilterbankEngineCUDA", "[cuda][InverseFilterbankEngineCUDA]")
   }
 }
 
-TEST_CASE ("cufft kernels can operate on data", "")
+TEST_CASE (
+  "cufft kernels can operate on data",
+  "[cuda][InverseFilterbankEngineCUDA]"
+)
 {
   void* stream = 0;
   cudaStream_t cuda_stream = reinterpret_cast<cudaStream_t>(stream);
@@ -81,7 +88,7 @@ TEST_CASE ("cufft kernels can operate on data", "")
 
 TEST_CASE (
   "InverseFilterbankEngineCUDA can operate on data",
-  ""
+  "[cuda][InverseFilterbankEngineCUDA]"
 )
 {
   std::vector<test::util::TestShape> test_shapes = test_config.get_test_vector_shapes();

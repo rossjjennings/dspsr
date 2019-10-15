@@ -23,9 +23,10 @@ void throw_on_error (const cudaError& error, const std::string& msg="")
   }
 }
 
-TEST_CASE ("Consecutive FFTW and CUFFT calls produce numerically similar results", "[cuda][cufft_precision]")
+TEST_CASE ("Consecutive FFTW and CUFFT calls produce numerically similar results",
+          "[cuda][cufft_precision]")
 {
-  
+
 
   if (test::util::config::verbose) {
     std::cerr << "test_FTransform_cufft_precision" << std::endl;
