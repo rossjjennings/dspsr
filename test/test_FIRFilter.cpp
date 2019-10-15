@@ -9,7 +9,7 @@
 #include "Rational.h"
 #include "dsp/FIRFilter.h"
 
-TEST_CASE("FIRFilter filter taps and coefficients can be manipulated", "[FIRFilter]")
+TEST_CASE("FIRFilter filter taps and coefficients can be manipulated", "[unit][no_file][FIRFilter]")
 {
   dsp::FIRFilter filter;
   std::vector<float> coeff = {2.0, 1.0};

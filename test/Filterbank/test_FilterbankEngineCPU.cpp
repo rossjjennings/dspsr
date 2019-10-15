@@ -3,7 +3,7 @@
 #include "dsp/FilterbankEngineCPU.h"
 
 
-TEST_CASE ("can create instance of FilterbankEngineCPU", "[FilterbankEngineCPU]")
+TEST_CASE ("can create instance of FilterbankEngineCPU", "[unit][FilterbankEngineCPU]")
 {
   dsp::FilterbankEngineCPU engine;
 }

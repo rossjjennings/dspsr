@@ -19,7 +19,7 @@ void check_error (const char*);
 
 TEST_CASE (
   "InverseFilterbankEngineCUDA",
-  "[cuda][InverseFilterbankEngineCUDA]"
+  "[unit][cuda][no_file][unit][InverseFilterbankEngineCUDA]"
 )
 {
   void* stream = 0;
@@ -49,7 +49,7 @@ TEST_CASE (
 
 TEST_CASE (
   "cufft kernels can operate on data",
-  "[cuda][InverseFilterbankEngineCUDA]"
+  "[cuda][no_file][InverseFilterbankEngineCUDA]"
 )
 {
   void* stream = 0;
@@ -88,7 +88,7 @@ TEST_CASE (
 
 TEST_CASE (
   "InverseFilterbankEngineCUDA can operate on data",
-  "[cuda][InverseFilterbankEngineCUDA]"
+  "[cuda][no_file][InverseFilterbankEngineCUDA]"
 )
 {
   std::vector<test::util::TestShape> test_shapes = test_config.get_test_vector_shapes();

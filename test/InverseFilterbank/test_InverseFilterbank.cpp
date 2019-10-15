@@ -23,7 +23,7 @@
 static test::util::TestConfig test_config;
 
 
-TEST_CASE ("InverseFilterbank", "[InverseFilterbank]") {
+TEST_CASE ("InverseFilterbank", "[unit][no_file][InverseFilterbank]") {
   dsp::InverseFilterbank filterbank;
 
   SECTION ("InverseFilterbank prepare method runs")

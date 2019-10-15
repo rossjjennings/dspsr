@@ -11,16 +11,24 @@
 
 static test::util::InverseFilterbank::InverseFilterbankTestConfig test_config;
 
-TEST_CASE ("InverseFilterbankEngineCPU", "[InverseFilterbankEngineCPU]")
+TEST_CASE (
+  "InverseFilterbankEngineCPU",
+  "[unit][no_file][InverseFilterbankEngineCPU]")
 {
+  if (test::util::config::verbose) {
+    std::cerr << "test_InverseFilterbankEngineCPU: [no_file][unit]" << std::endl;
+  }
   dsp::InverseFilterbankEngineCPU engine;
 }
 
 TEST_CASE (
   "InverseFilterbankEngineCPU can operate on data",
-	"[InverseFilterbankEngineCPU]"
+	"[no_file][InverseFilterbankEngineCPU]"
 )
 {
+  if (test::util::config::verbose) {
+    std::cerr << "test_InverseFilterbankEngineCPU: [no_file]" << std::endl;
+  }
   dsp::InverseFilterbankEngineCPU engine;
   Reference::To<dsp::TimeSeries> in = new dsp::TimeSeries;
   Reference::To<dsp::TimeSeries> out = new dsp::TimeSeries;

@@ -7,7 +7,10 @@
 #include "dsp/InverseFilterbankConfig.h"
 #include "dsp/FilterbankConfig.h"
 
-TEST_CASE("InverseFilterbankConfig can intake arguments", "[InverseFilterbankConfig]")
+TEST_CASE(
+  "InverseFilterbankConfig can intake arguments",
+  "[unit][no_file][InverseFilterbankConfig]"
+)
 {
 
   SECTION ("istream method produces correct configuration")
@@ -41,7 +44,10 @@ TEST_CASE("InverseFilterbankConfig can intake arguments", "[InverseFilterbankCon
   }
 }
 
-TEST_CASE("InverseFilterbankConfig can stream correct internal representation", "[InverseFilterbankConfig]")
+TEST_CASE(
+  "InverseFilterbankConfig can stream correct internal representation",
+  "[unit][no_file][InverseFilterbankConfig]"
+)
 {
   dsp::InverseFilterbank::Config config;
   // std::string stringvalues = "1:D";

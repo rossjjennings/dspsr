@@ -24,7 +24,7 @@ void throw_on_error (const cudaError& error, const std::string& msg="")
 }
 
 TEST_CASE ("Consecutive FFTW and CUFFT calls produce numerically similar results",
-          "[cuda][cufft_precision]")
+          "[cuda][no_file][cufft_precision]")
 {
 
 

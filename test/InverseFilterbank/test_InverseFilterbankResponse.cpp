@@ -28,7 +28,7 @@ const unsigned nchan = 8;
 const unsigned freq_response_size = nchan * os_factor.normalize(input_fft_length);
 
 TEST_CASE("InverseFilterbankResponse attributes can be manipulated",
-          "[InverseFilterbankResponse]")
+          "[unit][no_file][InverseFilterbankResponse]")
 {
   dsp::InverseFilterbankResponse deripple_response;
 

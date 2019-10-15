@@ -19,7 +19,7 @@ static test::util::InverseFilterbank::InverseFilterbankTestConfig test_config;
 
 TEST_CASE (
   "output overlap discard kernel should produce expected output",
-  "[cuda][overlap_discard]"
+  "[no_file][cuda][overlap_discard]"
 )
 {
   std::vector<float> thresh = test_config.get_thresh();
@@ -98,7 +98,7 @@ TEST_CASE (
 
 TEST_CASE (
   "overlap save kernel should produce expected output",
-  "[cuda][overlap_save]"
+  "[no_file][cuda][overlap_save]"
 )
 {
   std::vector<float> thresh = test_config.get_thresh();
@@ -180,7 +180,7 @@ TEST_CASE (
 
 TEST_CASE (
   "apodization overlap kernel should produce expected output",
-  "[cuda][apodization_overlap]"
+  "[no_file][cuda][apodization_overlap]"
 )
 {
   std::vector<float> thresh = test_config.get_thresh();
@@ -267,7 +267,7 @@ TEST_CASE (
 
 TEST_CASE (
   "reponse stitch kernel should produce expected output",
-  "[cuda][response_stitch]"
+  "[no_file][cuda][response_stitch]"
 )
 {
   std::vector<float> thresh = test_config.get_thresh();
