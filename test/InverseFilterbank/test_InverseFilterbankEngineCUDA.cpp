@@ -19,7 +19,7 @@ void check_error (const char*);
 
 TEST_CASE (
   "InverseFilterbankEngineCUDA",
-  "[unit][cuda][no_file][unit][InverseFilterbankEngineCUDA]"
+  "[unit][cuda][no_file][InverseFilterbankEngineCUDA]"
 )
 {
   void* stream = 0;
