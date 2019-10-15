@@ -38,7 +38,7 @@
 #if HAVE_CUDA
 #include "dsp/ConvolutionCUDA.h"
 #include "dsp/ConvolutionCUDASpectral.h"
-#include "dsp/FilterbankCUDA.h"
+#include "dsp/FilterbankEngineCUDA.h"
 #include "dsp/OptimalFilterbank.h"
 #include "dsp/TransferCUDA.h"
 #include "dsp/DetectionCUDA.h"
