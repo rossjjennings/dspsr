@@ -40,6 +40,11 @@ void dsp::Unpacker::prepare ()
 
 void dsp::Unpacker::reserve ()
 {
+  // set the Observation information, required if 
+  // subsequence transformations operate in-place on
+  // the data dimensions
+  output->Observation::operator=(*input);
+
   // resize the output
   output->set_order (output_order);
 
