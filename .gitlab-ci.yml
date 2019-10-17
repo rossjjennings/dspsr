@@ -54,4 +54,5 @@ deploy:
     - docker push $image:$version
     - docker push $image:latest
   only:
-    - master
+    variables:
+      - $CI_PIPELINE_SOURCE == "pipeline"
