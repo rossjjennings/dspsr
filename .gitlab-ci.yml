@@ -30,6 +30,9 @@ build:
   artifacts:
     paths:
       - install
+  only:
+    variables:
+      - $CI_PIPELINE_SOURCE != "pipeline"
 
 test:
   stage: test
@@ -39,9 +42,13 @@ test:
     - ls ${base_dir}/install/
     - ls ${base_dir}/install/bin
     - ${base_dir}/install/bin/test_main ~[cuda][unit],~[cuda][no_file] -v high
-    - if [ "$CI_PIPELINE_SOURCE" != "pipeline" ]; then curl -X POST -F token=${CI_JOB_TOKEN} -F ref=master https://gitlab.com/api/v4/projects/${DSPSR_TEST_ID}/trigger/pipeline; fi
+    - curl -X POST -F token=${CI_JOB_TOKEN} -F ref=master https://gitlab.com/api/v4/projects/${DSPSR_TEST_ID}/trigger/pipeline
   dependencies:
     - build
+  only:
+    variables:
+      - $CI_PIPELINE_SOURCE != "pipeline"
+
 
 deploy:
   stage: deploy
