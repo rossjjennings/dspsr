@@ -34,11 +34,12 @@ build:
 test:
   stage: test
   script:
+    - echo $CI_PIPELINE_SOURCE
     - base_dir=${PWD}
     - ls ${base_dir}/install/
     - ls ${base_dir}/install/bin
     - ${base_dir}/install/bin/test_main ~[cuda][unit],~[cuda][no_file] -v high
-    - curl -X POST -F token=${CI_JOB_TOKEN} -F ref=master https://gitlab.com/api/v4/projects/${DSPSR_TEST_ID}/trigger/pipeline
+    - if [ "$CI_PIPELINE_SOURCE" != "pipeline" ]; then curl -X POST -F token=${CI_JOB_TOKEN} -F ref=master https://gitlab.com/api/v4/projects/${DSPSR_TEST_ID}/trigger/pipeline; fi
   dependencies:
     - build
 
