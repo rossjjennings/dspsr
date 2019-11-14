@@ -8,7 +8,9 @@ endif
 endif
 
 if HAVE_PYTHON
+if HAVE_SWIG
 SUBDIRS += python
+endif
 endif
 
 if HAVE_PGPLOT
