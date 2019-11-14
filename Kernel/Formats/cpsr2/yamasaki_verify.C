@@ -175,7 +175,7 @@ int yamasaki_verify (const char* filename, uint64_t offset_bytes,
     if (yama_offset != expected) {
       if (yamasaki_verbose) {
 	fprintf (stderr, "yamasaki_verify: Byte count mismatch for block "
-		 UI64" value "UI64" expected "UI64"\n",
+		 UI64 " value " UI64 " expected " UI64 "\n",
 		 block_count, yama_offset, expected);
 	yamadump (yama_hdr);
       }
@@ -193,12 +193,12 @@ int yamasaki_verify (const char* filename, uint64_t offset_bytes,
   close (fd);
   
   if (bad_count) {
-    fprintf (stdout, "yamasaki_verify: "UI64" bad blocks out of "UI64"\n",
+    fprintf (stdout, "yamasaki_verify: " UI64 " bad blocks out of " UI64 "\n",
 	     bad_count, block_count);
     
     if (toggle_count) {
-      fprintf (stdout, "yamasaki_verify: data came good again "UI64
-	       " out of "UI64" times\n", toggle_count, bad_count);
+      fprintf (stdout, "yamasaki_verify: data came good again " UI64
+	       " out of " UI64 " times\n", toggle_count, bad_count);
       if (toggle_count >= bad_count -1)
 	return 0;
     }
@@ -206,6 +206,6 @@ int yamasaki_verify (const char* filename, uint64_t offset_bytes,
     return -1;
   }
 
-  fprintf (stderr, "yamasaki_verify: "UI64" counts verified\n",block_count);
+  fprintf (stderr, "yamasaki_verify: " UI64 " counts verified\n",block_count);
   return 0;
 }

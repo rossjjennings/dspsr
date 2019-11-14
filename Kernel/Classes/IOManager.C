@@ -407,8 +407,8 @@ uint64_t dsp::IOManager::set_block_size (uint64_t minimum_samples)
       cerr << "dsp::IOManager::set_block_size insufficient RAM" << endl;
 
     throw Error (InvalidState, "dsp::IOManager::set_block_size",
-                 "insufficient RAM: limit=%g MB -> block="UI64" samples\n\t"
-                 "require="UI64" samples -> \"-U %g\" on command line",
+                 "insufficient RAM: limit=%g MB -> block=" UI64 " samples\n\t"
+                 "require=" UI64 " samples -> \"-U %g\" on command line",
                  float(maximum_RAM)/megabyte, block_size,
                  minimum_samples, min_ram/megabyte);
   }

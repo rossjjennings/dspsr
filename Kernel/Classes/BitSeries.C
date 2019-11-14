@@ -52,7 +52,7 @@ void dsp::BitSeries::resize (int64_t nsamples)
 
   if (require < 0)
     throw Error (InvalidParam, "dsp::BitSeries::resize",
-		 "invalid size="I64, require);
+		 "invalid size=" I64, require);
 
   if (!require || require > data_size) {
 
@@ -68,8 +68,7 @@ void dsp::BitSeries::resize (int64_t nsamples)
   }
 
   if( verbose )
-    fprintf(stderr,"dsp::BitSeries::resize() setting request_ndat to "I64"\n",
-	  nsamples);
+    cerr << "dsp::BitSeries::resize set request_ndat to " << nsamples << endl;
   
   set_ndat( nsamples );
   request_ndat = nsamples;
@@ -140,7 +139,7 @@ void dsp::BitSeries::copy_data (const dsp::BitSeries* copy,
 
   if (copy_ndat > get_ndat())
     throw Error (InvalidParam, "dsp::BitSeries::copy_data",
-		 "copy ndat="UI64" > this ndat="UI64, copy_ndat, get_ndat());
+		 "copy ndat=" UI64 " > this ndat=" UI64, copy_ndat, get_ndat());
 
   if (copy_ndat)
   {
@@ -212,7 +211,7 @@ void dsp::BitSeries::internal_match (const BitSeries* other)
     data = (unsigned char*) memory->do_allocate (other->data_size);
     if (!data)
       throw Error (InvalidState,"dsp::DataSeries::internal_match",
-      "could not allocate "UI64" bytes", other->data_size);
+      "could not allocate " UI64 " bytes", other->data_size);
 
     data_size = other->data_size;
   }

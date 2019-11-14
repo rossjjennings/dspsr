@@ -633,7 +633,7 @@ dsp::WeightedTimeSeries::convolve_weights (unsigned nfft, unsigned nkeep) try
     if (end_weight > nweights_tot)
       throw Error (InvalidState, "dsp::WeightedTimeSeries::convolve_weights",
 		   "end_weight=%d > nweights=%d \n\t"
-                   "blocks="UI64" end_idat="UI64,
+                   "blocks=" UI64 " end_idat=" UI64,
                    end_weight, nweights_tot, blocks, end_idat);
 
     if (verbose)

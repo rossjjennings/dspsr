@@ -68,7 +68,7 @@ void dsp::DataSeries::set_ndat (uint64_t _ndat)
 {
   if( _ndat*get_ndim()*get_nbit() % 8 )
     throw Error(InvalidParam,"dsp::DataSeries::set_ndat",
-		"ndat="UI64" * ndim=%d * nbit=%d yields non-integer bytes",
+		"ndat=" UI64 " * ndim=%d * nbit=%d yields non-integer bytes",
                 _ndat, get_ndim(), get_nbit());
 
   Observation::set_ndat( _ndat );
@@ -79,7 +79,7 @@ void dsp::DataSeries::set_ndim (uint64_t _ndim)
 {
   if( _ndim*get_ndat()*get_nbit() % 8 )
     throw Error(InvalidParam,"dsp::DataSeries::set_ndim",
-                "ndat="UI64" * ndim=%d * nbit=%d yields non-integer bytes",
+                "ndat=" UI64 " * ndim=%d * nbit=%d yields non-integer bytes",
                 get_ndat(), _ndim, get_nbit());
 
   bool dim_shape_changed = (_ndim != get_ndim());
@@ -164,7 +164,7 @@ void dsp::DataSeries::resize (uint64_t nsamples, unsigned char*& old_buffer)
   // check that nbits is a multiple of 8 (bits per byte)
   if (nbits_required & 0x07)
     throw Error (InvalidParam,"dsp::DataSeries::resize",
-		"nbit=%d ndim=%d nsamp="UI64" not an integer number of bytes",
+		"nbit=%d ndim=%d nsamp=" UI64 " not an integer number of bytes",
 		get_nbit(), get_ndim(), nsamples);
 
   if (verbose)
@@ -223,7 +223,7 @@ void dsp::DataSeries::resize (uint64_t nsamples, unsigned char*& old_buffer)
 
     if (!buffer)
       throw Error (InvalidState,"dsp::DataSeries::resize",
-		  "Could not allocate "UI64" bytes", require);
+		  "Could not allocate " UI64 " bytes", require);
 
     size = require;
     memory_used += size;
@@ -247,7 +247,7 @@ void dsp::DataSeries::reshape ()
 
   if (subsize*get_npol()*get_nchan() > size) {
     throw Error (InvalidState, "dsp::DataSeries::reshape",
-		 "subsize="UI64" * npol=%d * nchan=%d > size="UI64,
+		 "subsize=" UI64 " * npol=%d * nchan=%d > size=" UI64,
 		 subsize, get_npol(), get_nchan(), size);
   }
 
@@ -352,7 +352,7 @@ dsp::DataSeries& dsp::DataSeries::swap_data(dsp::DataSeries& ts)
 
   if( subsize*get_npol()*get_nchan() > size )
     throw Error(InvalidState,"dsp::DataSeries::swap_data()",
-		"BUG! subsize*get_npol()*get_nchan() > size ("UI64" * %d * %d > "UI64")\n",
+		"BUG! subsize*get_npol()*get_nchan() > size (" UI64 " * %d * %d > " UI64 ")\n",
 		subsize,get_npol(),get_nchan(),size);
 
   return *this;
@@ -378,7 +378,7 @@ void dsp::DataSeries::internal_match (const DataSeries* other)
     buffer = (unsigned char*) memory->do_allocate (required);
     if (!buffer)
       throw Error (InvalidState,"dsp::DataSeries::internal_match",
-		  "could not allocate "UI64" bytes", required);
+		  "could not allocate " UI64 " bytes", required);
 
     size = required;
     memory_used += size;

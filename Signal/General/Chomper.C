@@ -25,13 +25,13 @@ dsp::Chomper::Chomper()
 //! Do stuff
 void dsp::Chomper::transformation(){
   if( verbose )
-    fprintf(stderr,"In dsp::Chomper::Transformation() with input ndat="UI64"\n",
+    fprintf(stderr,"In dsp::Chomper::Transformation() with input ndat=" UI64 "\n",
 	    get_input()->get_ndat());
 
   if( use_new_ndat ){
     if( get_input()->get_ndat() < new_ndat )
       throw Error(InvalidParam,"dsp::Chomper::transformation()",
-		  "You wanted to chomp the timeseries to ndat="UI64" but it only had "UI64" points!",
+		  "You wanted to chomp the timeseries to ndat=" UI64 " but it only had " UI64 " points!",
 		  new_ndat, get_input()->get_ndat());
 
     const_cast<TimeSeries*>(get_input())->set_ndat( new_ndat );
@@ -43,6 +43,6 @@ void dsp::Chomper::transformation(){
     const_cast<TimeSeries*>(get_input())->operator*=( multiplier );
 
   if( verbose )
-    fprintf(stderr,"Returning from dsp::Chomper::Transformation() with output ndat="UI64"\n",
+    fprintf(stderr,"Returning from dsp::Chomper::Transformation() with output ndat=" UI64 "\n",
 	    get_output()->get_ndat());
 }

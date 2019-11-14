@@ -61,7 +61,7 @@ void dsp::FourBitUnpacker::unpack (uint64_t ndat,
 
   if (ndat % 2)
     throw Error (InvalidParam, "dsp::FourBitUnpacker::unpack",
-                 "invalid ndat="UI64, ndat);
+                 "invalid ndat=" UI64, ndat);
 
   for (uint64_t idat = 0; idat < ndat2; idat++)
   {
