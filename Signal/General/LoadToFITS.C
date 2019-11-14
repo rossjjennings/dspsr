@@ -204,10 +204,11 @@ void dsp::LoadToFITS::construct () try
     // voltage samples per filterbank sample
     samp_per_fb = config->tsamp * rate;
     if (verbose)
-      cerr << "voltage samples per filterbank sample="<<samp_per_fb << endl;
+      cerr << "voltage samples per filterbank sample=" << samp_per_fb << endl;
     // correction for number of samples per filterbank channel
-    tres_factor = round(factor*samp_per_fb/fb_nchan);
-    tsamp = tres_factor/factor*fb_nchan/rate;
+    unsigned effective_channelisation = fb_nchan / nchan;
+    tres_factor = round(factor*samp_per_fb/effective_channelisation);
+    tsamp = tres_factor/factor * (fb_nchan/nchan)/rate;
 
     // voltage samples per output block
     nsample = round(samp_per_fb * config->nsblk);
