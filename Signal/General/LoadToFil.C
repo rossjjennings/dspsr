@@ -244,7 +244,7 @@ void dsp::LoadToFil::construct () try
       SampleDelay* delay = new SampleDelay;
 
       delay->set_input (timeseries);
-      delay->set_output (timeseries);
+      delay->set_output (timeseries = new_TimeSeries() );
       delay->set_function (new Dedispersion::SampleDelay);
 
       operations.push_back( delay );
@@ -259,7 +259,7 @@ void dsp::LoadToFil::construct () try
       Detection* detection = new Detection;
 
       detection->set_input( timeseries );
-      detection->set_output( timeseries );
+      detection->set_output( timeseries = new_TimeSeries() );
 
       if (config->npol==1) 
         detection->set_output_state(Signal::Intensity);
@@ -289,7 +289,7 @@ void dsp::LoadToFil::construct () try
       SampleDelay* delay = new SampleDelay;
 
       delay->set_input (timeseries);
-      delay->set_output (timeseries);
+      delay->set_output (timeseries = new_TimeSeries() );
       delay->set_function (new Dedispersion::SampleDelay);
 
       operations.push_back( delay );
@@ -313,7 +313,7 @@ void dsp::LoadToFil::construct () try
     
     tscrunch->set_factor( config->tscrunch_factor );
     tscrunch->set_input( timeseries );
-    tscrunch->set_output( timeseries );
+    tscrunch->set_output( timeseries = new_TimeSeries() );
 
     operations.push_back( tscrunch );
   }
