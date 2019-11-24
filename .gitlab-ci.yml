@@ -30,6 +30,7 @@ build:
   artifacts:
     paths:
       - install
+      - test
   only:
     variables:
       - $CI_PIPELINE_SOURCE != "pipeline"
