@@ -47,3 +47,12 @@ LDADD = $(top_builddir)/Signal/Pulsar/libdspsr.la \
         $(top_builddir)/Kernel/libdspbase.la \
         @PSRCHIVE_LIBS@ \
         @CUFFT_LIBS@ @CUDA_LIBS@
+
+if HAVE_CUFFT
+if HAVE_CUFFT_CALLBACKS
+LDADD += $(top_builddir)/Signal/General/ConvolutionCUDACallbacks_DC.o -lcufft_static -lculibos
+else
+	LDADD += @CUFFT_LIBS@
+endif
+endif
+

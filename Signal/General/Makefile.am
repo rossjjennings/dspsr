@@ -86,6 +86,8 @@ if HAVE_CUFFT_CALLBACKS
 
 bin_PROGRAMS += cufft_callback_bench
 
+cufft_callback_bench_SOURCES = cufft_callback_bench.cu
+
 ConvolutionCUDACallbacks.lo: ConvolutionCUDACallbacks.cu
 	$(top_srcdir)/config/cudalt.py $(top_builddir)/libtool $@ $(CUDA_NVCC) -dc -c $<
 	$(CUDA_NVCC) -o ConvolutionCUDACallbacks_DC.o -dlink ConvolutionCUDACallbacks.o -lcufft_static
