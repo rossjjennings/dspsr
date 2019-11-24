@@ -106,6 +106,8 @@ void parse_options (int argc, char** argv) try
   arg = menu.add (config->rescale_seconds, 'I', "secs");
   arg->set_help ("rescale interval in seconds");
 
+  arg = menu.add (config->apply_FITS_scale_and_offset, "scloffs");
+  arg->set_help ("denormalize using DAT_SCL and DAT_OFFS [PSRFITS]");
 
   menu.add ("\n" "Output options:");
 

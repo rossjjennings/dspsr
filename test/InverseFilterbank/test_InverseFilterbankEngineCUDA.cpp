@@ -10,14 +10,18 @@
 #include "dsp/MemoryCUDA.h"
 #include "Rational.h"
 
-#include "util.hpp"
+#include "util/util.hpp"
 #include "InverseFilterbankTestConfig.hpp"
 
-static util::InverseFilterbank::InverseFilterbankTestConfig test_config;
+static test::util::InverseFilterbank::InverseFilterbankTestConfig test_config;
 
 void check_error (const char*);
 
-TEST_CASE ("InverseFilterbankEngineCUDA", "") {
+TEST_CASE (
+  "InverseFilterbankEngineCUDA",
+  "[unit][cuda][no_file][InverseFilterbankEngineCUDA]"
+)
+{
   void* stream = 0;
   cudaStream_t cuda_stream = reinterpret_cast<cudaStream_t>(stream);
 
@@ -43,7 +47,10 @@ TEST_CASE ("InverseFilterbankEngineCUDA", "") {
   }
 }
 
-TEST_CASE ("cufft kernels can operate on data", "")
+TEST_CASE (
+  "cufft kernels can operate on data",
+  "[cuda][no_file][InverseFilterbankEngineCUDA]"
+)
 {
   void* stream = 0;
   cudaStream_t cuda_stream = reinterpret_cast<cudaStream_t>(stream);
@@ -81,13 +88,13 @@ TEST_CASE ("cufft kernels can operate on data", "")
 
 TEST_CASE (
   "InverseFilterbankEngineCUDA can operate on data",
-  ""
+  "[cuda][no_file][InverseFilterbankEngineCUDA]"
 )
 {
-  std::vector<util::TestShape> test_shapes = test_config.get_test_vector_shapes();
+  std::vector<test::util::TestShape> test_shapes = test_config.get_test_vector_shapes();
   auto idx = GENERATE_COPY(range(0, (int) test_shapes.size()));
 
-	util::TestShape test_shape = test_shapes[idx];
+	test::util::TestShape test_shape = test_shapes[idx];
 
   void* stream = 0;
   cudaStream_t cuda_stream = reinterpret_cast<cudaStream_t>(stream);
@@ -101,7 +108,7 @@ TEST_CASE (
   Rational os_factor (4, 3);
 
   unsigned npart = test_shape.npart;
-  util::InverseFilterbank::InverseFilterbankProxy proxy(
+  test::util::InverseFilterbank::InverseFilterbankProxy proxy(
     os_factor, npart, test_shape.input_npol,
     test_shape.input_nchan, test_shape.output_nchan,
     test_shape.input_ndat, test_shape.overlap_pos
@@ -112,7 +119,7 @@ TEST_CASE (
 
   proxy.setup(in, out, false, false);
 
-  auto transfer = util::transferTimeSeries(cuda_stream, device_memory);
+  auto transfer = test::util::transferTimeSeries(cuda_stream, device_memory);
 
   transfer(in, in_gpu, cudaMemcpyHostToDevice);
   transfer(out, out_gpu, cudaMemcpyHostToDevice);

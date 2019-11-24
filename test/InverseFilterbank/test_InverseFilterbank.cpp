@@ -16,14 +16,14 @@
 #include "dsp/InverseFilterbankEngineCPU.h"
 #include "dsp/InverseFilterbankResponse.h"
 
-#include "util.hpp"
+#include "util/util.hpp"
+#include "util/TestConfig.hpp"
 
-const std::string file_path = util::get_test_data_dir() + "/channelized.simulated_pulsar.noise_0.0.nseries_3.ndim_2.dump";
-const unsigned block_size = 699048; // this is taken from dspsr logs
-const double dm = 2.64476;
-const unsigned freq_res = 1024;
 
-TEST_CASE ("InverseFilterbank") {
+static test::util::TestConfig test_config;
+
+
+TEST_CASE ("InverseFilterbank", "[unit][no_file][InverseFilterbank]") {
   dsp::InverseFilterbank filterbank;
 
   SECTION ("InverseFilterbank prepare method runs")
@@ -57,15 +57,25 @@ TEST_CASE ("InverseFilterbank") {
   }
 }
 
-TEST_CASE ("InverseFilterbank runs on channelized data", "")
+TEST_CASE ("InverseFilterbank runs on channelized data", "[InverseFilterbank]")
 {
-  // util::set_verbose(true);
+
+  const std::string file_name = test_config.get_field<std::string>(
+    "InverseFilterbank.test_InverseFilterbank.file_name");
+  const std::string file_path = test::util::get_test_data_dir() + "/" + file_name;
+
+  const unsigned block_size = test_config.get_field<unsigned>(
+    "InverseFilterbank.test_InverseFilterbank.block_size");
+  const double dm = test_config.get_field<double>(
+    "InverseFilterbank.test_InverseFilterbank.dm");
+  const unsigned freq_res = test_config.get_field<unsigned>(
+    "InverseFilterbank.test_InverseFilterbank.freq_res");
 
   dsp::IOManager manager;
   manager.open(file_path);
 
   dsp::TimeSeries* unpacked = new dsp::TimeSeries;
-  util::load_psr_data(manager, block_size, unpacked);
+  test::util::load_psr_data(manager, block_size, unpacked);
 
   dsp::Observation* info = manager.get_input()->get_info();
   info->set_dispersion_measure(dm);

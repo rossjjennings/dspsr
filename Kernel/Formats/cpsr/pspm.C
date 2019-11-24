@@ -240,7 +240,7 @@ bool PSPMverify (PSPM_SEARCH_HEADER* hdr, bool verbose)
     int64_t mb = 1024 * 1024;
     if (hdr->ll_file_offset % mb) {
       if (verbose)
-	fprintf (stderr, "PSPMverify: offset="I64" corrupted.\n",
+	fprintf (stderr, "PSPMverify: offset=" I64 " corrupted.\n",
 		 hdr->ll_file_offset);
       return false;
     }

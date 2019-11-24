@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <time.h>
 #include <cstdlib>
+#include <functional>
 
 // #include "json.hpp"
 #include "toml.h"
@@ -27,6 +28,7 @@
 
 void check_error (const char*);
 
+namespace test {
 namespace util {
 
   struct TestShape {
@@ -98,6 +100,11 @@ namespace util {
   template<>
   struct tomltype<bool> {
     typedef bool type;
+  };
+
+  template<>
+  struct tomltype<std::string> {
+    typedef std::string type;
   };
 
   template<typename unit>
@@ -175,7 +182,11 @@ namespace util {
   template<typename T>
   T product (std::vector<T>);
 
-  void load_psr_data (dsp::IOManager manager, unsigned block_size, dsp::TimeSeries* ts);
+  void load_psr_data (
+    dsp::IOManager manager,
+    unsigned block_size,
+    dsp::TimeSeries* ts,
+    int nblocks=-1);
 
   void set_verbose (bool val);
 
@@ -183,7 +194,8 @@ namespace util {
 
   std::string get_test_data_dir ();
 
-  //! load data from a stl vector unsignedo a dspsr TimeSeries object.
+  std::string get_working_path ();
+  //! load data from a stl vector to a dspsr TimeSeries object.
   //! dim should be of length 3.
   //! Assumes TimeSeries is in FPT order.
   template<typename T>
@@ -196,9 +208,10 @@ namespace util {
     cudaStream_t stream, CUDA::DeviceMemory* memory);
 
 }
+}
 
 template<typename T>
-void util::load_binary_data (std::string file_path, std::vector<T>& test_data)
+void test::util::load_binary_data (std::string file_path, std::vector<T>& test_data)
 {
   std::streampos size;
 
@@ -223,13 +236,13 @@ void util::load_binary_data (std::string file_path, std::vector<T>& test_data)
 }
 
 template<typename T>
-void util::write_binary_data (std::string file_path, std::vector<T> buffer)
+void test::util::write_binary_data (std::string file_path, std::vector<T> buffer)
 {
-  util::write_binary_data(file_path, buffer.data(), buffer.size());
+  test::util::write_binary_data(file_path, buffer.data(), buffer.size());
 }
 
 template<typename T>
-void util::write_binary_data (std::string file_path, T* buffer, unsigned len)
+void test::util::write_binary_data (std::string file_path, T* buffer, unsigned len)
 {
   std::ofstream file(file_path, std::ios::out | std::ios::binary);
 
@@ -242,29 +255,29 @@ void util::write_binary_data (std::string file_path, T* buffer, unsigned len)
 
 
 template<typename T>
-unsigned util::nclose (const std::vector<T>& a, const std::vector<T>& b, float atol, float rtol) {
+unsigned test::util::nclose (const std::vector<T>& a, const std::vector<T>& b, float atol, float rtol) {
 
   if (a.size() != b.size()) {
-    std::string msg ("util::nclose: vectors not the same size");
-    if (util::config::verbose) {
+    std::string msg ("test::util::nclose: vectors not the same size");
+    if (test::util::config::verbose) {
      std::cerr << msg << std::endl;
     }
     throw msg;
   }
-  if (util::config::verbose) {
-    std::cerr << "util::nclose size=" << a.size() << std::endl;
+  if (test::util::config::verbose) {
+    std::cerr << "test::util::nclose size=" << a.size() << std::endl;
   }
-  return util::nclose(a.data(), b.data(), (unsigned) a.size(), atol, rtol);
+  return test::util::nclose(a.data(), b.data(), (unsigned) a.size(), atol, rtol);
 }
 
 
 template<typename T>
-unsigned util::nclose (const T* a, const T* b, unsigned size, float atol, float rtol)
+unsigned test::util::nclose (const T* a, const T* b, unsigned size, float atol, float rtol)
 {
   unsigned nclose=0;
   bool close;
   for (unsigned i=0; i<size; i++) {
-    close = util::isclose<T>(a[i], b[i], atol, rtol);
+    close = test::util::isclose<T>(a[i], b[i], atol, rtol);
     if (close) {
       nclose++;
     }
@@ -274,26 +287,26 @@ unsigned util::nclose (const T* a, const T* b, unsigned size, float atol, float 
 
 
 template<typename T>
-bool util::allclose (const std::vector<T>& a, const std::vector<T>& b, float atol, float rtol) {
+bool test::util::allclose (const std::vector<T>& a, const std::vector<T>& b, float atol, float rtol) {
 
-  return util::nclose<T> (a, b, atol, rtol) == a.size();
+  return test::util::nclose<T> (a, b, atol, rtol) == a.size();
 }
 
 
 template<typename T>
-bool util::allclose (const T* a, const T* b, unsigned size, float atol, float rtol)
+bool test::util::allclose (const T* a, const T* b, unsigned size, float atol, float rtol)
 {
-  return util::nclose<T> (a, b, size, atol, rtol) == size;
+  return test::util::nclose<T> (a, b, size, atol, rtol) == size;
 }
 
 template<typename T>
-bool util::isclose (T a, T b, float atol, float rtol)
+bool test::util::isclose (T a, T b, float atol, float rtol)
 {
   return std::abs(a - b) <= (atol + rtol*std::abs(b));
 }
 
 template<typename T>
-T util::max (const T* a, unsigned size)
+T test::util::max (const T* a, unsigned size)
 {
   T max_val = a[0];
   for (unsigned idx=1; idx<size; idx++)
@@ -306,13 +319,13 @@ T util::max (const T* a, unsigned size)
 }
 
 template<typename T>
-T util::max (const std::vector<T>& a)
+T test::util::max (const std::vector<T>& a)
 {
-  return util::max<T>(a.data(), a.size());
+  return test::util::max<T>(a.data(), a.size());
 }
 
 template<typename T>
-T util::min (const T* a, unsigned size)
+T test::util::min (const T* a, unsigned size)
 {
   T min_val = a[0];
   for (unsigned idx=1; idx<size; idx++)
@@ -325,44 +338,44 @@ T util::min (const T* a, unsigned size)
 }
 
 template<typename T>
-T util::min (const std::vector<T>& a)
+T test::util::min (const std::vector<T>& a)
 {
-  return util::min<T>(a.data(), a.size());
+  return test::util::min<T>(a.data(), a.size());
 }
 
 
 template<typename T>
-std::vector<T> util::subtract (const std::vector<T>& a, const std::vector<T>& b)
+std::vector<T> test::util::subtract (const std::vector<T>& a, const std::vector<T>& b)
 {
 }
 
 template<typename T>
-void util::subtract (const T* a, const T* b, T* res, unsigned size)
+void test::util::subtract (const T* a, const T* b, T* res, unsigned size)
 {
 }
 
 template<typename T>
-std::vector<T> util::abs (const std::vector<T>& a)
+std::vector<T> test::util::abs (const std::vector<T>& a)
 {
   std::vector<T> res(a.size());
-  util::abs (a.data(), res.data(), a.size());
+  test::util::abs (a.data(), res.data(), a.size());
 }
 
 template<typename T>
-void util::abs (const T* a, T* res, unsigned size)
+void test::util::abs (const T* a, T* res, unsigned size)
 {
 }
 
 
 
 template<typename T>
-void util::print_array (const std::vector<T>& arr, std::vector<unsigned>& dim)
+void test::util::print_array (const std::vector<T>& arr, std::vector<unsigned>& dim)
 {
-  util::print_array<T>(const_cast<T*>(arr.data()), dim);
+  test::util::print_array<T>(const_cast<T*>(arr.data()), dim);
 }
 
 template<typename T>
-void util::print_array (T* arr, std::vector<unsigned>& dim)
+void test::util::print_array (T* arr, std::vector<unsigned>& dim)
 {
   if (dim.size() > 2) {
     unsigned head_dim = dim[0];
@@ -372,7 +385,7 @@ void util::print_array (T* arr, std::vector<unsigned>& dim)
       stride *= dim[d];
     }
     for (unsigned i=0; i<head_dim; i++) {
-      util::print_array<T>(arr + stride*i, tail_dim);
+      test::util::print_array<T>(arr + stride*i, tail_dim);
     }
   } else {
     for (unsigned i=0; i<dim[0]; i++) {
@@ -386,7 +399,7 @@ void util::print_array (T* arr, std::vector<unsigned>& dim)
 }
 
 template<typename T>
-T util::sum (std::vector<T> a)
+T test::util::sum (std::vector<T> a)
 {
   T res = 0;
   std::for_each (a.begin(), a.end(), [&res](unsigned i){res+=i;});
@@ -394,7 +407,7 @@ T util::sum (std::vector<T> a)
 }
 
 template<typename T>
-T util::product (std::vector<T> a)
+T test::util::product (std::vector<T> a)
 {
   T res = 1;
   std::for_each (a.begin(), a.end(), [&res](unsigned i){res*=i;});
@@ -402,7 +415,7 @@ T util::product (std::vector<T> a)
 }
 
 template<typename T>
-std::function<T(void)> util::random ()
+std::function<T(void)> test::util::random ()
 {
   srand (time(NULL));
   return [] () { return (T) rand() / RAND_MAX; };
@@ -410,13 +423,13 @@ std::function<T(void)> util::random ()
 
 
 template<typename T>
-void util::loadTimeSeries (
+void test::util::loadTimeSeries (
   const std::vector<T>& in,
   dsp::TimeSeries* out,
   const std::vector<unsigned>& dim
 )
 {
-  typedef util::std2dspsr<T> dspsr_type;
+  typedef test::util::std2dspsr<T> dspsr_type;
 
   unsigned ndim = dspsr_type::ndim;
 
@@ -428,14 +441,14 @@ void util::loadTimeSeries (
   out->set_ndim (ndim);
   out->resize (dim[2]);
 
-  if (util::config::verbose) {
-    std::cerr << "util::loadTimeSeries: ("
+  if (test::util::config::verbose) {
+    std::cerr << "test::util::loadTimeSeries: ("
       << dim[0] << ","
       << dim[1] << ","
       << dim[2] << ","
       << ndim << ")" << std::endl;
   }
-  // std::cerr << "util::loadTimeSeries: in.size()=" << in.size() << std::endl;
+  // std::cerr << "test::util::loadTimeSeries: in.size()=" << in.size() << std::endl;
 
 
   const float* in_data = reinterpret_cast<const float*> (in.data());

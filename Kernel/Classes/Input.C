@@ -100,7 +100,7 @@ void dsp::Input::operation ()
 {
   if (block_size < overlap)
     throw Error (InvalidState, "dsp::Input::operation", 
-                 "block_size="UI64" < overlap="UI64, block_size, overlap);
+                 "block_size=" UI64 " < overlap=" UI64, block_size, overlap);
 
   if (eod())
     throw Error (EndOfFile, "dsp::Input::operation",
@@ -283,7 +283,7 @@ void dsp::Input::seek (int64_t offset, int whence)
   case SEEK_CUR:
     if (offset < -(int64_t)next_sample)
       throw Error (InvalidRange, "dsp::Input::seek", "SEEK_CUR -ve "
-		   "offset="I64" and next_sample="I64,
+		   "offset=" I64 " and next_sample=" I64,
 		   offset,(int64_t)next_sample);
     next_sample += offset;
     break;
@@ -353,7 +353,7 @@ void dsp::Input::seek(MJD mjd)
     actual_seek = uint64_t(seek_samples);
 
   if( verbose )
-    fprintf(stderr,"dsp::Input::seek(MJD) will seek %f = "UI64" samples\n",
+    fprintf(stderr,"dsp::Input::seek(MJD) will seek %f = " UI64 " samples\n",
 	    seek_samples, actual_seek);
 
   seek( actual_seek, SEEK_SET );
@@ -404,7 +404,7 @@ void dsp::Input::set_total_seconds (double seconds)
 
   if ((total_samples > get_total_samples()) && (get_total_samples() > 0) )
     throw Error (InvalidParam, "dsp::Input::set_total_seconds",
-		 "samples="UI64" > total samples="UI64, total_samples,
+		 "samples=" UI64 " > total samples=" UI64, total_samples,
 		 get_total_samples());
 
   set_total_samples ( total_samples );

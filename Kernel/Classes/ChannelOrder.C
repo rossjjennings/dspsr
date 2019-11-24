@@ -13,6 +13,8 @@
 
 #include "dsp/ChannelOrder.h"
 
+using namespace std;
+
 dsp::ChannelOrder::ChannelOrder()
   : Transformation<BitSeries,TimeSeries>("ChannelOrder",outofplace)
 {
@@ -21,10 +23,11 @@ dsp::ChannelOrder::ChannelOrder()
 
 dsp::ChannelOrder::~ChannelOrder(){ }
 
-void dsp::ChannelOrder::transformation(){
+void dsp::ChannelOrder::transformation()
+{
   if( verbose )
-    fprintf(stderr,"In dsp::ChannelOrder::transformation() with input->ndat="UI64"\n",
-	    input->get_ndat());
+    cerr << "dsp::ChannelOrder::transformation with input->ndat=" 
+         << input->get_ndat() << endl;
 
   if(input->get_nbit()!=32)
     throw Error(InvalidState,"dsp::ChannelOrder::transformation()",
@@ -83,7 +86,7 @@ void dsp::ChannelOrder::transformation(){
   }
 
   if( verbose )
-    fprintf(stderr,"Exiting from dsp::ChannelOrder::transformation() with output->ndat="UI64"\n",
-	    output->get_ndat());
+    cerr << "dsp::ChannelOrder::transformation exit with output->ndat="
+         << output->get_ndat() << endl;
 }
 

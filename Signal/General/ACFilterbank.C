@@ -100,7 +100,7 @@ void dsp::ACFilterbank::transformation ()
 
   if (npart == 0)
     throw Error (InvalidState, "dsp::ACFilterbank::transformation",
-		 "input.ndat="I64" < nfft=%d",
+		 "input.ndat=" I64 " < nfft=%d",
 		 input->get_ndat(), nsamp_fft);
 
   minimum_samps_can_process = nsamp_fft;

@@ -6,7 +6,10 @@
 
 #include "dsp/FilterbankConfig.h"
 
-TEST_CASE("FilterbankConfig can intake arguments", "[FilterbankConfig]")
+TEST_CASE(
+  "FilterbankConfig can intake arguments",
+  "[unit][no_file][FilterbankConfig]"
+)
 {
 
   SECTION ("istream method produces correct configuration")
@@ -30,7 +33,10 @@ TEST_CASE("FilterbankConfig can intake arguments", "[FilterbankConfig]")
   }
 }
 
-TEST_CASE("FilterbankConfig can stream correct internal representation", "[FilterbankConfig]")
+TEST_CASE(
+  "FilterbankConfig can stream correct internal representation",
+  "[unit][no_file][FilterbankConfig]"
+)
 {
   dsp::Filterbank::Config config;
   // std::string stringvalues = "1:D";

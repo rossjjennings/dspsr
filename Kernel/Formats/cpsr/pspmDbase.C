@@ -112,10 +112,10 @@ static char src[32];
 void pspmDbase::entry::load (const char* str) 
 {
   int s = sscanf (str,
-		     I32" "I32" "I32" "I32
+		     I32 " " I32 " " I32 " " I32
 		     " %s %s"
 		     " %lf %lf %lf"
-		     " %d %d %d "I64,
+		     " %d %d %d " I64,
 		     &scan, &num, &tape, &file,
 		     mjdstr, src, 
 		     &frequency, &bandwidth, &tsamp,
@@ -134,10 +134,10 @@ void pspmDbase::entry::unload (string& str)
 {
   strcpy (mjdstr, start.printdays(15).c_str());
   int s = sprintf (buffer, 
-		      I32" "I32" "I32" "I32
+		      I32 " " I32 " " I32 " " I32
 		      " %s %s"
 		      " %lf %lf %lf"
-		      " %d %d %d "I64,
+		      " %d %d %d " I64,
 		      scan, num, tape, file,
 		      mjdstr, name.c_str(), 
 		      frequency, bandwidth, tsamp,
@@ -306,8 +306,8 @@ void ascii_dump (const PSPM_SEARCH_HEADER* hdr)
 {
 
   fprintf (stderr, "File size:       %ld\n", hdr->file_size);
-  fprintf (stderr, "Large File Size: "I64"\n", hdr->ll_file_size);
-  fprintf (stderr, "Large Offset:    "I64"\n", hdr->ll_file_offset);
+  fprintf (stderr, "Large File Size: " I64 "\n", hdr->ll_file_size);
+  fprintf (stderr, "Large Offset:    " I64 "\n", hdr->ll_file_offset);
   fprintf (stderr, "MJD in hdr    %40.38Lf\n", hdr->mjd_start);
 
   fprintf (stderr, "tick offset:     %30.28lf\n\n", hdr->tick_offset);

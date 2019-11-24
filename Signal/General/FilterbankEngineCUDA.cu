@@ -7,7 +7,7 @@
  *
  ***************************************************************************/
 
-//#define _DEBUG 1
+// #define _DEBUG 1
 
 #include "dsp/FilterbankEngineCUDA.h"
 #include "CUFFTError.h"
@@ -145,6 +145,7 @@ void CUDA::FilterbankEngine::setup (dsp::Filterbank* filterbank)
 
     unsigned mem_size = nchan * ndat * ndim * sizeof(cufftReal);
 
+    DEBUG("CUDA::FilterbankEngine::setup allocating "<< mem_size << " bytes for Response kernel");
     // allocate space for the convolution kernel
     cudaMalloc ((void**)&d_kernel, mem_size);
 
@@ -162,6 +163,21 @@ void CUDA::FilterbankEngine::setup (dsp::Filterbank* filterbank)
     else
       cudaMemcpy (d_kernel, kernel, mem_size, cudaMemcpyHostToDevice);
   }
+
+  unsigned bigfftsize = nchan_subband * freq_res * 2;
+  if (filterbank->get_input()->get_state() == Signal::Nyquist) {
+    bigfftsize += 256;
+  }
+  // also need space to hold backward FFTs
+  unsigned scratch_needed = bigfftsize + 2 * freq_res;
+  // if (apodization) {
+  //   scratch_needed += bigfftsize;
+  // }
+  //
+  // if (matrix_convolution){
+  //   scratch_needed += bigfftsize;
+  // }
+  total_scratch_needed = scratch_needed;
 
   if (!real_to_complex)
     return;

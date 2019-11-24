@@ -181,6 +181,9 @@ SWIN_FUNC_AFFINITY
 if test x"$enable_shared" == xyes; then
   AM_PATH_PYTHON(,, [:])
   AC_PROG_SWIG
+
+  AM_CONDITIONAL([HAVE_SWIG], [test x"$SWIG" != x])
+
   SWIG_ENABLE_CXX
   SWIG_PYTHON
 else

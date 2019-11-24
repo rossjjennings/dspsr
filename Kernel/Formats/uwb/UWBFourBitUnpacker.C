@@ -106,6 +106,9 @@ void dsp::UWBFourBitUnpacker::get_scales_and_offsets ()
     throw Error (InvalidState, "dsp::UWBFourBitUnpacker::get_scales_and_offsets",
                  "ASCIIObservation required and not available");
 
+  if (verbose)
+    cerr << "dsp::UWBFourBitUnpacker::get_scales_and_offsets nchan=" << nchan << " npol=" << npol << endl;
+
   scales.resize(nchan);
   offsets.resize(nchan);
   stringstream key;
@@ -136,6 +139,11 @@ void dsp::UWBFourBitUnpacker::get_scales_and_offsets ()
       {
         offsets[ichan][ipol] = 0;
       }
+      if (verbose)
+      {
+        cerr << "scales[" << ichan << "][" << ipol << "]=" << scales[ichan][ipol] << endl;
+        cerr << "offsets[" << ichan << "][" << ipol << "]=" << offsets[ichan][ipol] << endl;
+      }
     }
   }
 }
@@ -150,6 +158,8 @@ void dsp::UWBFourBitUnpacker::unpack ()
 
   if (!have_scales_and_offsets)
   {
+    if (verbose)
+      cerr << "dsp::UWBFourBitUnpacker::unpack getting scales and offsets" << endl;
     get_scales_and_offsets();
     have_scales_and_offsets = true;
   }
@@ -190,6 +200,10 @@ void dsp::UWBFourBitUnpacker::unpack ()
       into[0] = (float(real) * scale) + offset;
       into[1] = (float(imag) * scale) + offset;
 
+      real = max(int8_t(-8), real);
+      real = min(int8_t(7), real);
+      imag = max(int8_t(-8), imag);
+      imag = min(int8_t(7), imag);
       hists[0][real+8]++;
       hists[1][imag+8]++;
 
@@ -197,6 +211,8 @@ void dsp::UWBFourBitUnpacker::unpack ()
       from += from_stride; 
 
     } // for each complex sample
+    if (verbose)
+      cerr << "dsp::UWBFourBitUnpacker::unpack finished unpacking ipol=" << ipol << endl;
   } // for each polarisation
 }
 

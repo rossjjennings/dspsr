@@ -90,6 +90,9 @@ namespace dsp {
     //! Filterbank config options
     Filterbank::Config filterbank;
 
+    //! when unpacking FITS data, denormalize using DAT_SCL and DAT_OFFS
+    bool apply_FITS_scale_and_offset;
+
     //! set block size to this factor times the minimum possible
     unsigned times_minimum_ndat;
 

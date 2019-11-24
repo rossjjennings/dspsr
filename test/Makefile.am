@@ -1,6 +1,9 @@
 bin_PROGRAMS = test_main bench_InverseFilterbank
 
 test_main_SOURCES = test_main.cpp \
+                    util/util.cpp \
+                    util/TransformationProxy.cpp \
+                    util/TestConfig.cpp \
                     test_Apodization.cpp \
                     test_EventEmitter.cpp \
                     test_FIRFilter.cpp \
@@ -11,9 +14,8 @@ test_main_SOURCES = test_main.cpp \
                     InverseFilterbank/test_InverseFilterbankResponse.cpp \
                     InverseFilterbank/test_InverseFilterbank.cpp \
                     InverseFilterbank/test_InverseFilterbankPipeline.cpp \
-                    util.cpp \
-                    TestConfig.cpp \
-                    InverseFilterbankTestConfig.cpp
+                    InverseFilterbank/InverseFilterbankTestConfig.cpp
+
 
 
 if HAVE_CUFFT
@@ -21,19 +23,22 @@ if HAVE_CUFFT
 
   test_main_SOURCES += InverseFilterbank/test_InverseFilterbankEngineCUDA_kernels.cpp \
                        InverseFilterbank/test_InverseFilterbankEngineCUDA.cpp \
-                       InverseFilterbank/test_InverseFilterbankEngine_integration.cpp
+                       InverseFilterbank/test_InverseFilterbankEngine_integration.cpp \
+                       SpectralKurtosis/test_SpectralKurtosis_integration.cpp
 
   test_main_SOURCES += test_FTransform_cufft_precision.cpp
 
-  bench_InverseFilterbank_SOURCES = util.cpp \
-                                    TestConfig.cpp \
-                                    InverseFilterbankTestConfig.cpp \
+  bench_InverseFilterbank_SOURCES = util/util.cpp \
+                                    util/TestConfig.cpp \
+                                    InverseFilterbank/InverseFilterbankTestConfig.cpp \
                                     InverseFilterbank/bench_InverseFilterbank.cpp
 
 endif
 
 include $(top_srcdir)/config/Makefile.local
 include $(top_srcdir)/config/Makefile.cuda
+include $(srcdir)/InverseFilterbank
+include $(srcdir)/SpectralKurtosis
 
 AM_CPPFLAGS = -I$(top_builddir)/local_include @PSRCHIVE_CPPFLAGS@ @PSRCHIVE_CFLAGS@
 LDADD = $(top_builddir)/Signal/Pulsar/libdspsr.la \

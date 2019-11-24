@@ -7,8 +7,9 @@
 
 #include "dsp/InverseFilterbank.h"
 
-#include "TestConfig.hpp"
+#include "util/TestConfig.hpp"
 
+namespace test {
 namespace util {
   namespace InverseFilterbank {
 
@@ -62,7 +63,7 @@ namespace util {
 
     };
 
-    class InverseFilterbankTestConfig : public util::TestConfig {
+    class InverseFilterbankTestConfig : public test::util::TestConfig {
 
     public:
 
@@ -125,9 +126,10 @@ namespace util {
     );
   }
 }
+}
 
 template<typename MemoryType>
-void util::InverseFilterbank::InverseFilterbankProxy::set_memory (
+void test::util::InverseFilterbank::InverseFilterbankProxy::set_memory (
   MemoryType* _memory
 )
 {
@@ -141,7 +143,7 @@ void util::InverseFilterbank::InverseFilterbankProxy::set_memory (
 
 
 template<typename T>
-void util::InverseFilterbank::response_stitch_cpu_FPT (
+void test::util::InverseFilterbank::response_stitch_cpu_FPT (
   const std::vector<T>& in,
   const std::vector<T>& resp,
   std::vector<T>& out,
@@ -232,7 +234,7 @@ void util::InverseFilterbank::response_stitch_cpu_FPT (
 
 
 template<typename T>
-void util::InverseFilterbank::apodization_overlap_cpu_FPT (
+void test::util::InverseFilterbank::apodization_overlap_cpu_FPT (
   const std::vector<T>& in,
   const std::vector<T>& apodization,
   std::vector<T>& out,
@@ -267,10 +269,10 @@ void util::InverseFilterbank::apodization_overlap_cpu_FPT (
             idat > apod_size ||
             idat + in_offset > in_size
           ) {
-            std::cerr << "util::apodization_overlap_cpu_FPT: watch out!" << std::endl;
-            std::cerr << "util::apodization_overlap_cpu_FPT: idat + out_offset=" << idat + out_offset << ", out_size=" << out_size << std::endl;
-            std::cerr << "util::apodization_overlap_cpu_FPT: idat + in_offset=" << idat + in_offset << ", in_size=" << in_size << std::endl;
-            std::cerr << "util::apodization_overlap_cpu_FPT: idat=" << idat  << ", apod_size=" << apod_size << std::endl;
+            std::cerr << "test::util::apodization_overlap_cpu_FPT: watch out!" << std::endl;
+            std::cerr << "test::util::apodization_overlap_cpu_FPT: idat + out_offset=" << idat + out_offset << ", out_size=" << out_size << std::endl;
+            std::cerr << "test::util::apodization_overlap_cpu_FPT: idat + in_offset=" << idat + in_offset << ", in_size=" << in_size << std::endl;
+            std::cerr << "test::util::apodization_overlap_cpu_FPT: idat=" << idat  << ", apod_size=" << apod_size << std::endl;
           }
 
           if (apodization.size() != 0) {
@@ -285,7 +287,7 @@ void util::InverseFilterbank::apodization_overlap_cpu_FPT (
 }
 
 template<typename T>
-void util::InverseFilterbank::overlap_discard_cpu_FPT (
+void test::util::InverseFilterbank::overlap_discard_cpu_FPT (
   const std::vector<T>& in,
   std::vector<T>& out,
   unsigned discard,
@@ -298,13 +300,13 @@ void util::InverseFilterbank::overlap_discard_cpu_FPT (
 )
 {
   std::vector<T> empty;
-  util::InverseFilterbank::apodization_overlap_cpu_FPT<T>(
+  test::util::InverseFilterbank::apodization_overlap_cpu_FPT<T>(
     in, empty, out, discard, npart, npol, nchan, samples_per_part, in_ndat, out_ndat
   );
 }
 
 template<typename T>
-void util::InverseFilterbank::overlap_save_cpu_FPT (
+void test::util::InverseFilterbank::overlap_save_cpu_FPT (
   const std::vector<T>& in,
   std::vector<T>& out,
   unsigned discard,
@@ -336,9 +338,9 @@ void util::InverseFilterbank::overlap_save_cpu_FPT (
             idat + out_offset > out_size ||
             idat + in_offset > in_size
           ) {
-            std::cerr << "util::overlap_save_cpu_FPT: watch out!" << std::endl;
-            std::cerr << "util::overlap_save_cpu_FPT: idat + out_offset=" << idat + out_offset << ", out_size=" << out_size << std::endl;
-            std::cerr << "util::overlap_save_cpu_FPT: idat + in_offset=" << idat + in_offset << ", in_size=" << in_size << std::endl;
+            std::cerr << "test::util::overlap_save_cpu_FPT: watch out!" << std::endl;
+            std::cerr << "test::util::overlap_save_cpu_FPT: idat + out_offset=" << idat + out_offset << ", out_size=" << out_size << std::endl;
+            std::cerr << "test::util::overlap_save_cpu_FPT: idat + in_offset=" << idat + in_offset << ", in_size=" << in_size << std::endl;
           }
           out[out_offset + idat] = in[in_offset + idat + discard];
         }

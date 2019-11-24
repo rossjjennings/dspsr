@@ -98,6 +98,11 @@ namespace dsp
 
     bool verbose;
 
+  private:
+
+    // size of the forward FFT size
+    unsigned bigfftsize;
+
   };
 
 }

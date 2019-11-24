@@ -10,6 +10,7 @@
 #include "dsp/TimeSeries.h"
 #include "dsp/BitSeries.h"
 #include "dsp/Memory.h"
+#include "EventEmitter.h"
 
 #ifndef __SpectralKurtosis_h
 #define __SpectralKurtosis_h
@@ -83,6 +84,23 @@ namespace dsp {
 
     void set_engine (Engine*);
 
+    template<class T>
+    class Reporter {
+    public:
+      virtual void operator() (T*, unsigned, unsigned, unsigned, unsigned) {};
+    };
+
+    // A event emitter that takes a data array, and the nchan, npol, ndat and ndim
+    // associated with the data array
+    EventEmitter<Reporter<float>> float_reporter;
+
+    // This is for reporting the state of the bit zapmask
+    EventEmitter<Reporter<unsigned char>> char_reporter;
+
+    bool get_report () const { return report; }
+
+    void set_report (bool _report) { report = _report; }
+
   protected:
 
     //! Perform the transformation on the input time series
@@ -121,7 +139,7 @@ namespace dsp {
 
     uint64_t output_ndat;
 
-    //! SK Estimates 
+    //! SK Estimates
     Reference::To<TimeSeries> estimates;
 
     //! Tscrunched SK Estimate for block
@@ -176,6 +194,10 @@ namespace dsp {
 
     bool prepared;
 
+    //! flag that indicates whether or not to report intermediate data products
+    //! via the *_report EventEmitter objects.
+    bool report;
+
   };
 
   class SpectralKurtosis::Engine : public Reference::Able
@@ -193,14 +215,14 @@ namespace dsp {
                               float upper_thresh, float lower_thresh) = 0;
 
       virtual void detect_fscr (const TimeSeries* input, BitSeries* output,
-                                const float lower, const float upper,
+                                const float mu2, const unsigned std_devs,
                                 unsigned schan, unsigned echan) = 0;
 
       virtual void detect_tscr (const TimeSeries* input,
                                 const TimeSeries * input_tscr,
                                 BitSeries* output,
                                 float upper, float lower) = 0;
- 
+
       virtual int count_mask (const BitSeries* output) = 0;
 
       virtual float * get_estimates (const TimeSeries* input) = 0;

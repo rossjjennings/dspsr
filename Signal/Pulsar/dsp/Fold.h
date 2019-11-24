@@ -141,7 +141,7 @@ namespace dsp
     //! Engine used to perform folding
     class Engine;
 
-    void set_engine (Engine*);
+    virtual void set_engine (Engine*);
 
     //! Set output cerr stream
     virtual void set_cerr (std::ostream& os) const;

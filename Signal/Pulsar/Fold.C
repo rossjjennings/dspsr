@@ -644,7 +644,7 @@ void dsp::Fold::fold (uint64_t nweights,
 
   if (idat_end > ndat)
     throw Error (InvalidParam, "dsp::Fold:fold",
-                 "idat_start="UI64" + ndat_fold="UI64" > ndat="UI64,
+                 "idat_start=" UI64 " + ndat_fold=" UI64 " > ndat=" UI64,
                  idat_start, ndat_fold, ndat);
 
   // midpoint of the first sample

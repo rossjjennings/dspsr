@@ -83,7 +83,7 @@ namespace CUDA
     cudaStream_t stream;
 
     bool verbose;
-
+    
   };
 
 }

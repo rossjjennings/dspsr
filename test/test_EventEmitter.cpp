@@ -6,7 +6,7 @@
 
 #include "EventEmitter.h"
 
-TEST_CASE ("EventEmitter class works with function types and object types") {
+TEST_CASE ("EventEmitter class works with function types and object types", "[unit][no_file][EventEmitter]") {
 
   SECTION ("EventEmitter works with function types ") {
 

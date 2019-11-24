@@ -10,7 +10,7 @@
 #include "Rational.h"
 #include "CommandLine.h"
 
-#include "util.hpp"
+#include "util/util.hpp"
 #include "InverseFilterbankTestConfig.hpp"
 
 class BenchmarkOptions : public Reference::Able {
@@ -21,15 +21,15 @@ public:
   bool report = false;
   bool output_toml = false;
   // npart, input_nchan, output_nchan, input_npol, output_npol, input_ndat, output_ndat, overlap_pos, overlap_neg
-  util::TestShape test_shape{10, 256, 1, 2, 2, 128, 0, 16, 16};
+  test::util::TestShape test_shape{10, 256, 1, 2, 2, 128, 0, 16, 16};
 
   void set_verbose () {
-    util::config::verbose = true;
+    test::util::config::verbose = true;
   }
 
   void set_very_verbose () {
     set_verbose();
-    util::set_verbose(true);
+    test::util::set_verbose(true);
   }
 
   void set_cuda_only () {
@@ -110,8 +110,8 @@ void parse_options (BenchmarkOptions* options, int argc, char** argv)
 
 int main (int argc, char** argv)
 {
-  util::time_point t0;
-  util::time_point t1;
+  test::util::time_point t0;
+  test::util::time_point t1;
 
   // dsp::Operation::record_time = true;
 
@@ -146,7 +146,7 @@ int main (int argc, char** argv)
   float ngigabits = (float) (8 * nbytes) / std::giga::num;
   std::cerr << "Processing " << ngigabits << " Gbits of data" << std::endl;
 
-  util::InverseFilterbank::InverseFilterbankProxy proxy(
+  test::util::InverseFilterbank::InverseFilterbankProxy proxy(
     os_factor, npart, npol,
     options->test_shape.input_nchan, options->test_shape.output_nchan,
     options->test_shape.input_ndat, options->test_shape.overlap_pos
@@ -158,14 +158,14 @@ int main (int argc, char** argv)
 
   bool do_fft_window = true;
   bool do_response = true;
-  t0 = util::now();
+  t0 = test::util::now();
   proxy.setup(in, out, do_fft_window, do_response);
-  util::delta<std::ratio<1>> delta_setup_initial = util::now() - t0;
+  test::util::delta<std::ratio<1>> delta_setup_initial = test::util::now() - t0;
 
   std::cerr << "initial setup took " << delta_setup_initial.count() << " s" << std::endl;
 
 
-  // if (util::config::verbose) {
+  // if (test::util::config::verbose) {
   //   std::cerr << "in shape=("
   //     << in->get_nchan() << ","
   //     << in->get_npol() << ","
@@ -176,7 +176,7 @@ int main (int argc, char** argv)
 
 
 
-  util::delta<std::ratio<1>> delta_cpu;
+  test::util::delta<std::ratio<1>> delta_cpu;
 
   if (! options->cuda_only)
   {
@@ -184,21 +184,21 @@ int main (int argc, char** argv)
     float* scratch_cpu = proxy.allocate_scratch(engine_cpu.get_total_scratch_needed());
     engine_cpu.set_scratch(scratch_cpu);
 
-    util::delta<std::ratio<1>> delta;
-    t0 = util::now();
+    test::util::delta<std::ratio<1>> delta;
+    t0 = test::util::now();
     for (unsigned iiter=0; iiter<options->niter; iiter++) {
-      t1 = util::now();
+      t1 = test::util::now();
       engine_cpu.perform(
         in, out, npart
       );
       engine_cpu.finish();
-      delta = util::now() - t1;
-      if (util::config::verbose) {
+      delta = test::util::now() - t1;
+      if (test::util::config::verbose) {
         std::cerr << "CPU engine loop " << iiter << " took " << delta.count() << "s" << std::endl;
       }
     }
 
-    delta_cpu = util::now() - t0;
+    delta_cpu = test::util::now() - t0;
     float delta_cpu_s_per_loop = (float) delta_cpu.count() / options->niter;
 
     std::cerr << "CPU engine took " << delta_cpu_s_per_loop << " s per loop"
@@ -208,24 +208,24 @@ int main (int argc, char** argv)
 
   }
 
-  auto transfer = util::transferTimeSeries(cuda_stream, device_memory);
-  t0 = util::now();
+  auto transfer = test::util::transferTimeSeries(cuda_stream, device_memory);
+  t0 = test::util::now();
   transfer(in, in_gpu, cudaMemcpyHostToDevice);
   transfer(out, out_gpu, cudaMemcpyHostToDevice);
-  util::delta<std::ratio<1>> delta_transfer = util::now() - t0;
+  test::util::delta<std::ratio<1>> delta_transfer = test::util::now() - t0;
 
   std::cerr << "transfering from CPU to GPU took " << delta_transfer.count() << " s" << std::endl;
 
-  t0 = util::now();
+  t0 = test::util::now();
   engine_cuda.setup(proxy.filterbank);
   proxy.set_memory<CUDA::DeviceMemory>(device_memory);
   float* scratch_cuda = proxy.allocate_scratch(engine_cuda.get_total_scratch_needed());
   engine_cuda.set_scratch(scratch_cuda);
-  util::delta<std::ratio<1>> delta_setup = util::now() - t0;
+  test::util::delta<std::ratio<1>> delta_setup = test::util::now() - t0;
 
   std::cerr << "setting up CUDA engine took " << delta_setup.count() << " s" << std::endl;
 
-  // t0 = util::now();
+  // t0 = test::util::now();
   float delta_cuda_i = 0;
   float delta_cuda = 0;
   cudaEvent_t start, stop;
@@ -234,21 +234,21 @@ int main (int argc, char** argv)
 
 
   for (unsigned iiter=0; iiter<options->niter; iiter++) {
-    // t1 = util::now();
+    // t1 = test::util::now();
     cudaEventRecord(start);
     engine_cuda.perform(
       in_gpu, out_gpu, npart
     );
     engine_cuda.finish();
-    // util::delta<std::ratio<1>> delta = util::now() - t1;
+    // test::util::delta<std::ratio<1>> delta = test::util::now() - t1;
     cudaEventRecord(stop);
 
     cudaEventSynchronize(stop);
     cudaEventElapsedTime(&delta_cuda_i, start, stop);
     delta_cuda += delta_cuda_i;
     // cudaDeviceSynchronize();
-    // util::delta<std::ratio<1>> delta = util::now() - t0;
-    if (util::config::verbose) {
+    // test::util::delta<std::ratio<1>> delta = test::util::now() - t0;
+    if (test::util::config::verbose) {
       std::cerr << "CUDA engine loop " << iiter << " took " << delta_cuda_i/1000 << "s" << std::endl;
       // std::cerr << "CUDA engine (CPU timer) loop " << iiter << " took " << delta.count() << "s" << std::endl;
     }
@@ -257,7 +257,7 @@ int main (int argc, char** argv)
   cudaEventDestroy(start);
   cudaEventDestroy(stop);
 
-  // util::delta<std::ratio<1>> delta_cuda = util::now() - t0;
+  // test::util::delta<std::ratio<1>> delta_cuda = test::util::now() - t0;
   float delta_cuda_s = delta_cuda / 1000;
   float delta_cuda_s_per_loop = delta_cuda_s / options->niter;
   float rate_cuda = ngigabits / delta_cuda_s_per_loop;
@@ -289,7 +289,7 @@ int main (int argc, char** argv)
     auto output_array = root->setChild("benchmark", toml::Array());
     auto inner_val = output_array->push((toml::Table()));
 
-    util::to_toml(*inner_val, options->test_shape);
+    test::util::to_toml(*inner_val, options->test_shape);
     inner_val->setChild("nbytes", (int64_t) nbytes);
 
     inner_val->setChild("niter", (int) options->niter);

@@ -11,7 +11,6 @@
 
 #include "dsp/FilterbankEngineCPU.h"
 #include "dsp/TimeSeries.h"
-#include "dsp/Scratch.h"
 #include "dsp/Apodization.h"
 #include "dsp/OptimalFFT.h"
 
@@ -92,37 +91,36 @@ void dsp::FilterbankEngineCPU::setup (dsp::Filterbank* filterbank)
     backward = FTransform::Agent::current->get_plan (freq_res, FTransform::bcc);
   }
 
-  // setup scratch space
-  unsigned bigfftsize = nchan_subband * freq_res * 2;
-  if (input->get_state() == Signal::Nyquist)
+  // calculate the amount of scratch space needed
+
+  bigfftsize = nchan_subband * freq_res * 2;
+  if (input->get_state() == Signal::Nyquist) {
     bigfftsize += 256;
+  }
 
-  // also need space to hold backward FFTs
+  //
+  // // also need space to hold backward FFTs
   unsigned scratch_needed = bigfftsize + 2 * freq_res;
-
+  //
   if (apodization) {
-    if (verbose) {
-      cerr << "dsp::FilterbankEngineCPU::setup: adding space for apodization" << endl;
-    }
     scratch_needed += bigfftsize;
   }
 
   if (matrix_convolution){
-    if (verbose) {
-      cerr << "dsp::FilterbankEngineCPU::setup: adding space for matrix convolution" << endl;
-    }
     scratch_needed += bigfftsize;
   }
 
-  // divide up the scratch space
-  dsp::Scratch* scratch = new Scratch;
-  freq_domain_scratch[0] = scratch->space<float> (scratch_needed);
-  freq_domain_scratch[1] = freq_domain_scratch[0];
-  if (matrix_convolution) {
-    freq_domain_scratch[1] += bigfftsize;
-  }
-  time_domain_scratch = freq_domain_scratch[1] + bigfftsize;
-  windowed_time_domain_scratch = time_domain_scratch + 2 * freq_res;
+  total_scratch_needed = scratch_needed;
+
+  // // divide up the scratch space
+  // dsp::Scratch* scratch = new Scratch;
+  // freq_domain_scratch[0] = scratch->space<float> (scratch_needed);
+  // freq_domain_scratch[1] = freq_domain_scratch[0];
+  // if (matrix_convolution) {
+  //   freq_domain_scratch[1] += bigfftsize;
+  // }
+  // time_domain_scratch = freq_domain_scratch[1] + bigfftsize;
+  // windowed_time_domain_scratch = time_domain_scratch + 2 * freq_res;
 
   if (verbose) {
     cerr << "dsp::FilterbankEngineCPU::setup: freq_res=" << freq_res <<
@@ -140,6 +138,13 @@ void dsp::FilterbankEngineCPU::setup (dsp::Filterbank* filterbank)
 void dsp::FilterbankEngineCPU::set_scratch (float * _scratch)
 {
   scratch = _scratch;
+  freq_domain_scratch[0] = scratch;
+  freq_domain_scratch[1] = freq_domain_scratch[0];
+  if (matrix_convolution) {
+    freq_domain_scratch[1] += bigfftsize;
+  }
+  time_domain_scratch = freq_domain_scratch[1] + bigfftsize;
+  windowed_time_domain_scratch = time_domain_scratch + 2 * freq_res;
 }
 
 void dsp::FilterbankEngineCPU::finish ()
