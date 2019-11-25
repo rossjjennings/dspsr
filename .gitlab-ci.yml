@@ -29,8 +29,6 @@ build:
     - make -j$(nproc)
     - make install
     - cp -r ${DSPSR_DIR}/install/ ${base_dir}/install
-    - ls ${base_dir}/install
-    # - curl -X POST -F token=${CI_JOB_TOKEN} -F ref=master https://gitlab.com/api/v4/projects/${DSPSR_TEST_ID}/trigger/pipeline
   artifacts:
     paths:
       - install
@@ -42,11 +40,9 @@ build:
 test:
   stage: test
   script:
-    - echo $CI_PIPELINE_SOURCE
     - base_dir=${PWD}
-    - ls ${base_dir}/install/
-    - ls ${base_dir}/install/bin
-    - ${base_dir}/install/bin/test_main ~[cuda][unit],~[cuda][no_file] -v high
+    - cp -r ${base_dir}/install/ ${DSPSR_DIR}/install
+    - ${DSPSR_DIR}/install/bin/test_main ~[cuda][unit],~[cuda][no_file] -v high
     - curl -X POST -F token=${CI_JOB_TOKEN} -F ref=master https://gitlab.com/api/v4/projects/${DSPSR_TEST_ID}/trigger/pipeline
   dependencies:
     - build
