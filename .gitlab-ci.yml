@@ -7,6 +7,7 @@ variables:
   IMAGE_NAME: dspsr
   DOCKER_HOST: tcp://docker:2375
   DOCKER_DRIVER: overlay2
+  DSPSR_DIR: /home/psr/dspsr
 
 
 stages:
@@ -19,13 +20,16 @@ build:
   script:
     - base_dir=${PWD}
     - ./bootstrap
-    - mkdir install
     - echo "apsr bpsr cpsr2 caspsr mopsr sigproc dada" > backends.list
     - echo $CUDA_INCLUDE_DIR
     - echo $CUDA_LIB_DIR
-    - ./configure --enable-shared --prefix=${base_dir}/install --with-cuda-include-dir=$CUDA_INCLUDE_DIR --with-cuda-lib-dir=$CUDA_LIB_DIR
+    - mkdir -p ${DSPSR_DIR}/install
+    - mkdir build && cd build
+    - ./../configure --enable-shared --prefix=${DSPSR_DIR}/install --with-cuda-include-dir=$CUDA_INCLUDE_DIR --with-cuda-lib-dir=$CUDA_LIB_DIR
     - make -j$(nproc)
     - make install
+    - cp -r ${DSPSR_DIR}/install/ ${base_dir}/install
+    - ls ${base_dir}/install
     # - curl -X POST -F token=${CI_JOB_TOKEN} -F ref=master https://gitlab.com/api/v4/projects/${DSPSR_TEST_ID}/trigger/pipeline
   artifacts:
     paths:
