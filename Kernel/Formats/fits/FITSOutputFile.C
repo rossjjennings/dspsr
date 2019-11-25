@@ -340,16 +340,16 @@ void dsp::FITSOutputFile::write_header ()
 		     "error MJD::datestr("+datestr_pattern+")");
     }
     output_filename = filename + get_extension();
-    if (mangle_output)
-    {
-      char buff[1024];
-      sprintf (buff, "%sXXXXXX", output_filename.c_str());
-      mkstemp(buff);
-      mangled_output_filename = buff;
-    }
   }
+
   if (mangle_output)
+  {
+    char buff[1024];
+    sprintf (buff, "%sXXXXXX", output_filename.c_str());
+    mkstemp(buff);
+    mangled_output_filename = buff;
     archive -> unload (mangled_output_filename);
+  }
   else
     archive -> unload (output_filename);
 }
