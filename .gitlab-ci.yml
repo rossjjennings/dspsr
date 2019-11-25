@@ -41,6 +41,7 @@ test:
   stage: test
   script:
     - base_dir=${PWD}
+    - mkdir -p ${DSPSR_DIR}
     - cp -r ${base_dir}/install/ ${DSPSR_DIR}/install
     - ${DSPSR_DIR}/install/bin/test_main ~[cuda][unit],~[cuda][no_file] -v high
     - curl -X POST -F token=${CI_JOB_TOKEN} -F ref=master https://gitlab.com/api/v4/projects/${DSPSR_TEST_ID}/trigger/pipeline
