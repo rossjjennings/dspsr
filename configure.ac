@@ -182,8 +182,6 @@ if test x"$enable_shared" == xyes; then
   AM_PATH_PYTHON(,, [:])
   AC_PROG_SWIG
 
-  AM_CONDITIONAL([HAVE_SWIG], [test x"$SWIG" != x])
-
   SWIG_ENABLE_CXX
   SWIG_PYTHON
 else
@@ -191,6 +189,8 @@ else
 fi
 
 AM_CONDITIONAL([HAVE_PYTHON], [test "$PYTHON" != :])
+AM_CONDITIONAL([HAVE_SWIG], [test x"$SWIG" != x])
+
 # echo "HAVE_PYTHON=$HAVE_PYTHON"
 # echo "HAVE_CUDA=$HAVE_CUDA"
 #
