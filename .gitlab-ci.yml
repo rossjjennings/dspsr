@@ -18,6 +18,7 @@ stages:
 build:
   stage: build
   script:
+    - echo "Using $(nproc) processers"
     - base_dir=${PWD}
     - ./bootstrap
     - echo "apsr bpsr cpsr2 caspsr mopsr sigproc dada" > backends.list
@@ -36,6 +37,8 @@ build:
   only:
     variables:
       - $CI_PIPELINE_SOURCE != "pipeline"
+  tags:
+    - ska
 
 test:
   stage: test
