@@ -39,6 +39,7 @@ build:
       - $CI_PIPELINE_SOURCE != "pipeline"
   tags:
     - ska
+    - docker-executor
 
 test:
   stage: test
