@@ -267,6 +267,13 @@ void dsp::Convolution::prepare ()
 
   prepare_output ();
 
+  if (zero_DM) {
+    if (! has_zero_DM_output()) {
+      zero_DM_output = new dsp::TimeSeries;
+    }
+    zero_DM_output->copy_configuration(output);
+  }
+
   if (engine)
   {
     if (verbose)
