@@ -36,6 +36,9 @@ dsp::Convolution::Convolution (const char* _name, Behaviour _type)
 {
   set_buffering_policy (new InputBuffering (this));
   normalizer = new ScalarFilter();
+
+  zero_DM = false;
+
 }
 
 dsp::Convolution::~Convolution ()
@@ -57,6 +60,7 @@ void dsp::Convolution::set_device (Memory* mem)
     set_scratch (gpu_scratch);
   }
 #endif
+
 }
 
 void dsp::Convolution::set_engine (Engine * _engine)
@@ -128,6 +132,25 @@ void dsp::Convolution::set_passband (Response* _passband)
 {
   passband = _passband;
 }
+
+void dsp::Convolution::set_zero_DM_output (TimeSeries* _zero_DM_output)
+{
+  zero_DM = true;
+  zero_DM_output = _zero_DM_output;
+}
+
+bool dsp::Convolution::has_zero_DM_output () const {
+  return zero_DM_output;
+}
+
+const dsp::TimeSeries* dsp::Convolution::get_zero_DM_output () const {
+  return zero_DM_output;
+}
+
+dsp::TimeSeries* dsp::Convolution::get_zero_DM_output () {
+  return zero_DM_output;
+}
+
 
 //! Prepare all relevant attributes
 void dsp::Convolution::prepare ()

@@ -125,6 +125,21 @@ namespace dsp {
 
     Engine* get_engine();
 
+    //! get the zero_DM flag
+    bool get_zero_DM () const { return zero_DM; }
+
+    //! set the zero_DM flag
+    void set_zero_DM (bool _zero_DM) { zero_DM = _zero_DM; }
+
+    //! Return true if the zero_DM_output attribute has been set
+    bool has_zero_DM_output () const;
+
+    //! Set the zero_DM_output TimeSeries object
+    virtual void set_zero_DM_output (TimeSeries* zero_DM_output);
+
+    //! Return a pointer to the zero_DM_output TimeSeries object
+    virtual const TimeSeries* get_zero_DM_output() const;
+    virtual TimeSeries* get_zero_DM_output();
 
   protected:
 
@@ -148,6 +163,12 @@ namespace dsp {
 
     //! Prepare the output TimeSeries
     void prepare_output ();
+
+    //! zero DM flag -- this indicates whether to do a parallel transformation
+    //! without any dedispersion
+    bool zero_DM;
+
+    Reference::To<dsp::TimeSeries> zero_DM_output;
 
   private:
 

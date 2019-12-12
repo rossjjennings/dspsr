@@ -7,6 +7,7 @@ test_main_SOURCES = test_main.cpp \
                     test_Apodization.cpp \
                     test_EventEmitter.cpp \
                     test_FIRFilter.cpp \
+                    Convolution/test_Convolution.cpp \
                     Filterbank/test_FilterbankEngineCPU.cpp \
                     Filterbank/test_FilterbankConfig.cpp \
                     InverseFilterbank/test_InverseFilterbankEngineCPU.cpp \
@@ -15,7 +16,6 @@ test_main_SOURCES = test_main.cpp \
                     InverseFilterbank/test_InverseFilterbank.cpp \
                     InverseFilterbank/test_InverseFilterbankPipeline.cpp \
                     InverseFilterbank/InverseFilterbankTestConfig.cpp
-
 
 
 if HAVE_CUFFT
@@ -55,4 +55,3 @@ else
 	LDADD += @CUFFT_LIBS@
 endif
 endif
-
