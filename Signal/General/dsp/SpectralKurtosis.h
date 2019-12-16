@@ -101,6 +101,17 @@ namespace dsp {
 
     void set_report (bool _report) { report = _report; }
 
+    //! Return true if the zero_DM_input attribute has been set
+    bool has_zero_DM_input () const;
+
+    //! Set the zero_DM_input TimeSeries object
+    virtual void set_zero_DM_input (TimeSeries* zero_DM_input);
+
+    //! Return a pointer to the zero_DM_input TimeSeries object
+    virtual const TimeSeries* get_zero_DM_input() const;
+    virtual TimeSeries* get_zero_DM_input();
+
+
   protected:
 
     //! Perform the transformation on the input time series
@@ -198,6 +209,8 @@ namespace dsp {
     //! via the *_report EventEmitter objects.
     bool report;
 
+    //! Input TimeSeries that has not been dedispersed in some previous operation.
+    Reference::To<dsp::TimeSeries> zero_DM_input;
   };
 
   class SpectralKurtosis::Engine : public Reference::Able

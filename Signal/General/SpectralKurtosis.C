@@ -44,6 +44,8 @@ dsp::SpectralKurtosis::SpectralKurtosis() : Transformation<TimeSeries,TimeSeries
   prepared = false;
 
   set_buffering_policy(new InputBuffering(this));
+
+  zero_DM_input = nullptr;
 }
 
 dsp::SpectralKurtosis::~SpectralKurtosis ()
@@ -87,6 +89,23 @@ void dsp::SpectralKurtosis::set_engine (Engine* _engine)
   if (verbose)
     cerr << "dsp::SpectralKurtosis::set_engine()" << endl;
   engine = _engine;
+}
+
+void dsp::SpectralKurtosis::set_zero_DM_input (TimeSeries* _zero_DM_input)
+{
+  zero_DM_input = _zero_DM_input;
+}
+
+bool dsp::SpectralKurtosis::has_zero_DM_input () const {
+  return zero_DM_input;
+}
+
+const dsp::TimeSeries* dsp::SpectralKurtosis::get_zero_DM_input () const {
+  return zero_DM_input;
+}
+
+dsp::TimeSeries* dsp::SpectralKurtosis::get_zero_DM_input () {
+  return zero_DM_input;
 }
 
 
@@ -223,7 +242,7 @@ void dsp::SpectralKurtosis::transformation ()
   prepare_output ();
 
   // ensure output containers are sized correctly
-  reserve ();
+  reserve();
 
   if ((ndat == 0) || (npart == 0))
     return;
@@ -303,12 +322,19 @@ void dsp::SpectralKurtosis::transformation ()
 
 void dsp::SpectralKurtosis::compute ()
 {
-  if (verbose)
+  if (verbose) {
     cerr << "dsp::SpectralKurtosis::compute" << endl;
+  }
+  const dsp::TimeSeries* compute_input = get_input();;
+
+  if (has_zero_DM_input()) {
+    compute_input = get_zero_DM_input();
+    // compute_input->set_input_sample(input->get_input_sample());
+  }
 
   if (engine)
   {
-    engine->compute (input, estimates, estimates_tscr, M);
+    engine->compute (compute_input, estimates, estimates_tscr, M);
   }
   else
   {
@@ -323,7 +349,7 @@ void dsp::SpectralKurtosis::compute ()
     const float M_fac = (float)(M+1) / (M-1);
     float * outdat = estimates->get_dattfp();
 
-    switch (input->get_order())
+    switch (compute_input->get_order())
     {
       case dsp::TimeSeries::OrderTFP:
       {
@@ -335,7 +361,7 @@ void dsp::SpectralKurtosis::compute ()
 
         for (unsigned ipart=0; ipart < npart; ipart++)
         {
-          indat = (float *) input->get_dattfp() + (M * ipart * chan_stride);
+          indat = (float *) compute_input->get_dattfp() + (M * ipart * chan_stride);
 
           for (unsigned ichan=0; ichan<nchan; ichan++)
           {
@@ -386,7 +412,7 @@ void dsp::SpectralKurtosis::compute ()
             for (unsigned ipol=0; ipol < npol; ipol++)
             {
               // input pointer for channel pol
-              const float* indat = input->get_datptr (ichan, ipol) + ipart * nfloat;
+              const float* indat = compute_input->get_datptr (ichan, ipol) + ipart * nfloat;
               // std::cerr << "  ichan=" << ichan << ", ipol=" << ipol << ", ipart=" << ipart << std::endl;
 
               S1_sum = 0;

@@ -104,5 +104,90 @@ TEST_CASE(
     CHECK(output->get_state() == zero_DM_output->get_state());
     CHECK(output->get_ndim() == zero_DM_output->get_ndim());
   }
+}
+
+
+TEST_CASE(
+  "Convolution::operate",
+  "[component][no_file][Convolution]"
+)
+{
+  dsp::Convolution convolution;
+  Reference::To<dsp::TimeSeries> input = new dsp::TimeSeries;
+  Reference::To<dsp::TimeSeries> output = new dsp::TimeSeries;
+  Reference::To<dsp::Response> response = new dsp::Response;
+
+  std::vector<unsigned> shape {
+      8, 2, 100
+  };
+
+  unsigned freq_res = 16;
+
+  input->set_state(Signal::Analytic);
+  input->set_nchan(shape[0]);
+  input->set_npol(shape[1]);
+  input->set_ndat(shape[2]);
+  input->set_ndim(2);
+  input->resize(shape[2]);
+
+  response->resize(1, shape[0], freq_res, 2);
+
+  auto filler = [&shape] (unsigned ichan, unsigned ipol, unsigned idat, unsigned idim) -> float
+  {
+    if (idim == 0) {
+      return (float) (ichan*shape[1]*shape[2] + ipol*shape[2] + idat);
+    } else {
+      return 0.0;
+    }
+  };
+
+  test::util::init_TimeSeries(input, filler);
+  convolution.set_input(input);
+  convolution.set_output(output);
+  convolution.set_response(response);
+
+  SECTION ("operate method sets zero_DM_output to input")
+  {
+    convolution.set_zero_DM(true);
+    convolution.prepare();
+    convolution.operate();
+    dsp::TimeSeries* zero_DM_output = convolution.get_zero_DM_output();
+
+    float* ptr;
+    float expected_val;
+    float test_val;
+    unsigned nclose = 0;
+    unsigned size = 0;
+
+    for (unsigned ichan=0; ichan<zero_DM_output->get_nchan(); ichan++) {
+      for (unsigned ipol=0; ipol<zero_DM_output->get_npol(); ipol++) {
+        ptr = zero_DM_output->get_datptr(ichan, ipol);
+        for (unsigned idat=0; idat<zero_DM_output->get_ndat(); idat++) {
+          expected_val = *(input->get_datptr(ichan, ipol) + idat);
+          test_val = *(ptr + idat);
+          if (test_val == expected_val) {
+            nclose++;
+          } else {
+            std::cerr << "ichan=" << ichan
+              << ", ipol=" << ipol
+              << ", idat=" << idat
+              << "(" << *(ptr + idat) << ", " << expected_val << ")"
+              << std::endl;
+          }
+          size++;
+        }
+      }
+    }
+    std::cerr << "nclose=" << nclose << ", size=" << size << std::endl;
+    CHECK(nclose == size);
+
+  }
+
+  SECTION ("operate method works in non zero_DM case")
+  {
+    convolution.set_zero_DM(false);
+    convolution.prepare();
+    convolution.operate();
+  }
 
 }

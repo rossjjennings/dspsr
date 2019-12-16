@@ -15,7 +15,8 @@ test_main_SOURCES = test_main.cpp \
                     InverseFilterbank/test_InverseFilterbankResponse.cpp \
                     InverseFilterbank/test_InverseFilterbank.cpp \
                     InverseFilterbank/test_InverseFilterbankPipeline.cpp \
-                    InverseFilterbank/InverseFilterbankTestConfig.cpp
+                    InverseFilterbank/InverseFilterbankTestConfig.cpp \
+                    SpectralKurtosis/test_SpectralKurtosis.cpp
 
 
 if HAVE_CUFFT

@@ -264,15 +264,13 @@ void dsp::Convolution::prepare ()
 
     get_buffering_policy()->set_minimum_samples (nsamp_fft);
   }
-
-  prepare_output ();
-
   if (zero_DM) {
     if (! has_zero_DM_output()) {
       zero_DM_output = new dsp::TimeSeries;
     }
-    zero_DM_output->copy_configuration(output);
   }
+  prepare_output ();
+
 
   if (engine)
   {
@@ -348,6 +346,12 @@ void dsp::Convolution::prepare_output ()
     output->set_input_sample (0);
   else if (input_sample >= 0)
     output->set_input_sample ((input_sample / nsamp_step) * nsamp_step);
+
+  if (zero_DM) {
+    zero_DM_output->copy_configuration(output);
+    zero_DM_output->set_input_sample(output->get_input_sample());
+  }
+
 }
 
 //! Reserve the maximum amount of output space required
@@ -363,14 +367,15 @@ void dsp::Convolution::reserve ()
          << " npart=" << npart << endl;
 
   uint64_t output_ndat = npart * nsamp_step;
-  if ( state == Signal::Nyquist )
+  if ( state == Signal::Nyquist ) {
     output_ndat /= 2;
+  }
 
-  if( input != output )
+  if (input != output) {
     output->resize (output_ndat);
-  else
+  } else {
     output->set_ndat (output_ndat);
-
+  }
   // nfilt_pos complex points are dropped from the start of the first FFT
   output->change_start_time (nfilt_pos);
 
@@ -389,6 +394,11 @@ void dsp::Convolution::reserve ()
     if (state == Signal::Nyquist)
       weighted_output->scrunch_weights (2);
   }
+  if (zero_DM) {
+    zero_DM_output->resize(output_ndat);
+    zero_DM_output->change_start_time(nfilt_pos);
+  }
+
 
   if (verbose)
     cerr << "Convolution::reserve done" << endl;
@@ -444,10 +454,11 @@ void dsp::Convolution::transformation ()
 
   const unsigned nbytes_step = nsamp_step * ndim * sizeof(float);
 
-  if (verbose)
+  if (verbose) {
     cerr << "dsp::Convolution::transformation step nsamp=" << nsamp_step
          << " bytes=" << nbytes_step << " ndim=" << ndim << endl;
-
+    std::cerr << "dsp::Convolution::transformation nfilt_pos=" << nfilt_pos << std::endl;
+  }
   const unsigned cross_pol = matrix_convolution ? 2 : 1;
 
   // temporary things that should not go in and out of scope
@@ -526,6 +537,13 @@ void dsp::Convolution::transformation ()
 
           memcpy (ptr, complex_time + nfilt_pos*2, nbytes_step);
 
+          if (zero_DM) {
+            memcpy(
+              zero_DM_output->get_datptr(ichan, ipol) + offset,
+              input->get_datptr(ichan, ipol) + offset + nfilt_pos*2,
+              nbytes_step
+            );
+          }
         }  // for each poln, if matrix convolution
       }  // for each part of the time series
   // for each poln
