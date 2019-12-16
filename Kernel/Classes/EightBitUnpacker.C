@@ -22,17 +22,17 @@ dsp::EightBitUnpacker::EightBitUnpacker (const char* _name)
     cerr << "dsp::EightBitUnpacker ctor" << endl;
 }
 
-void dsp::EightBitUnpacker::unpack (uint64_t ndat, 
+void dsp::EightBitUnpacker::unpack (uint64_t ndat,
 				    const unsigned char* from,
 				    const unsigned nskip,
-				    float* into, 
+				    float* into,
                                     const unsigned fskip,
 				    unsigned long* hist)
 {
   const float* lookup = table->get_values ();
 
-  if (verbose)
-    cerr << "dsp::EightBitUnpacker::unpack ndat=" << ndat << endl;
+  // if (verbose)
+  //   cerr << "dsp::EightBitUnpacker::unpack ndat=" << ndat << endl;
 
   for (uint64_t idat = 0; idat < ndat; idat++)
   {
@@ -47,4 +47,3 @@ void dsp::EightBitUnpacker::unpack (uint64_t ndat,
     into += fskip;
   }
 }
-

@@ -429,10 +429,13 @@ void dsp::Convolution::transformation ()
 
   reserve ();
 
-  if (verbose)
+  if (verbose) {
     cerr << "dsp::Convolution::transformation scratch"
       " size=" << scratch_needed  << endl;
-
+    if (has_zero_DM_output()) {
+      std::cerr << "dsp::Convolution::transformation using zero DM output" << std::endl;
+    }
+  }
   float* spectrum[2];
   spectrum[0] = scratch->space<float> (scratch_needed);
   spectrum[1] = spectrum[0];

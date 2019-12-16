@@ -436,6 +436,14 @@ void dsp::LoadToFold::construct () try
 
     convolved = new_time_series();
 
+
+    if (config->sk_zap && config->nosk_too) {
+      zero_DM_time_series = new_time_series();
+      convolution->set_zero_DM(true);
+      convolution->set_zero_DM_output(zero_DM_time_series);
+    }
+
+
     if (filterbank_after_dedisp)
     {
       convolution->set_input  (filterbanked);
@@ -556,43 +564,43 @@ void dsp::LoadToFold::construct () try
   // peform zapping based on the results of the SKFilterbank
   if (config->sk_zap)
   {
-    if (config->nosk_too)
-    {
-      Detection* presk_detect = new Detection;
-
-      // set up an out-of-place detection to effect a fork in the signal path
-      TimeSeries* presk_detected = new_time_series();
-
-#if HAVE_CUDA
-    if (run_on_gpu)
-      presk_detected->set_memory (device_memory);
-#endif
-
-      presk_detect->set_input (convolved);
-      presk_detect->set_output (presk_detected);
-
-      configure_detection (presk_detect, 0);
-
-      operations.push_back (presk_detect);
-
-      presk_unload = new Archiver;
-      presk_unload->set_extension( ".nosk" );
-      prepare_archiver( presk_unload );
-
-      build_fold (presk_fold, presk_unload);
-
-      presk_fold->set_input( presk_detected );
-
-#if HAVE_CUDA
-    if (run_on_gpu)
-      presk_fold->set_engine (new CUDA::FoldEngine(stream, false));
-#endif
-
-      presk_fold->prepare( manager->get_info() );
-      presk_fold->reset();
-
-      operations.push_back (presk_fold.get());
-    }
+//     if (config->nosk_too)
+//     {
+//       Detection* presk_detect = new Detection;
+//
+//       // set up an out-of-place detection to effect a fork in the signal path
+//       TimeSeries* presk_detected = new_time_series();
+//
+// #if HAVE_CUDA
+//     if (run_on_gpu)
+//       presk_detected->set_memory (device_memory);
+// #endif
+//
+//       presk_detect->set_input (convolved);
+//       presk_detect->set_output (presk_detected);
+//
+//       configure_detection (presk_detect, 0);
+//
+//       operations.push_back (presk_detect);
+//
+//       presk_unload = new Archiver;
+//       presk_unload->set_extension( ".nosk" );
+//       prepare_archiver( presk_unload );
+//
+//       build_fold (presk_fold, presk_unload);
+//
+//       presk_fold->set_input( presk_detected );
+//
+// #if HAVE_CUDA
+//     if (run_on_gpu)
+//       presk_fold->set_engine (new CUDA::FoldEngine(stream, false));
+// #endif
+//
+//       presk_fold->prepare( manager->get_info() );
+//       presk_fold->reset();
+//
+//       operations.push_back (presk_fold.get());
+//     }
 
     cleaned = new_time_series();
 
@@ -601,6 +609,10 @@ void dsp::LoadToFold::construct () try
 
     if (!config->input_buffering)
       skestimator->set_buffering_policy (NULL);
+
+    if (convolution && config->nosk_too) {
+      skestimator->set_zero_DM_input(zero_DM_time_series);
+    }
 
     skestimator->set_input (convolved);
     skestimator->set_output (cleaned);
@@ -718,7 +730,7 @@ void dsp::LoadToFold::prepare_interchan (TimeSeries* data, bool run_on_gpu)
   {
     sample_delay->set_engine (
         new CUDA::SampleDelayEngine ((cudaStream_t) gpu_stream));
-    // Note, this assumes the data TimeSeries memory has already been 
+    // Note, this assumes the data TimeSeries memory has already been
     // properly set up to use the GPU.
   }
 #endif

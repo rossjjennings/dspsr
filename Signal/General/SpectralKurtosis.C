@@ -328,6 +328,9 @@ void dsp::SpectralKurtosis::compute ()
   const dsp::TimeSeries* compute_input = get_input();;
 
   if (has_zero_DM_input()) {
+    if (verbose) {
+      std::cerr << "dsp::SpectralKurtosis::compute: using zero DM input" << std::endl;
+    }
     compute_input = get_zero_DM_input();
     // compute_input->set_input_sample(input->get_input_sample());
   }

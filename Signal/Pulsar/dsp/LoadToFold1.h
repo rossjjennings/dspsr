@@ -119,6 +119,9 @@ namespace dsp {
     //! Optional Spectral Kurtosis (for convolution)
     Reference::To<SpectralKurtosis> skestimator;
 
+    //! Optional zero DM TimeSeries for Spectral Kurtosis
+    Reference::To<TimeSeries> zero_DM_time_series;
+
     //! Optional SK Resizer
     Reference::To<Resize> skresize;
 
