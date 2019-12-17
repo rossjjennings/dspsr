@@ -141,6 +141,18 @@ namespace dsp {
     virtual const TimeSeries* get_zero_DM_output() const;
     virtual TimeSeries* get_zero_DM_output();
 
+
+    //! Return true if the zero DM response attribute has been set
+    bool has_zero_DM_response () const;
+
+    //! Return a pointer to the zero DM frequency response function
+    virtual const Response* get_zero_DM_response() const;
+    virtual Response* get_zero_DM_response();
+
+    //! Set the zero DM frequency response function
+    virtual void set_zero_DM_response (Response* response);
+
+
   protected:
 
     //! Perform the convolution transformation on the input TimeSeries
@@ -151,6 +163,9 @@ namespace dsp {
 
     //! Frequency response (convolution kernel)
     Reference::To<Response> response;
+
+    //! Frequency response to use in zero DM case
+    Reference::To<Response> zero_DM_response;
 
     //! Product of response and normaliser
     Reference::To<ResponseProduct> response_product;

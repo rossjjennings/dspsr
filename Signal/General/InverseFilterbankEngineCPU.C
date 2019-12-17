@@ -178,6 +178,7 @@ void dsp::InverseFilterbankEngineCPU::set_scratch (float * _scratch)
 void dsp::InverseFilterbankEngineCPU::perform (
   const dsp::TimeSeries* in,
   dsp::TimeSeries* out,
+  dsp::TimeSeries* zero_DM_out,
   uint64_t npart,
   uint64_t in_step,
   uint64_t out_step
@@ -352,7 +353,7 @@ void dsp::InverseFilterbankEngineCPU::perform (
           // std::cerr << "dsp::InverseFilterbankEngineCPU::perform: before fft" << std::endl;
           backward->bcc1d(output_fft_length, output_fft_scratch, output_freq_dom_ptr);
           if (report) {
-            reporter.emit("ifft", output_fft_scratch, 1, 1, output_fft_length, 2);            
+            reporter.emit("ifft", output_fft_scratch, 1, 1, output_fft_length, 2);
           }
           // std::cerr << "dsp::InverseFilterbankEngineCPU::perform: after fft" << std::endl;
           // ifft_file.write(
@@ -389,6 +390,18 @@ void dsp::InverseFilterbankEngineCPU::perform (
   // out_file.close();
   // deripple_before_file.close();
   // deripple_after_file.close();
+}
+
+
+void dsp::InverseFilterbankEngineCPU::perform (
+  const dsp::TimeSeries* in,
+  dsp::TimeSeries* out,
+  uint64_t npart,
+  uint64_t in_step,
+  uint64_t out_step
+)
+{
+  perform(in, out, nullptr, npart, in_step, out_step);
 }
 
 void dsp::InverseFilterbankEngineCPU::finish ()

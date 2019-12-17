@@ -103,6 +103,8 @@ TEST_CASE(
     CHECK(output->get_ndat() == zero_DM_output->get_ndat());
     CHECK(output->get_state() == zero_DM_output->get_state());
     CHECK(output->get_ndim() == zero_DM_output->get_ndim());
+    CHECK(output->get_rate() == zero_DM_output->get_rate());
+    CHECK(output->get_input_sample() == zero_DM_output->get_input_sample());
   }
 }
 

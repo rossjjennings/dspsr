@@ -352,9 +352,21 @@ void dsp::LoadToFold::construct () try
     if (convolve_when == Filterbank::Config::During) {
       if (kernel) {
         std::cerr << "dspsr: adding InverseFilterbankResponse to Dedispersion kernel" << std::endl;
+        if (config->sk_zap && config->nosk_too) {
+          std::cerr << "dspsr: using InverseFilterbankResponse as zero DM response" << std::endl;
+          zero_DM_time_series = new_time_series();
+          inverse_filterbank->set_zero_DM(true);
+          inverse_filterbank->set_zero_DM_output(zero_DM_time_series);
+          Reference::To<
+            dsp::InverseFilterbankResponse
+          > zero_DM_response = new dsp::InverseFilterbankResponse(inverse_filterbank_response);
+          inverse_filterbank->set_zero_DM_response(zero_DM_response);
+        }
+
         if (!response_product) {
           response_product = new ResponseProduct;
         }
+
         inverse_filterbank_response->set_pfb_dc_chan (manager->get_info()->get_pfb_dc_chan());
         response_product->add_response (inverse_filterbank_response);
         response_product->add_response (kernel);
@@ -610,7 +622,7 @@ void dsp::LoadToFold::construct () try
     if (!config->input_buffering)
       skestimator->set_buffering_policy (NULL);
 
-    if (convolution && config->nosk_too) {
+    if (config->nosk_too) {
       skestimator->set_zero_DM_input(zero_DM_time_series);
     }
 

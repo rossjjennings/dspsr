@@ -151,6 +151,21 @@ dsp::TimeSeries* dsp::Convolution::get_zero_DM_output () {
   return zero_DM_output;
 }
 
+bool dsp::Convolution::has_zero_DM_response () const {
+  return zero_DM_response;
+}
+
+const Response* dsp::Convolution::get_zero_DM_response() const {
+  return zero_DM_response;
+}
+
+Response* dsp::Convolution::get_zero_DM_response() {
+  return zero_DM_response;
+}
+
+void dsp::Convolution::set_zero_DM_response (Response* response) {
+  zero_DM_response = response;
+}
 
 //! Prepare all relevant attributes
 void dsp::Convolution::prepare ()
@@ -350,8 +365,30 @@ void dsp::Convolution::prepare_output ()
   if (zero_DM) {
     zero_DM_output->copy_configuration(output);
     zero_DM_output->set_input_sample(output->get_input_sample());
+    if (verbose) {
+      std::cerr << "dsp::Convolution::prepare: output->get_nchan()=" <<
+        output->get_nchan() << ",  zero_DM_output->get_nchan()=" <<
+        zero_DM_output->get_nchan() << std::endl;
+      std::cerr << "dsp::Convolution::prepare: output->get_npol()=" <<
+        output->get_npol() << ",  zero_DM_output->get_npol()=" <<
+        zero_DM_output->get_npol() << std::endl;
+      std::cerr << "dsp::Convolution::prepare: output->get_ndat()=" <<
+        output->get_ndat() << ",  zero_DM_output->get_ndat()=" <<
+        zero_DM_output->get_ndat() << std::endl;
+      std::cerr << "dsp::Convolution::prepare: output->get_state()=" <<
+        output->get_state() << ",  zero_DM_output->get_state()=" <<
+        zero_DM_output->get_state() << std::endl;
+      std::cerr << "dsp::Convolution::prepare: output->get_ndim()=" <<
+        output->get_ndim() << ",  zero_DM_output->get_ndim()=" <<
+        zero_DM_output->get_ndim() << std::endl;
+      std::cerr << "dsp::Convolution::prepare: output->get_rate()=" <<
+        output->get_rate() << ",  zero_DM_output->get_rate()=" <<
+        zero_DM_output->get_rate() << std::endl;
+      std::cerr << "dsp::Convolution::prepare: output->get_input_sample()=" <<
+        output->get_input_sample() << ",  zero_DM_output->get_input_sample()=" <<
+        zero_DM_output->get_input_sample() << std::endl;
+    }
   }
-
 }
 
 //! Reserve the maximum amount of output space required
