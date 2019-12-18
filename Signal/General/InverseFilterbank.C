@@ -135,7 +135,7 @@ void dsp::InverseFilterbank::filterbank()
   const uint64_t in_step = input_sample_step * input->get_ndim();
   const uint64_t out_step = output_sample_step * output->get_ndim();
 
-  engine->perform (input, output, npart, in_step, out_step);
+  engine->perform (input, output, zero_DM_output, npart, in_step, out_step);
   if (Operation::record_time){
     engine->finish ();
   }

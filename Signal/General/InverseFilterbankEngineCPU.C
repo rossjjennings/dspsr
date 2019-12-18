@@ -94,7 +94,7 @@ void dsp::InverseFilterbankEngineCPU::setup (dsp::InverseFilterbank* filterbank)
     }
   }
 
-  if (filterbank->has_zero_DM_response()) {
+  if (filterbank->get_zero_DM()) {
     if (verbose) {
       std::cerr << "dsp::InverseFilterbankEngineCPU::setup: setting zero_DM_response" << std::endl;
     }
@@ -163,7 +163,7 @@ void dsp::InverseFilterbankEngineCPU::setup (dsp::InverseFilterbank* filterbank)
                          input_time_scratch_samples +
                          output_fft_scratch_samples +
                          stitch_scratch_samples;
-                         
+
   if (zero_DM_response != nullptr) {
     total_scratch_needed += stitch_scratch_samples;
   }
@@ -256,6 +256,8 @@ void dsp::InverseFilterbankEngineCPU::perform (
       << input_nchan << std::endl;
   }
 
+  void* src_ptr;
+  void* dest_ptr;
 
   for (uint64_t ipart = 0; ipart < npart; ipart++) {
     for (unsigned ipol = 0; ipol < n_pol; ipol++) {
@@ -284,7 +286,7 @@ void dsp::InverseFilterbankEngineCPU::perform (
         if (real_to_complex) {
           forward->frc1d(input_fft_length, freq_dom_ptr, input_time_scratch);
         } else {
-          // fcc1d(number_of_points, destinationPtr, sourcePtr);
+          // fcc1d(number_of_points, dest_ptr, src_ptr);
           forward->fcc1d(input_fft_length, freq_dom_ptr, input_time_scratch);
         }
         // discard oversampled regions and do circular shift
@@ -334,6 +336,19 @@ void dsp::InverseFilterbankEngineCPU::perform (
       }
 
 
+      if (zero_DM_response != nullptr) {
+        // copy data from stitch_scratch into stitch_scratch_zero_DM
+        if (verbose) {
+          std::cerr << "dsp::InverseFilterbankEngineCPU::perform: applying zero_DM_response" << std::endl;
+        }
+        memcpy(stitch_scratch_zero_DM, stitch_scratch, output_nchan*output_fft_length*sizeof_complex);
+        zero_DM_response->operate(stitch_scratch_zero_DM, ipol, 0, output_nchan);
+      } else {
+        if (verbose) {
+          std::cerr << "dsp::InverseFilterbankEngineCPU::perform: NOT applying zero_DM_response" << std::endl;
+        }
+      }
+
       if (response != nullptr) {
         if (verbose) {
           std::cerr << "dsp::InverseFilterbankEngineCPU::perform: applying response" << std::endl;
@@ -376,16 +391,28 @@ void dsp::InverseFilterbankEngineCPU::perform (
           // );
 
           // Output is in FPT order.
-          void* sourcePtr = (void *)(
+          src_ptr = (void *)(
               output_fft_scratch + output_discard_pos*floats_per_complex);
-          void* destinationPtr = (void *)(
+          dest_ptr = (void *)(
               out->get_datptr(output_ichan, ipol) +
               ipart*output_sample_step*floats_per_complex);
-          std::memcpy(destinationPtr, sourcePtr, output_sample_step*sizeof_complex);
+          std::memcpy(dest_ptr, src_ptr, output_sample_step*sizeof_complex);
           output_freq_dom_ptr += output_fft_length*n_dims;
+
+          if (zero_DM_response != nullptr) {
+            backward->bcc1d(output_fft_length, output_fft_scratch, stitch_scratch_zero_DM + output_ichan*output_fft_length*n_dims);
+            src_ptr = (void *)(
+                output_fft_scratch + output_discard_pos*floats_per_complex);
+            dest_ptr = (void *)(
+                zero_DM_out->get_datptr(output_ichan, ipol) +
+                ipart*output_sample_step*floats_per_complex);
+            std::memcpy(dest_ptr, src_ptr, output_sample_step*sizeof_complex);
+          }
+
+
           // std::cerr << "dsp::InverseFilterbankEngineCPU::perform: after copy" << std::endl;
           // out_file.write(
-          //   reinterpret_cast<const char*>(destinationPtr),
+          //   reinterpret_cast<const char*>(dest_ptr),
           //   output_sample_step*sizeof_complex
           // );
         }
