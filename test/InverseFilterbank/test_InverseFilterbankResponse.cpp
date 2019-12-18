@@ -57,15 +57,15 @@ TEST_CASE("InverseFilterbankResponse attributes can be manipulated",
 TEST_CASE("InverseFilterbankResponse produces correct derippling response",
           "[InverseFilterbankResponse][component]")
 {
-
+  using IFResponse = dsp::InverseFilterbankResponse;
   const std::string file_name = test_config.get_field<std::string>(
     "InverseFilterbank.test_InverseFilterbankResponse.fir_file_name");
 
   const std::string file_path = test::util::get_test_data_dir() + "/" + file_name;
 
-  if (test::util::config::verbose) {
-    std::cerr << "test_InverseFilterbankResponse: FIR file path=" << file_path << std::endl;
-  }
+  // if (test::util::config::verbose) {
+  //   std::cerr << "test_InverseFilterbankResponse: FIR file path=" << file_path << std::endl;
+  // }
 
   // test::util::set_verbose(true);
   dsp::IOManager manager;
@@ -77,7 +77,7 @@ TEST_CASE("InverseFilterbankResponse produces correct derippling response",
   test::util::load_psr_data(manager, block_size, freq_response_expected);
 
   const std::vector<dsp::FIRFilter> filters = info->get_deripple();
-  dsp::InverseFilterbankResponse deripple_response;
+  IFResponse deripple_response;
 
   deripple_response.set_fir_filter(filters[0]);
   deripple_response.set_pfb_dc_chan(false);
@@ -94,7 +94,7 @@ TEST_CASE("InverseFilterbankResponse produces correct derippling response",
 
 
   SECTION ("copy operator works as expected") {
-    dsp::InverseFilterbankResponse new_deripple_response(deripple_response);
+    IFResponse new_deripple_response(deripple_response);
 
     float* deripple_response_buffer = deripple_response.get_datptr(0, 0);
     float* new_deripple_response_buffer = new_deripple_response.get_datptr(0, 0);
@@ -106,7 +106,22 @@ TEST_CASE("InverseFilterbankResponse produces correct derippling response",
     );
 
     REQUIRE(nclose == block_size);
+    if (test::util::config::verbose) {
+      std::cerr << "test_InverseFilterbankResponse: "
+        << nclose << "/" << block_size << " (" << ((float) nclose / block_size) * 100
+        << "%)" << std::endl;
+    }
+  }
 
+  SECTION ("copy operator works with pointers") {
+    Reference::To<
+      IFResponse
+    > ref_deripple_response = new IFResponse;
+    ref_deripple_response->resize(1, 1, freq_response_size, 2); // have to explicitly call this
+
+    Reference::To<
+      IFResponse
+    > new_ref_deripple_response = new IFResponse(*ref_deripple_response);
   }
 
 

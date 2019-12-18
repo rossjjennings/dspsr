@@ -48,6 +48,7 @@ dsp::InverseFilterbankResponse::InverseFilterbankResponse (const dsp::InverseFil
 
 const dsp::InverseFilterbankResponse& dsp::InverseFilterbankResponse::operator= (const dsp::InverseFilterbankResponse& response)
 {
+
   if (this == &response) {
     return *this;
   }

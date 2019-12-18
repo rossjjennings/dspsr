@@ -178,6 +178,9 @@ void dsp::InverseFilterbank::make_preparations ()
   }
   if (has_response()) {
     response->match(input, output_nchan);
+    if (zero_DM && has_zero_DM_response()) {
+      zero_DM_response->match(input, output_nchan);
+    }
     output_discard_pos = response->get_impulse_pos();
     output_discard_neg = response->get_impulse_neg();
     freq_res = response->get_ndat();

@@ -96,6 +96,7 @@ TEST_CASE (
   deripple->set_fir_filter(info->get_deripple()[0]);
   deripple->set_apply_deripple(false);
   deripple->set_ndat(freq_res);
+  deripple->resize(1, 1, freq_res, 2);
 
   filterbank.set_engine(filterbank_engine);
   filterbank.set_response(deripple);
@@ -104,15 +105,19 @@ TEST_CASE (
 
     Reference::To<
       dsp::InverseFilterbankResponse
-    > zero_DM_response = new dsp::InverseFilterbankResponse(*deripple);
+    > zero_DM_response = new dsp::InverseFilterbankResponse;
+    *zero_DM_response = *deripple;
+
     Reference::To<dsp::TimeSeries> zero_DM_output = new dsp::TimeSeries;
 
+    filterbank.set_zero_DM(true);
     filterbank.set_zero_DM_output(zero_DM_output);
     filterbank.set_zero_DM_response(zero_DM_response);
 
     filterbank.prepare();
     filterbank.operate();
 
+    REQUIRE(zero_DM_response->get_ndat() == filterbank.get_response()->get_ndat());
   }
 
   SECTION ("runs in non zero DM case") {
