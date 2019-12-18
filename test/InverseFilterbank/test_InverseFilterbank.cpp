@@ -23,18 +23,11 @@
 static test::util::TestConfig test_config;
 
 
-TEST_CASE ("InverseFilterbank", "[unit][no_file][InverseFilterbank]") {
+TEST_CASE (
+  "InverseFilterbank",
+  "[unit][no_file][InverseFilterbank]"
+) {
   dsp::InverseFilterbank filterbank;
-
-  SECTION ("InverseFilterbank prepare method runs")
-  {
-    // filterbank.prepare();
-  }
-
-  SECTION ("InverseFilterbank reserve method runs")
-  {
-    // filterbank.reserve();
-  }
 
   SECTION ("InverseFilterbank engine can be set")
   {
@@ -57,7 +50,9 @@ TEST_CASE ("InverseFilterbank", "[unit][no_file][InverseFilterbank]") {
   }
 }
 
-TEST_CASE ("InverseFilterbank runs on channelized data", "[InverseFilterbank]")
+TEST_CASE (
+  "InverseFilterbank runs on channelized data",
+  "[InverseFilterbank][component]")
 {
 
   const std::string file_name = test_config.get_field<std::string>(
@@ -74,7 +69,7 @@ TEST_CASE ("InverseFilterbank runs on channelized data", "[InverseFilterbank]")
   dsp::IOManager manager;
   manager.open(file_path);
 
-  dsp::TimeSeries* unpacked = new dsp::TimeSeries;
+  Reference::To<dsp::TimeSeries> unpacked = new dsp::TimeSeries;
   test::util::load_psr_data(manager, block_size, unpacked);
 
   dsp::Observation* info = manager.get_input()->get_info();
@@ -84,7 +79,8 @@ TEST_CASE ("InverseFilterbank runs on channelized data", "[InverseFilterbank]")
   unsigned input_nchan = info->get_nchan();
   unsigned input_npol = info->get_npol();
 
-  dsp::TimeSeries* output = new dsp::TimeSeries;
+  Reference::To<dsp::TimeSeries> output = new dsp::TimeSeries;
+
   dsp::InverseFilterbank filterbank;
   filterbank.set_buffering_policy(NULL);
   filterbank.set_output_nchan(1);
@@ -100,12 +96,28 @@ TEST_CASE ("InverseFilterbank runs on channelized data", "[InverseFilterbank]")
   deripple->set_fir_filter(info->get_deripple()[0]);
   deripple->set_apply_deripple(false);
   deripple->set_ndat(freq_res);
-  // deripple->set_nchan(1);
-  // deripple->resize(input_npol, 1, ndat, 2);
 
   filterbank.set_engine(filterbank_engine);
   filterbank.set_response(deripple);
 
-  filterbank.prepare();
-  filterbank.operate();
+  SECTION ("runs in zero DM case") {
+
+    Reference::To<
+      dsp::InverseFilterbankResponse
+    > zero_DM_response = new dsp::InverseFilterbankResponse(*deripple);
+    Reference::To<dsp::TimeSeries> zero_DM_output = new dsp::TimeSeries;
+
+    filterbank.set_zero_DM_output(zero_DM_output);
+    filterbank.set_zero_DM_response(zero_DM_response);
+
+    filterbank.prepare();
+    filterbank.operate();
+
+  }
+
+  SECTION ("runs in non zero DM case") {
+    filterbank.prepare();
+    filterbank.operate();
+  }
+
 }

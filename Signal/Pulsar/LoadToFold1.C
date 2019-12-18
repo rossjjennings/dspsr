@@ -303,6 +303,7 @@ void dsp::LoadToFold::construct () try
 
   // convolved and filterbank are out of place
   TimeSeries* filterbanked = unpacked;
+  zero_DM_time_series = unpacked;
 
   Filterbank::Config::When convolve_when;
   unsigned filter_channels;
@@ -359,7 +360,7 @@ void dsp::LoadToFold::construct () try
           inverse_filterbank->set_zero_DM_output(zero_DM_time_series);
           Reference::To<
             dsp::InverseFilterbankResponse
-          > zero_DM_response = new dsp::InverseFilterbankResponse(inverse_filterbank_response);
+          > zero_DM_response = new dsp::InverseFilterbankResponse(*inverse_filterbank_response);
           inverse_filterbank->set_zero_DM_response(zero_DM_response);
         }
 
@@ -616,13 +617,17 @@ void dsp::LoadToFold::construct () try
 
     cleaned = new_time_series();
 
-    if (!skestimator)
+    if (!skestimator) {
       skestimator = new SpectralKurtosis();
+    }
 
-    if (!config->input_buffering)
+    if (!config->input_buffering) {
       skestimator->set_buffering_policy (NULL);
+      skestimator->set_zero_DM_buffering_policy (NULL);
+    }
 
     if (config->nosk_too) {
+      skestimator->set_zero_DM(true);
       skestimator->set_zero_DM_input(zero_DM_time_series);
     }
 

@@ -23,7 +23,7 @@ TEST_CASE (
 
 TEST_CASE (
   "InverseFilterbankEngineCPU can operate on data",
-	"[no_file][InverseFilterbankEngineCPU]"
+	"[no_file][InverseFilterbankEngineCPU][component]"
 )
 {
   if (test::util::config::verbose) {

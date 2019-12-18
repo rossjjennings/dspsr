@@ -27,6 +27,7 @@ dsp::InverseFilterbankEngineCPU::InverseFilterbankEngineCPU ()
   input_fft_length = 0;
   fft_plans_setup = false;
   response = nullptr;
+  zero_DM_response = nullptr;
   fft_window = nullptr;
 
   pfb_dc_chan = 0;
@@ -93,6 +94,13 @@ void dsp::InverseFilterbankEngineCPU::setup (dsp::InverseFilterbank* filterbank)
     }
   }
 
+  if (filterbank->has_zero_DM_response()) {
+    if (verbose) {
+      std::cerr << "dsp::InverseFilterbankEngineCPU::setup: setting zero_DM_response" << std::endl;
+    }
+    zero_DM_response = filterbank->get_zero_DM_response();
+  }
+
   OptimalFFT* optimal = 0;
   if (response && response->has_optimal_fft()) {
     if (verbose) {
@@ -155,7 +163,10 @@ void dsp::InverseFilterbankEngineCPU::setup (dsp::InverseFilterbank* filterbank)
                          input_time_scratch_samples +
                          output_fft_scratch_samples +
                          stitch_scratch_samples;
-
+                         
+  if (zero_DM_response != nullptr) {
+    total_scratch_needed += stitch_scratch_samples;
+  }
   // dsp::Scratch* scratch = new Scratch;
   // input_fft_scratch = scratch->space<float>
   //   (input_time_points + input_fft_points + output_fft_points  + stitch_points);
@@ -172,6 +183,9 @@ void dsp::InverseFilterbankEngineCPU::set_scratch (float * _scratch)
   input_time_scratch = input_fft_scratch + input_fft_scratch_samples;
   output_fft_scratch = input_time_scratch + input_time_scratch_samples;
   stitch_scratch = output_fft_scratch + output_fft_scratch_samples;
+  if (zero_DM_response != nullptr) {
+    stitch_scratch_zero_DM = stitch_scratch + stitch_scratch_samples;
+  }
 
 }
 

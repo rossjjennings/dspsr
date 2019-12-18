@@ -86,7 +86,7 @@ void PipelineConfig::setup_input (std::string file_path) {
 
 TEST_CASE(
   "InverseFilterbank works in larger LoadToFold context",
-  "[InverseFilterbankPipeline]"
+  "[InverseFilterbank][integration]"
 )
 {
 

@@ -32,8 +32,6 @@ TEST_CASE("InverseFilterbankResponse attributes can be manipulated",
 {
   dsp::InverseFilterbankResponse deripple_response;
 
-
-
   SECTION ("can get and set ndat")
   {
     unsigned new_ndat = 128;
@@ -49,15 +47,15 @@ TEST_CASE("InverseFilterbankResponse attributes can be manipulated",
   }
 }
 
-TEST_CASE ("InverseFilterbankResponse roll should produce expected result",
-           "[InverseFilterbankResponse]")
-{
-
-}
+// TEST_CASE ("InverseFilterbankResponse roll should produce expected result",
+//            "[InverseFilterbankResponse]")
+// {
+//
+// }
 
 
 TEST_CASE("InverseFilterbankResponse produces correct derippling response",
-          "[InverseFilterbankResponse]")
+          "[InverseFilterbankResponse][component]")
 {
 
   const std::string file_name = test_config.get_field<std::string>(
@@ -78,19 +76,41 @@ TEST_CASE("InverseFilterbankResponse produces correct derippling response",
   dsp::TimeSeries* freq_response_expected = new dsp::TimeSeries;
   test::util::load_psr_data(manager, block_size, freq_response_expected);
 
+  const std::vector<dsp::FIRFilter> filters = info->get_deripple();
+  dsp::InverseFilterbankResponse deripple_response;
+
+  deripple_response.set_fir_filter(filters[0]);
+  deripple_response.set_pfb_dc_chan(false);
+  deripple_response.set_apply_deripple(true);
+  deripple_response.set_ndat(freq_response_size);
+  deripple_response.set_input_nchan(nchan);
+  deripple_response.set_oversampling_factor(os_factor);
+  deripple_response.resize(1, 1, freq_response_size, 2); // have to explicitly call this
+  deripple_response.build();
+
+
+  float expected_val;
+  float test_val;
+
+
+  SECTION ("copy operator works as expected") {
+    dsp::InverseFilterbankResponse new_deripple_response(deripple_response);
+
+    float* deripple_response_buffer = deripple_response.get_datptr(0, 0);
+    float* new_deripple_response_buffer = new_deripple_response.get_datptr(0, 0);
+
+    unsigned nclose = test::util::nclose(
+      deripple_response_buffer,
+      new_deripple_response_buffer,
+      block_size
+    );
+
+    REQUIRE(nclose == block_size);
+
+  }
+
+
   SECTION ("build produces correct frequency response") {
-    const std::vector<dsp::FIRFilter> filters = info->get_deripple();
-    dsp::InverseFilterbankResponse deripple_response;
-
-    deripple_response.set_fir_filter(filters[0]);
-    deripple_response.set_pfb_dc_chan(false);
-    deripple_response.set_apply_deripple(true);
-    deripple_response.set_ndat(freq_response_size);
-    deripple_response.set_input_nchan(nchan);
-    deripple_response.set_oversampling_factor(os_factor);
-    deripple_response.resize(1, 1, freq_response_size, 2); // have to explicitly call this
-    deripple_response.build();
-
     float* freq_response_expected_buffer = freq_response_expected->get_datptr(0, 0);
 
     float* freq_response_test_buffer = deripple_response.get_datptr(0, 0);
@@ -103,9 +123,6 @@ TEST_CASE("InverseFilterbankResponse produces correct derippling response",
         "freq_response_test.dat", freq_response_test_buffer, 2*freq_response_size);
     test::util::write_binary_data<float>(
         "freq_response_expected.dat", freq_response_expected_buffer, 2*freq_response_size);
-
-    float expected_val;
-    float test_val;
 
     bool isclose;
     bool allclose = true;

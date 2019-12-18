@@ -38,7 +38,7 @@ dsp::Convolution::Convolution (const char* _name, Behaviour _type)
   normalizer = new ScalarFilter();
 
   zero_DM = false;
-
+  zero_DM_output = new dsp::TimeSeries;
 }
 
 dsp::Convolution::~Convolution ()
@@ -155,15 +155,15 @@ bool dsp::Convolution::has_zero_DM_response () const {
   return zero_DM_response;
 }
 
-const Response* dsp::Convolution::get_zero_DM_response() const {
+const dsp::Response* dsp::Convolution::get_zero_DM_response() const {
   return zero_DM_response;
 }
 
-Response* dsp::Convolution::get_zero_DM_response() {
+dsp::Response* dsp::Convolution::get_zero_DM_response() {
   return zero_DM_response;
 }
 
-void dsp::Convolution::set_zero_DM_response (Response* response) {
+void dsp::Convolution::set_zero_DM_response (dsp::Response* response) {
   zero_DM_response = response;
 }
 
@@ -280,7 +280,7 @@ void dsp::Convolution::prepare ()
     get_buffering_policy()->set_minimum_samples (nsamp_fft);
   }
   if (zero_DM) {
-    if (! has_zero_DM_output()) {
+    if (! zero_DM) {
       zero_DM_output = new dsp::TimeSeries;
     }
   }
@@ -469,7 +469,7 @@ void dsp::Convolution::transformation ()
   if (verbose) {
     cerr << "dsp::Convolution::transformation scratch"
       " size=" << scratch_needed  << endl;
-    if (has_zero_DM_output()) {
+    if (zero_DM) {
       std::cerr << "dsp::Convolution::transformation using zero DM output" << std::endl;
     }
   }
@@ -588,4 +588,11 @@ void dsp::Convolution::transformation ()
       }  // for each part of the time series
   // for each poln
   // for each channel
+  if (verbose) {
+    std::cerr << "dsp::Convolution::transformation: output->get_input_sample()=" <<
+      output->get_input_sample() << ",  zero_DM_output->get_input_sample()=" <<
+      zero_DM_output->get_input_sample() << std::endl;
+  }
+
+
 }

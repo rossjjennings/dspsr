@@ -100,7 +100,7 @@ public:
 
 TEST_CASE (
   "InverseFilterbankEngineCPU and InverseFilterbankEngineCUDA produce same output",
-  "[cuda][InverseFilterbankEngine_integration]"
+  "[cuda][InverseFilterbankEngineCUDA][InverseFilterbankEngineCPU][integration]"
 )
 {
 
