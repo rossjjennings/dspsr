@@ -359,6 +359,8 @@ void dsp::LoadToFold::construct () try
           zero_DM_time_series = new_time_series();
           inverse_filterbank->set_zero_DM(true);
           inverse_filterbank->set_zero_DM_output(zero_DM_time_series);
+          // the following will be overwritten in InverseFilterbank::prepare
+          inverse_filterbank_response->resize(1, 1, config->inverse_filterbank.get_freq_res(), 2);
           Reference::To<
             dsp::InverseFilterbankResponse
           > zero_DM_response = new dsp::InverseFilterbankResponse(*inverse_filterbank_response);

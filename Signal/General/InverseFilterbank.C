@@ -129,6 +129,9 @@ void dsp::InverseFilterbank::transformation ()
   }
 
   output->set_input_sample (new_output_sample);
+  if (zero_DM) {
+    get_zero_DM_output()->set_input_sample(new_output_sample);
+  }
 
   if (verbose) {
     cerr << "dsp::InverseFilterbank::transformation after prepare output"
@@ -369,6 +372,8 @@ void dsp::InverseFilterbank::prepare_output (uint64_t ndat, bool set_ndat)
   output->set_ndim(2);
   output->set_state(Signal::Analytic);
 
+
+
   if (verbose) {
     cerr << "dsp::InverseFilterbank::prepare_output"
          << " output ndim=" << output->get_ndim()
@@ -488,6 +493,13 @@ void dsp::InverseFilterbank::prepare_output (uint64_t ndat, bool set_ndat)
   if (response){
     response->mark (output);
   }
+
+  if (zero_DM) {
+    get_zero_DM_output()->copy_configuration(output);
+    get_zero_DM_output()->resize(output->get_ndat());
+    get_zero_DM_output()->change_start_time(output_discard_pos);
+  }
+
 }
 
 void dsp::InverseFilterbank::resize_output (bool reserve_extra)
@@ -594,7 +606,7 @@ void dsp::InverseFilterbank::resize_output (bool reserve_extra)
 //     min_n = n[i];
 //     lcf = calc_lcf(min_n, n_input_channels, os);
 //     if (lcf.rem != 0) {
-//       min_n += os.get_denominator()*n_input_channels - lcf.rem;
+//       min_n += os.get_denominator()*n_input_c hannels - lcf.rem;
 // 			lcf.quot += 1;
 // 	    lcf.rem = 0;
 //     }
