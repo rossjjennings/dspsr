@@ -341,6 +341,7 @@ void dsp::LoadToFold::construct () try
     Reference::To<dsp::InverseFilterbankResponse> inverse_filterbank_response = new dsp::InverseFilterbankResponse;
     inverse_filterbank_response->set_apply_deripple(false);
     inverse_filterbank_response->set_input_overlap(config->inverse_filterbank.get_input_overlap());
+    inverse_filterbank_response->set_pfb_dc_chan (manager->get_info()->get_pfb_dc_chan());
 
     if (manager->get_info()->get_deripple_stages() > 0) {
       dsp::FIRFilter first_filter = manager->get_info()->get_deripple()[0];
@@ -368,7 +369,6 @@ void dsp::LoadToFold::construct () try
           response_product = new ResponseProduct;
         }
 
-        inverse_filterbank_response->set_pfb_dc_chan (manager->get_info()->get_pfb_dc_chan());
         response_product->add_response (inverse_filterbank_response);
         response_product->add_response (kernel);
 

@@ -86,8 +86,9 @@ void dsp::InverseFilterbank::transformation ()
 
   resize_output ();
 
-  if (has_buffering_policy())
+  if (has_buffering_policy()) {
     get_buffering_policy()->set_next_start (input_sample_step * npart);
+  }
 
   uint64_t output_ndat = output->get_ndat();
 
@@ -96,7 +97,10 @@ void dsp::InverseFilterbank::transformation ()
 
   if (verbose) {
     cerr << "dsp::InverseFilterbank::transformation npart=" << npart
-         << " nkeep=" << nkeep << " output_ndat=" << output_ndat << endl;
+         << " freq_res=" << freq_res <<
+         << " nfilt_tot=" << nfilt_tot <<
+         << " nkeep=" << nkeep
+         << " output_ndat=" << output_ndat << endl;
   }
   // set the input sample
   int64_t input_sample = input->get_input_sample();
@@ -341,11 +345,11 @@ void dsp::InverseFilterbank::prepare_output (uint64_t ndat, bool set_ndat)
     weighted_output->set_reserve_kludge_factor (tres_ratio);
   }
 
-  output->copy_configuration ( get_input() );
+  output->copy_configuration(get_input());
 
-  output->set_nchan( output_nchan );
-  output->set_ndim( 2 );
-  output->set_state( Signal::Analytic );
+  output->set_nchan(output_nchan);
+  output->set_ndim(2);
+  output->set_state(Signal::Analytic);
 
   if (verbose) {
     cerr << "dsp::InverseFilterbank::prepare_output"
@@ -360,6 +364,8 @@ void dsp::InverseFilterbank::prepare_output (uint64_t ndat, bool set_ndat)
 
   if (weighted_output)
   {
+    if (verbose)
+      cerr << "dsp::InverseFilterbank::prepare_output using weighted_output" << endl;
     weighted_output->set_reserve_kludge_factor (1);
     weighted_output->convolve_weights (input_fft_length, input_sample_step);
     weighted_output->scrunch_weights (tres_ratio);

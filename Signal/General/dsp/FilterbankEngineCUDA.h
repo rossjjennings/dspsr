@@ -47,6 +47,9 @@ namespace CUDA
     void perform (const dsp::TimeSeries* in, dsp::TimeSeries* out,
                   uint64_t npart, uint64_t in_step, uint64_t out_step);
 
+    void perform (const dsp::TimeSeries* in, dsp::TimeSeries* out, dsp::TimeSeries* zero_DM_out,
+                  uint64_t npart, uint64_t in_step, uint64_t out_step);
+
     void finish ();
 
     FTransform::Plan* get_forward ();
@@ -83,7 +86,7 @@ namespace CUDA
     cudaStream_t stream;
 
     bool verbose;
-    
+
   };
 
 }

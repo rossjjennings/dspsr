@@ -797,7 +797,7 @@ std::vector<cufftResult> CUDA::InverseFilterbankEngineCUDA::setup_forward_fft_pl
   }
   // setup forward batched plan
   int rank = 1; // 1D transform
-  int n[] = {_input_fft_length}; /* 1d transforms of length _input_fft_length */
+  int n[] = {(int) _input_fft_length}; /* 1d transforms of length _input_fft_length */
   int howmany = _howmany;
   int idist = _input_fft_length;
   int odist = _input_fft_length;
@@ -853,7 +853,7 @@ std::vector<cufftResult> CUDA::InverseFilterbankEngineCUDA::setup_backward_fft_p
   }
   // setup forward batched plan
   int rank = 1; // 1D transform
-  int n[] = {_output_fft_length}; /* 1d transforms of length _output_fft_length */
+  int n[] = {(int) _output_fft_length}; /* 1d transforms of length _output_fft_length */
   int howmany = _howmany;
   int idist = _output_fft_length;
   int odist = _output_fft_length;
@@ -1070,10 +1070,21 @@ void CUDA::InverseFilterbankEngineCUDA::set_scratch (float* _scratch)
   // check_error ("CUDA::InverseFilterbankEngineCUDA::set_scratch");
 }
 
+void CUDA::InverseFilterbankEngineCUDA::perform (
+  const dsp::TimeSeries* in,
+  dsp::TimeSeries* out,
+  uint64_t npart,
+  uint64_t in_step,
+  uint64_t out_step
+)
+{
+  perform(in, out, nullptr, npart, in_step, out_step);
+}
 
 void CUDA::InverseFilterbankEngineCUDA::perform (
   const dsp::TimeSeries* in,
   dsp::TimeSeries* out,
+  dsp::TimeSeries* zero_DM_out,
   uint64_t npart,
   uint64_t in_step,
   uint64_t out_step

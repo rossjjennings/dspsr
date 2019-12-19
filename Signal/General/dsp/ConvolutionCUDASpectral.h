@@ -41,6 +41,11 @@ namespace CUDA
     void perform (const dsp::TimeSeries* input, dsp::TimeSeries* output,
                   unsigned npart);
 
+    void perform (const dsp::TimeSeries* input, dsp::TimeSeries* output,
+                  dsp::TimeSeries* zero_DM_out,
+                  unsigned npart);
+
+
   protected:
 
     void perform_complex (const dsp::TimeSeries* input, dsp::TimeSeries * output,
@@ -98,7 +103,7 @@ namespace CUDA
     unsigned nsamp_overlap;
 
     unsigned nsamp_step;
-    
+
     unsigned nfilt_pos;
 
     unsigned nfilt_neg;
@@ -113,4 +118,3 @@ namespace CUDA
 }
 
 #endif
-

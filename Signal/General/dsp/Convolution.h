@@ -227,6 +227,8 @@ class dsp::Convolution::Engine : public Reference::Able
     virtual void prepare (dsp::Convolution * convolution) = 0;
 
     virtual void perform (const dsp::TimeSeries* in, dsp::TimeSeries* out, unsigned npart) = 0;
+
+    virtual void perform (const dsp::TimeSeries* in, dsp::TimeSeries* out, dsp::TimeSeries* zero_DM_out, unsigned npart) = 0;
 };
 
 #endif
