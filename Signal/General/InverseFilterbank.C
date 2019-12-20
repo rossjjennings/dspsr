@@ -86,16 +86,15 @@ void dsp::InverseFilterbank::transformation ()
 
   resize_output ();
 
+
   if (has_buffering_policy()) {
-<<<<<<< HEAD
-=======
     if (verbose) {
       std::cerr << "dsp::InverseFilterbank::transformation: get_buffering_policy()->set_next_start("
         << input_sample_step * npart << ")" << std::endl;
     }
->>>>>>> 362e0bb5... added some extra information for the inverse filterbank, fixed bug in InverseFilterbank
     get_buffering_policy()->set_next_start (input_sample_step * npart);
   }
+
 
   uint64_t output_ndat = output->get_ndat();
 
@@ -109,23 +108,8 @@ void dsp::InverseFilterbank::transformation ()
   }
 
   if (verbose) {
-<<<<<<< HEAD
-    cerr << "dsp::InverseFilterbank::transformation npart=" << npart
-         << " freq_res=" << freq_res <<
-         << " nfilt_tot=" << nfilt_tot <<
-         << " nkeep=" << nkeep
-         << " output_ndat=" << output_ndat << endl;
-  }
-  // set the input sample
-  int64_t input_sample = input->get_input_sample();
-  if (output_ndat == 0) {
-    output->set_input_sample (0);
-  } else if (input_sample >= 0) {
-    output->set_input_sample ((input_sample / input_sample_step) * nkeep);
-=======
     std::cerr << "dsp::InverseFilterbank::transformation: setting input sample to "
       << new_output_sample << std::endl;
->>>>>>> 362e0bb5... added some extra information for the inverse filterbank, fixed bug in InverseFilterbank
   }
 
   output->set_input_sample (new_output_sample);
@@ -147,6 +131,7 @@ void dsp::InverseFilterbank::transformation ()
   }
 
   filterbank ();
+
 }
 
 void dsp::InverseFilterbank::filterbank()
