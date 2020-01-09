@@ -54,6 +54,9 @@ SWIN_COMPILER
 
 AM_INIT_AUTOMAKE([foreign subdir-objects])
 
+# Create static libraries by default
+LT_INIT([disable-shared])
+
 #
 # Check for selected formats in backends.list
 #
@@ -83,14 +86,6 @@ AC_PROG_LIBTOOL
 AX_CXX_COMPILE_STDCXX_11([noext], [optional])
 AM_CONDITIONAL([HAVE_CXX11], [test x"$HAVE_CXX11" == x1])
 
-# Create static libraries by default
-if test x"$enable_shared" == xyes; then
-  # echo "enable shared"
-  AC_ENABLE_SHARED
-else
-  # echo "disable shared"
-  AC_DISABLE_SHARED
-fi
 #
 # Disable the debugging information option, -g
 #
@@ -176,12 +171,16 @@ SWIN_FUNC_GETOPT_LONG
 SWIN_FUNC_AFFINITY
 
 #
-# Generate python module if --enable-shared is used
+# Generate python module if --enable-shared is used 
+# but not if --disable-python is also used.
 #
-if test x"$enable_shared" == xyes; then
+AC_ARG_ENABLE([python],
+              AC_HELP_STRING([--disable-python],
+              [Don't build python extensions]))
+
+if test x"$enable_shared" == xyes -a x"$enable_python" != xno; then
   AM_PATH_PYTHON(,, [:])
   AC_PROG_SWIG
-
   SWIG_ENABLE_CXX
   SWIG_PYTHON
 else
