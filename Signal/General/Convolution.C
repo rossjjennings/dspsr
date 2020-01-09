@@ -36,6 +36,9 @@ dsp::Convolution::Convolution (const char* _name, Behaviour _type)
 {
   set_buffering_policy (new InputBuffering (this));
   normalizer = new ScalarFilter();
+
+  zero_DM = false;
+  zero_DM_output = new dsp::TimeSeries;
 }
 
 dsp::Convolution::~Convolution ()
@@ -57,6 +60,7 @@ void dsp::Convolution::set_device (Memory* mem)
     set_scratch (gpu_scratch);
   }
 #endif
+
 }
 
 void dsp::Convolution::set_engine (Engine * _engine)
@@ -127,6 +131,40 @@ void dsp::Convolution::set_apodization (Apodization* _function)
 void dsp::Convolution::set_passband (Response* _passband)
 {
   passband = _passband;
+}
+
+void dsp::Convolution::set_zero_DM_output (TimeSeries* _zero_DM_output)
+{
+  zero_DM = true;
+  zero_DM_output = _zero_DM_output;
+}
+
+bool dsp::Convolution::has_zero_DM_output () const {
+  return zero_DM_output;
+}
+
+const dsp::TimeSeries* dsp::Convolution::get_zero_DM_output () const {
+  return zero_DM_output;
+}
+
+dsp::TimeSeries* dsp::Convolution::get_zero_DM_output () {
+  return zero_DM_output;
+}
+
+bool dsp::Convolution::has_zero_DM_response () const {
+  return zero_DM_response;
+}
+
+const dsp::Response* dsp::Convolution::get_zero_DM_response() const {
+  return zero_DM_response;
+}
+
+dsp::Response* dsp::Convolution::get_zero_DM_response() {
+  return zero_DM_response;
+}
+
+void dsp::Convolution::set_zero_DM_response (dsp::Response* response) {
+  zero_DM_response = response;
 }
 
 //! Prepare all relevant attributes
@@ -241,8 +279,13 @@ void dsp::Convolution::prepare ()
 
     get_buffering_policy()->set_minimum_samples (nsamp_fft);
   }
-
+  if (zero_DM) {
+    if (! zero_DM) {
+      zero_DM_output = new dsp::TimeSeries;
+    }
+  }
   prepare_output ();
+
 
   if (engine)
   {
@@ -318,6 +361,34 @@ void dsp::Convolution::prepare_output ()
     output->set_input_sample (0);
   else if (input_sample >= 0)
     output->set_input_sample ((input_sample / nsamp_step) * nsamp_step);
+
+  if (zero_DM) {
+    zero_DM_output->copy_configuration(output);
+    zero_DM_output->set_input_sample(output->get_input_sample());
+    if (verbose) {
+      std::cerr << "dsp::Convolution::prepare: output->get_nchan()=" <<
+        output->get_nchan() << ",  zero_DM_output->get_nchan()=" <<
+        zero_DM_output->get_nchan() << std::endl;
+      std::cerr << "dsp::Convolution::prepare: output->get_npol()=" <<
+        output->get_npol() << ",  zero_DM_output->get_npol()=" <<
+        zero_DM_output->get_npol() << std::endl;
+      std::cerr << "dsp::Convolution::prepare: output->get_ndat()=" <<
+        output->get_ndat() << ",  zero_DM_output->get_ndat()=" <<
+        zero_DM_output->get_ndat() << std::endl;
+      std::cerr << "dsp::Convolution::prepare: output->get_state()=" <<
+        output->get_state() << ",  zero_DM_output->get_state()=" <<
+        zero_DM_output->get_state() << std::endl;
+      std::cerr << "dsp::Convolution::prepare: output->get_ndim()=" <<
+        output->get_ndim() << ",  zero_DM_output->get_ndim()=" <<
+        zero_DM_output->get_ndim() << std::endl;
+      std::cerr << "dsp::Convolution::prepare: output->get_rate()=" <<
+        output->get_rate() << ",  zero_DM_output->get_rate()=" <<
+        zero_DM_output->get_rate() << std::endl;
+      std::cerr << "dsp::Convolution::prepare: output->get_input_sample()=" <<
+        output->get_input_sample() << ",  zero_DM_output->get_input_sample()=" <<
+        zero_DM_output->get_input_sample() << std::endl;
+    }
+  }
 }
 
 //! Reserve the maximum amount of output space required
@@ -333,14 +404,15 @@ void dsp::Convolution::reserve ()
          << " npart=" << npart << endl;
 
   uint64_t output_ndat = npart * nsamp_step;
-  if ( state == Signal::Nyquist )
+  if ( state == Signal::Nyquist ) {
     output_ndat /= 2;
+  }
 
-  if( input != output )
+  if (input != output) {
     output->resize (output_ndat);
-  else
+  } else {
     output->set_ndat (output_ndat);
-
+  }
   // nfilt_pos complex points are dropped from the start of the first FFT
   output->change_start_time (nfilt_pos);
 
@@ -359,6 +431,11 @@ void dsp::Convolution::reserve ()
     if (state == Signal::Nyquist)
       weighted_output->scrunch_weights (2);
   }
+  if (zero_DM) {
+    zero_DM_output->resize(output_ndat);
+    zero_DM_output->change_start_time(nfilt_pos);
+  }
+
 
   if (verbose)
     cerr << "Convolution::reserve done" << endl;
@@ -389,10 +466,13 @@ void dsp::Convolution::transformation ()
 
   reserve ();
 
-  if (verbose)
+  if (verbose) {
     cerr << "dsp::Convolution::transformation scratch"
       " size=" << scratch_needed  << endl;
-
+    if (zero_DM) {
+      std::cerr << "dsp::Convolution::transformation using zero DM output" << std::endl;
+    }
+  }
   float* spectrum[2];
   spectrum[0] = scratch->space<float> (scratch_needed);
   spectrum[1] = spectrum[0];
@@ -414,10 +494,11 @@ void dsp::Convolution::transformation ()
 
   const unsigned nbytes_step = nsamp_step * ndim * sizeof(float);
 
-  if (verbose)
+  if (verbose) {
     cerr << "dsp::Convolution::transformation step nsamp=" << nsamp_step
          << " bytes=" << nbytes_step << " ndim=" << ndim << endl;
-
+    std::cerr << "dsp::Convolution::transformation nfilt_pos=" << nfilt_pos << std::endl;
+  }
   const unsigned cross_pol = matrix_convolution ? 2 : 1;
 
   // temporary things that should not go in and out of scope
@@ -496,8 +577,22 @@ void dsp::Convolution::transformation ()
 
           memcpy (ptr, complex_time + nfilt_pos*2, nbytes_step);
 
+          if (zero_DM) {
+            memcpy(
+              zero_DM_output->get_datptr(ichan, ipol) + offset,
+              input->get_datptr(ichan, ipol) + offset + nfilt_pos*2,
+              nbytes_step
+            );
+          }
         }  // for each poln, if matrix convolution
       }  // for each part of the time series
   // for each poln
   // for each channel
+  if (verbose) {
+    std::cerr << "dsp::Convolution::transformation: output->get_input_sample()=" <<
+      output->get_input_sample() << ",  zero_DM_output->get_input_sample()=" <<
+      zero_DM_output->get_input_sample() << std::endl;
+  }
+
+
 }

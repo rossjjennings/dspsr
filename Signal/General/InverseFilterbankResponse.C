@@ -42,6 +42,30 @@ dsp::InverseFilterbankResponse::~InverseFilterbankResponse ()
   }
 }
 
+dsp::InverseFilterbankResponse::InverseFilterbankResponse (const dsp::InverseFilterbankResponse& response) {
+  operator = (response);
+}
+
+const dsp::InverseFilterbankResponse& dsp::InverseFilterbankResponse::operator= (const dsp::InverseFilterbankResponse& response)
+{
+
+  if (this == &response) {
+    return *this;
+  }
+  dsp::Response::operator= (response);
+
+  fir_filter = response.fir_filter;
+  forward = response.forward;
+  built = response.built;
+  pfb_dc_chan = response.pfb_dc_chan;
+  apply_deripple = response.apply_deripple;
+  oversampling_factor = response.oversampling_factor;
+  input_overlap = response.input_overlap;
+
+}
+
+
+
 void dsp::InverseFilterbankResponse::build ()
 {
   if (verbose) {

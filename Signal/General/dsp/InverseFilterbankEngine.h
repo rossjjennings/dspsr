@@ -36,6 +36,13 @@ public:
                         const uint64_t in_step,
                         const uint64_t out_step) = 0;
 
+  virtual void perform (const dsp::TimeSeries * in,
+                        dsp::TimeSeries * out,
+                        dsp::TimeSeries* zero_DM_out,
+                        uint64_t npart,
+                        const uint64_t in_step,
+                        const uint64_t out_step) = 0;
+
   //! Finish up
   virtual void finish () { }
 

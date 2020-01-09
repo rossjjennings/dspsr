@@ -722,6 +722,7 @@ void dsp::Response::calc_lcf (
   //     << " b=" << b
   //     << " osf=" << osf
   //     << std::endl;
+  // }
   //   std::cerr << "dsp::Response::calc_lcf: quot=" << a / (osf.get_denominator()*b) << std::endl;
   //   std::cerr << "dsp::Response::calc_lcf: rem=" << a % (osf.get_denominator()*b) << std::endl;
   // }
@@ -729,26 +730,36 @@ void dsp::Response::calc_lcf (
   result[1] = a % (osf.get_denominator()*b);
 }
 
+
 void dsp::Response::calc_oversampled_fft_length (
   unsigned* _fft_length,
   unsigned _nchan,
-  const Rational& osf
+  const Rational& osf,
+  int direction
 )
 {
-  // if (verbose) {
-  //   std::cerr << "dsp::Response::calc_oversampled_fft_length:"
-  //     << " _fft_length=" << *_fft_length
-  //     << " _nchan=" << _nchan
-  //     << " osf=" << osf
-  //     << std::endl;
-  // }
+  if (verbose) {
+    std::cerr << "dsp::Response::calc_oversampled_fft_length:"
+      << " _fft_length=" << *_fft_length
+      << " _nchan=" << _nchan
+      << " osf=" << osf
+      << std::endl;
+  }
   vector<unsigned> max_fft_length_lcf(2);
 	calc_lcf(*_fft_length, _nchan, osf, max_fft_length_lcf);
   while (max_fft_length_lcf[1] != 0 || fmod(log2(max_fft_length_lcf[0]), 1) != 0){
-    if (max_fft_length_lcf[1] != 0) {
-      (*_fft_length) -= max_fft_length_lcf[1];
-    } else {
-      (*_fft_length) -= 2;
+    if (direction == -1) {
+      if (max_fft_length_lcf[1] != 0) {
+        (*_fft_length) -= max_fft_length_lcf[1];
+      } else {
+        (*_fft_length) -= 2;
+      }
+    } else if (direction == 1) {
+      if (max_fft_length_lcf[1] != 0) {
+        (*_fft_length) = osf.get_denominator()*_nchan*(max_fft_length_lcf[0] + 1);
+      } else {
+        (*_fft_length) += 2;
+      }
     }
     calc_lcf(*_fft_length, _nchan, osf, max_fft_length_lcf);
   }
@@ -766,14 +777,14 @@ void dsp::Response::calc_oversampled_discard_region(
   const Rational& osf
 )
 {
-  // if (verbose) {
-  //   std::cerr << "dsp::Response::calc_oversampled_discard_region"
-  //     << " _discard_neg=" << *_discard_neg
-  //     << " _discard_pos=" << *_discard_pos
-  //     << " _nchan=" << _nchan
-  //     << " osf=" << osf
-  //     << std::endl;
-  // }
+  if (verbose) {
+    std::cerr << "dsp::Response::calc_oversampled_discard_region"
+      << " _discard_neg=" << *_discard_neg
+      << " _discard_pos=" << *_discard_pos
+      << " _nchan=" << _nchan
+      << " osf=" << osf
+      << std::endl;
+  }
 	vector<unsigned> n = {*_discard_pos, *_discard_neg};
   vector<vector<unsigned>> lcfs(2);
   unsigned min_n;

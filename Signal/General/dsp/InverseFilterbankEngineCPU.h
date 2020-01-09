@@ -45,6 +45,13 @@ namespace dsp
     void perform (const dsp::TimeSeries* in, dsp::TimeSeries* out,
                   uint64_t npart, uint64_t in_step=0, uint64_t out_step=0);
 
+    void perform (const dsp::TimeSeries * in,
+                  dsp::TimeSeries * out,
+                  dsp::TimeSeries* zero_DM_out,
+                  uint64_t npart,
+                  const uint64_t in_step=0,
+                  const uint64_t out_step=0);
+
     //! Called when the the `InverseFilterbank` sees that the engine is done
     //! operating on data
     void finish ();
@@ -59,6 +66,9 @@ namespace dsp
 
     //! A response object that gets multiplied by assembled spectrum
     Response* response;
+
+    //! zero DM response
+    Response* zero_DM_response;
 
     //! FFT window applied before forward FFT
     Apodization* fft_window;
@@ -155,7 +165,7 @@ namespace dsp
     //! Scratch space, in samples, needed for the stitch_scratch space
     unsigned stitch_scratch_samples;
 
-
+    float* stitch_scratch_zero_DM;
 
 
   };

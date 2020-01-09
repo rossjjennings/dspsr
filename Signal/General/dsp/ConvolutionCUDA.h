@@ -47,13 +47,23 @@ namespace CUDA
     void perform (const dsp::TimeSeries* input, dsp::TimeSeries* output,
                   unsigned npart);
 
+    void perform (const dsp::TimeSeries* input, dsp::TimeSeries* output,
+                  dsp::TimeSeries* zero_DM_output,
+                  unsigned npart);
+
   protected:
 
-    void perform_complex (const dsp::TimeSeries* input, dsp::TimeSeries * output,
-                         unsigned npart);
+    void perform_complex (
+      const dsp::TimeSeries* input,
+      dsp::TimeSeries * output,
+      dsp::TimeSeries* zero_DM_output,
+      unsigned npart);
 
-    void perform_real (const dsp::TimeSeries* input, dsp::TimeSeries * output,
-                       unsigned npart);
+    void perform_real (
+      const dsp::TimeSeries* input,
+      dsp::TimeSeries* output,
+      dsp::TimeSeries* zero_DM_output,
+      unsigned npart);
 
     cudaStream_t stream;
 
@@ -94,7 +104,7 @@ namespace CUDA
     unsigned nsamp_overlap;
 
     unsigned nsamp_step;
-    
+
     unsigned nfilt_pos;
 
     unsigned nfilt_neg;
@@ -107,4 +117,3 @@ namespace CUDA
 }
 
 #endif
-

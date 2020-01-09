@@ -44,6 +44,11 @@ dsp::SpectralKurtosis::SpectralKurtosis() : Transformation<TimeSeries,TimeSeries
   prepared = false;
 
   set_buffering_policy(new InputBuffering(this));
+  set_zero_DM_buffering_policy(new InputBuffering(&zero_DM_input_container));
+
+  zero_DM = false;
+  set_zero_DM_input(new dsp::TimeSeries);
+
 }
 
 dsp::SpectralKurtosis::~SpectralKurtosis ()
@@ -89,6 +94,23 @@ void dsp::SpectralKurtosis::set_engine (Engine* _engine)
   engine = _engine;
 }
 
+void dsp::SpectralKurtosis::set_zero_DM_input (TimeSeries* _zero_DM_input)
+{
+  zero_DM_input_container.set_input(_zero_DM_input);
+}
+
+bool dsp::SpectralKurtosis::has_zero_DM_input () const {
+  return zero_DM_input_container.has_input();
+}
+
+const dsp::TimeSeries* dsp::SpectralKurtosis::get_zero_DM_input () const {
+  return zero_DM_input_container.get_input();
+}
+
+dsp::TimeSeries* dsp::SpectralKurtosis::get_zero_DM_input () {
+  return const_cast<dsp::TimeSeries*>(zero_DM_input_container.get_input());
+}
+
 
 /*
  * These are preparations that could be performed once at the start of
@@ -111,6 +133,9 @@ void dsp::SpectralKurtosis::prepare ()
   if (has_buffering_policy())
   {
     get_buffering_policy()->set_minimum_samples (M);
+    if (zero_DM) {
+      get_zero_DM_buffering_policy()->set_minimum_samples (M);
+    }
   }
 
   if (engine)
@@ -168,6 +193,10 @@ void dsp::SpectralKurtosis::prepare_output ()
   // configure output timeseries (out-of-place) to match input
   output->copy_configuration (get_input());
   output->set_input_sample (input->get_input_sample ());
+
+  // if (zero_DM) {
+  //   get_zero_DM_input()->set_input_sample(input->get_input_sample());
+  // }
 }
 
 /* ensure containers have correct dynamic size */
@@ -194,6 +223,13 @@ void dsp::SpectralKurtosis::reserve ()
 /* call set of transformations */
 void dsp::SpectralKurtosis::transformation ()
 {
+  if (zero_DM && has_zero_DM_buffering_policy())  {
+    if (verbose) {
+      std::cerr << "dsp::SpectralKurtosis::transformation zero_DM_buffering_policy pre_transformation" << std::endl;
+    }
+    get_zero_DM_buffering_policy()->pre_transformation();
+  }
+
   if (!prepared)
     prepare();
 
@@ -215,15 +251,23 @@ void dsp::SpectralKurtosis::transformation ()
       cerr << "dsp::SpectralKurtosis::transformation setting next_start_sample="
            << output_ndat << endl;
     get_buffering_policy()->set_next_start (output_ndat);
+
+
     if (verbose) {
       std::cerr << "dsp::SpectralKurtosis::transformation set_next_start done" << std::endl;
     }
+  }
+  if (zero_DM && has_zero_DM_buffering_policy())  {
+    if (verbose) {
+      std::cerr << "dsp::SpectralKurtosis::transformation zero_DM_buffering_policy set_next_start " << std::endl;
+    }
+    get_zero_DM_buffering_policy()->set_next_start(output_ndat);
   }
 
   prepare_output ();
 
   // ensure output containers are sized correctly
-  reserve ();
+  reserve();
 
   if ((ndat == 0) || (npart == 0))
     return;
@@ -303,12 +347,24 @@ void dsp::SpectralKurtosis::transformation ()
 
 void dsp::SpectralKurtosis::compute ()
 {
-  if (verbose)
+  if (verbose) {
     cerr << "dsp::SpectralKurtosis::compute" << endl;
+  }
+  const dsp::TimeSeries* compute_input = get_input();;
+
+  if (zero_DM) {
+    compute_input = get_zero_DM_input();
+    if (verbose) {
+      std::cerr << "dsp::SpectralKurtosis::compute: using zero DM input" << std::endl;
+      std::cerr << "dsp::SpectralKurtosis::compute: input->get_input_sample()=" << input->get_input_sample() << std::endl;
+      std::cerr << "dsp::SpectralKurtosis::compute: get_zero_DM_input()->get_input_sample()=" << get_zero_DM_input()->get_input_sample() << std::endl;
+    }
+    // compute_input->set_input_sample(input->get_input_sample());
+  }
 
   if (engine)
   {
-    engine->compute (input, estimates, estimates_tscr, M);
+    engine->compute (compute_input, estimates, estimates_tscr, M);
   }
   else
   {
@@ -323,7 +379,7 @@ void dsp::SpectralKurtosis::compute ()
     const float M_fac = (float)(M+1) / (M-1);
     float * outdat = estimates->get_dattfp();
 
-    switch (input->get_order())
+    switch (compute_input->get_order())
     {
       case dsp::TimeSeries::OrderTFP:
       {
@@ -335,7 +391,7 @@ void dsp::SpectralKurtosis::compute ()
 
         for (unsigned ipart=0; ipart < npart; ipart++)
         {
-          indat = (float *) input->get_dattfp() + (M * ipart * chan_stride);
+          indat = (float *) compute_input->get_dattfp() + (M * ipart * chan_stride);
 
           for (unsigned ichan=0; ichan<nchan; ichan++)
           {
@@ -386,7 +442,7 @@ void dsp::SpectralKurtosis::compute ()
             for (unsigned ipol=0; ipol < npol; ipol++)
             {
               // input pointer for channel pol
-              const float* indat = input->get_datptr (ichan, ipol) + ipart * nfloat;
+              const float* indat = compute_input->get_datptr (ichan, ipol) + ipart * nfloat;
               // std::cerr << "  ichan=" << ichan << ", ipol=" << ipol << ", ipart=" << ipart << std::endl;
 
               S1_sum = 0;
@@ -882,7 +938,7 @@ void dsp::SpectralKurtosis::mask ()
   }
   else
   {
-    // mask is a TFP ordered bit series, output is FTP order Timeseries
+    // mask is a TFP ordered bit series, output is FTP order TimeSeries
     const unsigned nfloat = M * ndim;
     for (unsigned ichan=0; ichan < nchan; ichan++)
     {

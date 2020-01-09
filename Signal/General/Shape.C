@@ -247,9 +247,9 @@ void dsp::Shape::rotate (int rotbin)
 
       temp = buf[irot];
       int ipt = 0;
-  
+
       for (unsigned istep=0; istep<nstep; istep++) {
-	
+
 	p1 = buf + (irot + ipt + pts) % pts;
 	p2 = buf + (irot + ipt + rotbin + pts) % pts;
 
@@ -275,4 +275,3 @@ void dsp::Shape::zero ()
   for (unsigned ifilt=0; ifilt<bufsize; ifilt++)
     buffer[ifilt] = 0;
 }
-

@@ -193,6 +193,15 @@ void CUDA::FilterbankEngine::finish ()
   check_error_stream ("CUDA::FilterbankEngine::finish", stream);
 }
 
+void CUDA::FilterbankEngine::perform (
+    const dsp::TimeSeries * in,
+    dsp::TimeSeries * out,
+    dsp::TimeSeries* zero_DM_out,
+    uint64_t npart,
+    const uint64_t in_step,
+    const uint64_t out_step
+){}
+
 
 void CUDA::FilterbankEngine::perform (const dsp::TimeSeries * in, dsp::TimeSeries * out,
             uint64_t npart, const uint64_t in_step, const uint64_t out_step)

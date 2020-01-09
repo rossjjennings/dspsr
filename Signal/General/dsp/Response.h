@@ -165,7 +165,9 @@ namespace dsp {
     void calc_oversampled_fft_length(
       unsigned* _fft_length,
       unsigned _nchan,
-      const Rational& osf);
+      const Rational& osf,
+      int direction=-1);
+
 
     mutable unsigned step;
 

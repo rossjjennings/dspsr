@@ -154,6 +154,14 @@ void dsp::FilterbankEngineCPU::finish ()
   }
 }
 
+void dsp::FilterbankEngineCPU::perform (
+    const dsp::TimeSeries * in,
+    dsp::TimeSeries * out,
+    dsp::TimeSeries* zero_DM_out,
+    uint64_t npart,
+    const uint64_t in_step,
+    const uint64_t out_step
+){}
 
 void dsp::FilterbankEngineCPU::perform (
     const dsp::TimeSeries * in,

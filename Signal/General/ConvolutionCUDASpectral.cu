@@ -395,6 +395,16 @@ void CUDA::ConvolutionEngineSpectral::setup_batched (const dsp::TimeSeries* inpu
   fft_configured = true;
 }
 
+void CUDA::ConvolutionEngineSpectral::perform (
+  const dsp::TimeSeries* input,
+  dsp::TimeSeries * output,
+  dsp::TimeSeries* zero_DM_out,
+  unsigned npart
+)
+{
+
+}
+
 // Perform convolution choosing the optimal batched size or if ndat is not as
 // was configured, then perform singular
 void CUDA::ConvolutionEngineSpectral::perform (const dsp::TimeSeries* input, dsp::TimeSeries * output, unsigned npart)

@@ -86,24 +86,35 @@ void dsp::InverseFilterbank::transformation ()
 
   resize_output ();
 
-  if (has_buffering_policy())
+
+  if (has_buffering_policy()) {
+    if (verbose) {
+      std::cerr << "dsp::InverseFilterbank::transformation: get_buffering_policy()->set_next_start("
+        << input_sample_step * npart << ")" << std::endl;
+    }
     get_buffering_policy()->set_next_start (input_sample_step * npart);
+  }
+
 
   uint64_t output_ndat = output->get_ndat();
 
-  // points kept from each small fft
-  unsigned nkeep = freq_res - nfilt_tot;
+  int64_t input_sample = input->get_input_sample();
+  int64_t new_output_sample = 0;
+
+  if (input_sample >= 0) {
+    // unsigned nkeep = freq_res - nfilt_tot;
+    // new_output_sample = (input_sample / input_sample_step) * nkeep;
+    new_output_sample = output_ndat;
+  }
 
   if (verbose) {
-    cerr << "dsp::InverseFilterbank::transformation npart=" << npart
-         << " nkeep=" << nkeep << " output_ndat=" << output_ndat << endl;
+    std::cerr << "dsp::InverseFilterbank::transformation: setting input sample to "
+      << new_output_sample << std::endl;
   }
-  // set the input sample
-  int64_t input_sample = input->get_input_sample();
-  if (output_ndat == 0) {
-    output->set_input_sample (0);
-  } else if (input_sample >= 0) {
-    output->set_input_sample ((input_sample / input_sample_step) * nkeep);
+
+  output->set_input_sample (new_output_sample);
+  if (zero_DM) {
+    get_zero_DM_output()->set_input_sample(new_output_sample);
   }
 
   if (verbose) {
@@ -120,6 +131,7 @@ void dsp::InverseFilterbank::transformation ()
   }
 
   filterbank ();
+
 }
 
 void dsp::InverseFilterbank::filterbank()
@@ -135,7 +147,7 @@ void dsp::InverseFilterbank::filterbank()
   const uint64_t in_step = input_sample_step * input->get_ndim();
   const uint64_t out_step = output_sample_step * output->get_ndim();
 
-  engine->perform (input, output, npart, in_step, out_step);
+  engine->perform (input, output, zero_DM_output, npart, in_step, out_step);
   if (Operation::record_time){
     engine->finish ();
   }
@@ -178,6 +190,9 @@ void dsp::InverseFilterbank::make_preparations ()
   }
   if (has_response()) {
     response->match(input, output_nchan);
+    if (zero_DM && has_zero_DM_response()) {
+      zero_DM_response->match(input, output_nchan);
+    }
     output_discard_pos = response->get_impulse_pos();
     output_discard_neg = response->get_impulse_neg();
     freq_res = response->get_ndat();
@@ -197,8 +212,6 @@ void dsp::InverseFilterbank::make_preparations ()
     output_sample_step = output_fft_length - output_discard_total;
 
   } else {
-    // this means that the input_fft_length has been specified in the
-    // configuration
     output_fft_length = input_nchan*get_oversampling_factor().normalize(input_fft_length) / output_nchan;
     output_fft_length *= n_per_sample;
     input_fft_length *= n_per_sample;
@@ -338,11 +351,13 @@ void dsp::InverseFilterbank::prepare_output (uint64_t ndat, bool set_ndat)
     weighted_output->set_reserve_kludge_factor (tres_ratio);
   }
 
-  output->copy_configuration ( get_input() );
+  output->copy_configuration(get_input());
 
-  output->set_nchan( output_nchan );
-  output->set_ndim( 2 );
-  output->set_state( Signal::Analytic );
+  output->set_nchan(output_nchan);
+  output->set_ndim(2);
+  output->set_state(Signal::Analytic);
+
+
 
   if (verbose) {
     cerr << "dsp::InverseFilterbank::prepare_output"
@@ -357,6 +372,8 @@ void dsp::InverseFilterbank::prepare_output (uint64_t ndat, bool set_ndat)
 
   if (weighted_output)
   {
+    if (verbose)
+      cerr << "dsp::InverseFilterbank::prepare_output using weighted_output" << endl;
     weighted_output->set_reserve_kludge_factor (1);
     weighted_output->convolve_weights (input_fft_length, input_sample_step);
     weighted_output->scrunch_weights (tres_ratio);
@@ -461,6 +478,13 @@ void dsp::InverseFilterbank::prepare_output (uint64_t ndat, bool set_ndat)
   if (response){
     response->mark (output);
   }
+
+  if (zero_DM) {
+    get_zero_DM_output()->copy_configuration(output);
+    get_zero_DM_output()->resize(output->get_ndat());
+    get_zero_DM_output()->change_start_time(output_discard_pos);
+  }
+
 }
 
 void dsp::InverseFilterbank::resize_output (bool reserve_extra)
@@ -567,7 +591,7 @@ void dsp::InverseFilterbank::resize_output (bool reserve_extra)
 //     min_n = n[i];
 //     lcf = calc_lcf(min_n, n_input_channels, os);
 //     if (lcf.rem != 0) {
-//       min_n += os.get_denominator()*n_input_channels - lcf.rem;
+//       min_n += os.get_denominator()*n_input_c hannels - lcf.rem;
 // 			lcf.quot += 1;
 // 	    lcf.rem = 0;
 //     }

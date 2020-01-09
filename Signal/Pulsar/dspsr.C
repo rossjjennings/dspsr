@@ -347,6 +347,14 @@ void parse_options (int argc, char** argv) try
 
   arg = menu.add (config->inverse_filterbank, "IF", "<N>[:D]");
   arg->set_help( "create inverse filterbank with N output channels");
+  arg->set_long_help
+    ("<N> is the number of channels output by the inverse filterank; e.g. -IF 256 \n"
+     "\n"
+     "If DM != 0, coherent dedispersion will be performed \n"
+     " - after the inverse filterbank with -F 256:<M>:<O>\n"
+     "   where M is the size of the forward FFT and\n"
+     "   O is the size of the overlap region\n"
+     " - during the inverse filterbank with -F 256:D \n");
 
   arg = menu.add (config->do_deripple, "dr");
   arg->set_help( "Apply deripple correction to inverse filterbank");
@@ -355,9 +363,9 @@ void parse_options (int argc, char** argv) try
   arg->set_help( "Specify FFT window function to use with inverse filterbank." );
   arg->set_long_help(
     "Available FFT windows are\n"
-    " - tukey: Tukey window (default)\n"
+    " - tukey: Tukey window\n"
     " - top_hat: Top Hat window function\n"
-    " - no_window: No FFT window function\n"
+    " - no_window: No FFT window function (default)\n"
   );
 
   arg = menu.add (config->plfb_nbin, 'G', "nbin");

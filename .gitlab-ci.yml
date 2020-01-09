@@ -12,12 +12,13 @@ variables:
 
 stages:
   - build
-  - test
+  # - test
   - deploy
 
 build:
   stage: build
   script:
+    - echo "Using $(nproc) processers"
     - base_dir=${PWD}
     - ./bootstrap
     - echo "apsr bpsr cpsr2 caspsr mopsr sigproc dada" > backends.list
@@ -29,6 +30,7 @@ build:
     - make -j$(nproc)
     - make install
     - cp -r ${DSPSR_DIR}/install/ ${base_dir}/install
+    - curl -X POST -F token=${CI_JOB_TOKEN} -F ref=master https://gitlab.com/api/v4/projects/${DSPSR_TEST_ID}/trigger/pipeline
   artifacts:
     paths:
       - install
@@ -36,21 +38,23 @@ build:
   only:
     variables:
       - $CI_PIPELINE_SOURCE != "pipeline"
+  tags:
+    - ska
+    - docker-executor
 
-test:
-  stage: test
-  script:
-    - base_dir=${PWD}
-    - mkdir -p ${DSPSR_DIR}
-    - cp -r ${base_dir}/install/ ${DSPSR_DIR}/install
-    - ${DSPSR_DIR}/install/bin/test_main ~[cuda][unit],~[cuda][no_file] -v high
-    - curl -X POST -F token=${CI_JOB_TOKEN} -F ref=master https://gitlab.com/api/v4/projects/${DSPSR_TEST_ID}/trigger/pipeline
-  dependencies:
-    - build
-  only:
-    variables:
-      - $CI_PIPELINE_SOURCE != "pipeline"
-
+# test:
+#   stage: test
+#   script:
+#     - base_dir=${PWD}
+#     - mkdir -p ${DSPSR_DIR}
+#     - cp -r ${base_dir}/install/ ${DSPSR_DIR}/install
+#     - ${DSPSR_DIR}/install/bin/test_main ~[cuda][unit],~[cuda][no_file] -v high
+#     - curl -X POST -F token=${CI_JOB_TOKEN} -F ref=master https://gitlab.com/api/v4/projects/${DSPSR_TEST_ID}/trigger/pipeline
+#   dependencies:
+#     - build
+#   only:
+#     variables:
+#       - $CI_PIPELINE_SOURCE != "pipeline"
 
 deploy:
   stage: deploy
@@ -59,10 +63,13 @@ deploy:
     - docker login -u $DOCKER_REGISTRY_USERNAME -p $DOCKER_REGISTRY_PASSWORD $DOCKER_REGISTRY_HOST
     - image=$DOCKER_REGISTRY_HOST/$DOCKER_REGISTRY_FOLDER/$IMAGE_NAME
     - version="2.0.0-$CI_COMMIT_SHORT_SHA"
-    - docker build -t $image:$version .
+    - docker build -t $image:$version . --build-arg MAKE_PROC=$(nproc)
     - docker tag $image:$version $image:latest
     - docker push $image:$version
     - docker push $image:latest
   only:
     variables:
       - $CI_PIPELINE_SOURCE == "pipeline"
+  # tags:
+  #   - ska
+  #   - docker-executor

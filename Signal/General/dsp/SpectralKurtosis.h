@@ -101,6 +101,32 @@ namespace dsp {
 
     void set_report (bool _report) { report = _report; }
 
+    //! Return true if the zero_DM_input attribute has been set
+    bool has_zero_DM_input () const;
+    virtual void set_zero_DM_input (TimeSeries* zero_DM_input);
+    virtual const TimeSeries* get_zero_DM_input() const;
+    virtual TimeSeries* get_zero_DM_input();
+
+    // bool has_zero_DM_input_container () const;
+    // virtual void set_zero_DM_input_container (const HasInput<TimeSeries> zero_DM_input_container&);
+    // virtual const HasInput<TimeSeries>& get_zero_DM_input_container() const;
+    // virtual HasInput<TimeSeries>& get_zero_DM_input_container();
+
+    virtual void set_zero_DM_buffering_policy (BufferingPolicy* policy)
+    { zero_DM_buffering_policy = policy; }
+
+    bool has_zero_DM_buffering_policy() const
+    { return zero_DM_buffering_policy; }
+
+    BufferingPolicy* get_zero_DM_buffering_policy () const
+    { return zero_DM_buffering_policy; }
+
+    //! get the zero_DM flag
+    bool get_zero_DM () const { return zero_DM; }
+
+    //! set the zero_DM flag
+    void set_zero_DM (bool _zero_DM) { zero_DM = _zero_DM; }
+
   protected:
 
     //! Perform the transformation on the input time series
@@ -108,6 +134,8 @@ namespace dsp {
 
     //! Interface to alternate processing engine (e.g. GPU)
     Reference::To<Engine> engine;
+
+
 
   private:
 
@@ -197,6 +225,16 @@ namespace dsp {
     //! flag that indicates whether or not to report intermediate data products
     //! via the *_report EventEmitter objects.
     bool report;
+
+    // //! Input TimeSeries that has not been dedispersed in some previous operation.
+    // Reference::To<dsp::TimeSeries> zero_DM_input;
+
+    //! HasInput continaer for zero_DM_input TimeSeries
+    HasInput<TimeSeries> zero_DM_input_container;
+
+    Reference::To<BufferingPolicy> zero_DM_buffering_policy;
+
+    bool zero_DM;
 
   };
 

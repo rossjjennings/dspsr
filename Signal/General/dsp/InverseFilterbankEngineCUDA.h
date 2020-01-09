@@ -89,6 +89,13 @@ namespace CUDA
     void perform (const dsp::TimeSeries* in, dsp::TimeSeries* out,
                   uint64_t npart, uint64_t in_step=0, uint64_t out_step=0);
 
+    void perform (const dsp::TimeSeries * in,
+                  dsp::TimeSeries * out,
+                  dsp::TimeSeries* zero_DM_out,
+                  uint64_t npart,
+                  const uint64_t in_step=0,
+                  const uint64_t out_step=0);
+
     //! Do any actions to clean up after `perform`.
     void finish ();
 

@@ -31,6 +31,21 @@ void check_error (const char*);
 namespace test {
 namespace util {
 
+  // template<typename ReturnType, typename ClsType, typename ... Args >
+  // struct lambda_details
+  // {
+  //   using return_type = ReturnType;
+  //   using arity = std::integral_constant<std::size_t, sizeof...(Args)>;
+  //
+  // };
+  //
+  // template<typename FunctorType>
+  // struct lambda_traits : lambda_traits<decltype(&FunctorType::operator())> {};
+  //
+  // template<typename ReturnType, typename ClsType, typename ... Args>
+  // struct lambda_traits<ReturnType(ClsType::*)(Args...) const> : lambda_details<ReturnType, ClsType, Args...> {};
+
+
   struct TestShape {
     unsigned npart;
 
@@ -203,6 +218,9 @@ namespace util {
     const std::vector<T>& in,
     dsp::TimeSeries* out,
     const std::vector<unsigned>& dim);
+
+  template<typename FunctionType>
+  void init_TimeSeries(dsp::TimeSeries* ts, FunctionType filler);
 
   std::function<void(dsp::TimeSeries*, dsp::TimeSeries*, cudaMemcpyKind)> transferTimeSeries (
     cudaStream_t stream, CUDA::DeviceMemory* memory);
@@ -465,6 +483,28 @@ void test::util::loadTimeSeries (
         }
       }
       in_data += ndim*dim[2];
+    }
+  }
+}
+
+template<typename FunctionType>
+void test::util::init_TimeSeries (
+  dsp::TimeSeries* ts,
+  FunctionType filler
+)
+{
+  float* ts_data;
+  unsigned ndim = ts->get_ndim();
+  unsigned idx = 0;
+  for (unsigned ichan=0; ichan<ts->get_nchan(); ichan++) {
+    for (unsigned ipol=0; ipol < ts->get_npol(); ipol++) {
+      ts_data = ts->get_datptr(ichan, ipol);
+      for (unsigned idat = 0; idat < ts->get_ndat(); idat++) {
+        for (unsigned idim = 0; idim < ndim; idim++) {
+          idx = idim + ndim*idat;
+          ts_data[idx] = filler(ichan, ipol, idat, idim);
+        }
+      }
     }
   }
 }
