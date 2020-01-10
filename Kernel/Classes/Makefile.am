@@ -74,9 +74,8 @@ libClasses_la_LIBADD = @CUDA_LIBS@
 endif
 
 
-check_PROGRAMS = test_BlockIterator test_environ test_Rational
+check_PROGRAMS = test_BlockIterator test_environ
 test_BlockIterator_SOURCES = test_BlockIterator.C
-test_Rational_SOURCES = test_Rational.C
 
 #############################################################################
 #

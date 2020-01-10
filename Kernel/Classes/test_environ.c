@@ -4,8 +4,9 @@
  *   Licensed under the Academic Free License version 2.1
  *
  ***************************************************************************/
-#include <stdio.h>
 
+#include <stdio.h>
+#include <string.h>
 #include <inttypes.h>
 
 #include "environ.h"
