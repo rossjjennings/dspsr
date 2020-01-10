@@ -1,9 +1,9 @@
 bin_PROGRAMS = test_main bench_InverseFilterbank
 
-test_main_SOURCES = test_main.cpp \
-                    util/util.cpp \
-                    util/TransformationProxy.cpp \
-                    util/TestConfig.cpp \
+test_main_SOURCES = catch.hpp test_main.cpp \
+                    util/util.cpp util/util.hpp \
+                    util/TransformationProxy.cpp util/TransformationProxy.hpp \
+                    util/TestConfig.cpp util/TestConfig.hpp \
                     test_Apodization.cpp \
                     test_EventEmitter.cpp \
                     test_Response.cpp \
@@ -26,13 +26,15 @@ if HAVE_CUFFT
   test_main_SOURCES += InverseFilterbank/test_InverseFilterbankEngineCUDA_kernels.cpp \
                        InverseFilterbank/test_InverseFilterbankEngineCUDA.cpp \
                        InverseFilterbank/test_InverseFilterbankEngine_integration.cpp \
-                       SpectralKurtosis/test_SpectralKurtosis_integration.cpp
+                SpectralKurtosis/test_SpectralKurtosis_integration.cpp \
+		util/TestReporter.hpp SpectralKurtosis/SpectralKurtosisTestConfig.hpp
 
   test_main_SOURCES += test_FTransform_cufft_precision.cpp
 
   bench_InverseFilterbank_SOURCES = util/util.cpp \
                                     util/TestConfig.cpp \
                                     InverseFilterbank/InverseFilterbankTestConfig.cpp \
+					InverseFilterbank/InverseFilterbankTestConfig.hpp \
                                     InverseFilterbank/bench_InverseFilterbank.cpp
 
 endif
