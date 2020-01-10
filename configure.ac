@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.57)
-AC_INIT([DSPSR],[2016-06+],[dspsr-developers@lists.sourceforge.net])
+AC_INIT([DSPSR],[2020-01-10],[dspsr-developers@lists.sourceforge.net])
 
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([config])
@@ -255,11 +255,11 @@ AC_CONFIG_FILES([Makefile
 		Management/dspsr_ldflags
 		Management/dspsr_cflags
 		Management/release.csh
-    More/Makefile
-    More/Plotting/Makefile
-    More/Applications/Makefile
+		More/Makefile
+		More/Plotting/Makefile
+		More/Applications/Makefile
 		python/Makefile
-    test/Makefile])
+		test/Makefile])
 
 AC_OUTPUT
 
