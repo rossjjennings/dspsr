@@ -1,6 +1,6 @@
 bin_PROGRAMS = test_main bench_InverseFilterbank
 
-test_main_SOURCES = catch.hpp test_main.cpp \
+test_main_SOURCES = toml.h catch.hpp test_main.cpp \
                     util/util.cpp util/util.hpp \
                     util/TransformationProxy.cpp util/TransformationProxy.hpp \
                     util/TestConfig.cpp util/TestConfig.hpp \
