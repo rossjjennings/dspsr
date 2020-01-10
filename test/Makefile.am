@@ -39,8 +39,6 @@ endif
 
 include $(top_srcdir)/config/Makefile.local
 include $(top_srcdir)/config/Makefile.cuda
-include $(srcdir)/InverseFilterbank
-include $(srcdir)/SpectralKurtosis
 
 AM_CPPFLAGS = -I$(top_builddir)/local_include @PSRCHIVE_CPPFLAGS@ @PSRCHIVE_CFLAGS@
 LDADD = $(top_builddir)/Signal/Pulsar/libdspsr.la \
