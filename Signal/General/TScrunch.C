@@ -120,6 +120,7 @@ void dsp::TScrunch::prepare_output ()
   get_output()->set_input_sample (get_input()->get_input_sample() / sfactor);
   output->rescale (sfactor);
   output->set_rate (input->get_rate() / sfactor);
+  output->set_order (input->get_order());
 }
 
 void dsp::TScrunch::transformation ()
