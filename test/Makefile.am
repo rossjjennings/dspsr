@@ -9,6 +9,7 @@ test_main_SOURCES = toml.h catch.hpp test_main.cpp \
                     test_Response.cpp \
                     test_FIRFilter.cpp \
                     Convolution/test_Convolution.cpp \
+                    Detection/test_Detection.cpp \
                     Filterbank/test_FilterbankEngineCPU.cpp \
                     Filterbank/test_FilterbankConfig.cpp \
                     InverseFilterbank/test_InverseFilterbankEngineCPU.cpp \
@@ -54,6 +55,6 @@ if HAVE_CUFFT
 if HAVE_CUFFT_CALLBACKS
 LDADD += $(top_builddir)/Signal/General/ConvolutionCUDACallbacks_DC.o -lcufft_static -lculibos
 else
-	LDADD += @CUFFT_LIBS@
+LDADD += @CUFFT_LIBS@
 endif
 endif

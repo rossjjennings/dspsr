@@ -54,14 +54,14 @@ void dsp::Detection::set_output_state (Signal::State _state)
     break;
   default:
     throw Error (InvalidParam, "dsp::Detection::set_output_state",
-		 "invalid state=%s", Signal::state_string (_state));
+                 "invalid state=%s", Signal::state_string (_state));
   }
 
   state = _state;
 
   if (verbose)
-    cerr << "dsp::Detection::set_output_state to " 
-	 << Signal::state_string(state) << endl;
+    cerr << "dsp::Detection::set_output_state to "
+         << Signal::state_string(state) << endl;
 
 }
 
@@ -75,8 +75,8 @@ void dsp::Detection::transformation () try
 {
   if (verbose)
     cerr << "dsp::Detection::transformation input ndat=" << input->get_ndat()
-	 << " state=" << Signal::state_string(get_input()->get_state())
-	 << " output state=" << Signal::state_string(state) << endl;
+         << " state=" << Signal::state_string(get_input()->get_state())
+         << " output state=" << Signal::state_string(state) << endl;
 
   checks();
 
@@ -94,20 +94,20 @@ void dsp::Detection::transformation () try
     if (!inplace)
     {
       if (verbose)
-	cerr << "dsp::Detection::transformation inplace and no state change" 
-	     << endl;
+        cerr << "dsp::Detection::transformation inplace and no state change"
+             << endl;
     }
     else
     {
-      if (verbose) 
-	cerr << "dsp::Detection::transformation just copying input" << endl;
+      if (verbose)
+        cerr << "dsp::Detection::transformation just copying input" << endl;
       output->operator=( *input );
     }
     return;
   }
 
   if (!inplace)
-    resize_output ();    
+    resize_output ();
 
   bool understood = true;
 
@@ -128,9 +128,9 @@ void dsp::Detection::transformation () try
 
   if (!understood)
     throw Error (InvalidState, "dsp::Detection::transformation",
-		 "dsp::Detection cannot convert from " 
-		 + State2string(get_input()->get_state()) + " to "
-		 + State2string(state));
+                 "dsp::Detection cannot convert from "
+                 + State2string(get_input()->get_state()) + " to "
+                 + State2string(state));
 
   if ( inplace )
     resize_output ();
@@ -171,7 +171,7 @@ void dsp::Detection::resize_output ()
 
     if (verbose)
       cerr << "dsp::Detection::resize_output state: "
-	   << Signal::state_string(state) << " ndim=" << ndim << endl;
+           << Signal::state_string(state) << " ndim=" << ndim << endl;
   }
   else if (state==Signal::PPQQ)
     output_npol = 2;
@@ -200,10 +200,10 @@ void dsp::Detection::resize_output ()
   {
     if (verbose)
       cerr << "dsp::Detection::resize_output reshape FROM"
-	" npol=" << output->get_npol() <<
-	" ndim=" << output->get_ndim() << " TO"
-	" npol=" << output_npol <<
-	" ndim=" << output_ndim << endl;
+        " npol=" << output->get_npol() <<
+        " ndim=" << output->get_ndim() << " TO"
+        " npol=" << output_npol <<
+        " ndim=" << output_ndim << endl;
 
     get_output()->reshape ( output_npol, output_ndim );
   }
@@ -218,7 +218,7 @@ bool dsp::Detection::get_order_supported (TimeSeries::Order order) const
     return true;
 
   return state == Signal::PP_State
-    || state == Signal::PPQQ 
+    || state == Signal::PPQQ
     || state == Signal::Intensity;
 }
 
@@ -243,13 +243,147 @@ void dsp::Detection::square_law ()
   }
   const unsigned nchan = input->get_nchan();
   const unsigned npol = input->get_npol();
-  
+  const unsigned ndim = input->get_ndim();
+  const uint64_t ndat = input->get_ndat();
+
+#define NEW_ALGORITHM
+#ifdef NEW_ALGORITHM
+  // FPT ordering
+  if (input->get_order() == TimeSeries::OrderFPT)
+  {
+    for (unsigned ichan=0; ichan<nchan; ichan++)
+    {
+      unsigned opol = 0;
+      for (unsigned ipol=0; ipol<npol; ipol++)
+      {
+        register const float* in_ptr = input->get_datptr (ichan, ipol);
+
+        // should this input be detected and added to the output
+        if ((state == Signal::Intensity) ||
+            (state == Signal::NthPower) ||
+            (state == Signal::PP_State && ipol == 0) ||
+            (state == Signal::QQ_State && ipol == 1) ||
+            (state == Signal::PPQQ))
+        {
+          register float* out_ptr = output->get_datptr (ichan, opol);
+
+          // if dual polarisation input and
+          const bool sum = (state == Signal::Intensity && npol == 2 && ipol == 1);
+
+          if (input->get_state() == Signal::Nyquist)
+          {
+            for (uint64_t idat=0; idat<ndat; idat++)
+            {
+              if (sum)
+                *out_ptr += (*in_ptr) * (*in_ptr);
+              else
+                *out_ptr = (*in_ptr) * (*in_ptr);
+              out_ptr++;
+              in_ptr++;
+            }
+          }
+          else
+          {
+            for (uint64_t idat=0; idat<ndat; idat++)
+            {
+              if (sum)
+                *out_ptr += (*in_ptr) * (*in_ptr);
+              else
+                *out_ptr = (*in_ptr) * (*in_ptr);
+              in_ptr++;
+
+              *out_ptr += (*in_ptr) * (*in_ptr);
+              in_ptr++;
+
+              out_ptr++;
+            }
+          }
+        }
+
+        // only for state PPQQ should the output polarisation increment
+        if (state == Signal::PPQQ)
+          opol++;
+      }
+
+      if (state == Signal::NthPower)
+      {
+        register float* out_ptr = output->get_datptr (ichan, 0);
+        for (uint64_t idat=0; idat<ndat; idat++)
+        {
+          *out_ptr = *out_ptr * *out_ptr;
+          *out_ptr++;
+        }
+      }
+    }
+  }
+  // TFP ordering
+  else
+  {
+    unsigned offset = 0;
+    unsigned step = npol * ndim;
+    unsigned nval = ndim * output->get_npol();
+
+    if (npol == 1)
+    {
+      // offset=0, step=ndim, nval=ndim
+    }
+    else
+    {
+      if (state == Signal::PP_State)
+      {
+        // offset=0, step=npol*ndim, nval=ndim
+      }
+      else if (state == Signal::QQ_State)
+      {
+        // offset=ndim, step=npol*ndim, nval=ndim
+        offset = ndim;
+      }
+      else if (state == Signal::PPQQ)
+      {
+        // offset=0, step=npol*ndim, nval=npol*ndim
+      }
+      else if (state == Signal::Intensity || state == Signal::NthPower)
+      {
+        // offset=0, step=npol*ndim, nval=npol*ndim
+        nval = npol * ndim;
+      }
+      else
+      {
+        throw Error (InvalidState, "dsp::Detection::square_law",
+                     "Unsupported output state for npol==2, %s",
+                     Signal::state_string(state));
+      }
+    }
+
+    register const float* in_ptr = input->get_dattfp () + offset;
+    register float* out_ptr = output->get_dattfp ();
+    for (uint64_t idat=0; idat<ndat; idat++)
+    {
+      for (unsigned ichan=0; ichan<nchan; ichan++)
+      {
+        float sum = 0;
+        for (unsigned ival=0; ival<nval; ival++)
+        {
+          sum += in_ptr[ival] * in_ptr[ival];
+        }
+        in_ptr += step;
+        if (state == Signal::NthPower)
+          *out_ptr = sum * sum;
+        else
+          *out_ptr = sum;
+        out_ptr++;
+      }
+    }
+  }
+#else
   bool order_fpt = input->get_order() == TimeSeries::OrderFPT;
 
   const unsigned loop_nchan = (order_fpt) ? nchan : 1;
   const unsigned loop_npol = (order_fpt) ? npol : 1;
   const unsigned factor = (order_fpt) ? 1 : (nchan * npol);
   const uint64_t nfloat = input->get_ndim() * input->get_ndat() * factor;
+
+  cerr << "=== npol=" << npol << " loop_npol=" << loop_npol << endl;
 
   for (unsigned ichan=0; ichan<loop_nchan; ichan++)
   {
@@ -258,42 +392,42 @@ void dsp::Detection::square_law ()
       register float* out_ptr = NULL;
       register const float* in_ptr = NULL;
       register const float* dend = NULL;
-      
+
       if (order_fpt)
-	{
-	  out_ptr = output->get_datptr (ichan,ipol);
-	  in_ptr = input->get_datptr (ichan,ipol);
-	}
+      {
+        out_ptr = output->get_datptr (ichan,ipol);
+        in_ptr = input->get_datptr (ichan,ipol);
+      }
       else
-	{
-	  out_ptr = output->get_dattfp ();
-	  in_ptr = input->get_dattfp ();
-	}
+      {
+        out_ptr = output->get_dattfp ();
+        in_ptr = input->get_dattfp ();
+      }
 
       dend = in_ptr + nfloat;
 
       if (input->get_state()==Signal::Nyquist)
-	while( in_ptr != dend )
-	  {
-	    *out_ptr = *in_ptr * *in_ptr;
-	    out_ptr++;
-	    in_ptr++;
-	  } 
-      
+        while( in_ptr != dend )
+        {
+          *out_ptr = *in_ptr * *in_ptr;
+          out_ptr++;
+          in_ptr++;
+        }
+
       else if (input->get_state()==Signal::Analytic)
-	while( in_ptr != dend )
-	  {
-	    *out_ptr = *in_ptr * *in_ptr;  // Re*Re
-	    in_ptr++;
-	    
-	    *out_ptr += *in_ptr * *in_ptr; // Add in Im*Im
-	    in_ptr++;
-	    out_ptr++;
-	  } 
-      
+        while( in_ptr != dend )
+        {
+          *out_ptr = *in_ptr * *in_ptr;  // Re*Re
+          in_ptr++;
+
+          *out_ptr += *in_ptr * *in_ptr; // Add in Im*Im
+          in_ptr++;
+          out_ptr++;
+        }
+
     }  // for each ipol
   }  // for each ichan
-  
+
   if (state == Signal::Intensity && npol == 2)
   {
     // pscrunching
@@ -302,16 +436,16 @@ void dsp::Detection::square_law ()
     {
       for (unsigned ichan=0; ichan<loop_nchan; ichan++)
       {
-	register float* p0 = output->get_datptr (ichan, 0);
-	register float* p1 = output->get_datptr (ichan, 1);
-	const register float* pend = p0 + output->get_ndat();
-	
-	while (p0!=pend)
-	  {
-	    *p0 += *p1;
-	    p0 ++;
-	    p1 ++;
-	  }
+        register float* p0 = output->get_datptr (ichan, 0);
+        register float* p1 = output->get_datptr (ichan, 1);
+        const register float* pend = p0 + output->get_ndat();
+
+        while (p0!=pend)
+          {
+            *p0 += *p1;
+            p0 ++;
+            p1 ++;
+          }
       }
     }
     else
@@ -319,18 +453,19 @@ void dsp::Detection::square_law ()
       register const float* p0 = output->get_dattfp ();
       register const float* p1 = p0 + 1;
 
-      register float* pout = output->get_dattfp (); 
+      register float* pout = output->get_dattfp ();
       const register float* pend = pout + output->get_ndat() * nchan;
-	
+
       while (pout!=pend)
-	{
-	  *pout = *p0 + *p1;
-	  *pout ++;
-	  p0 += 2;
-	  p1 += 2;
-	}
+        {
+          *pout = *p0 + *p1;
+          *pout ++;
+          p0 += 2;
+          p1 += 2;
+        }
     }
-  } 
+  }
+#endif
 }
 
 void dsp::Detection::polarimetry () try
@@ -365,7 +500,7 @@ void dsp::Detection::polarimetry () try
 
  if (verbose)
     cerr << "dsp::Detection::polarimetry "
-	 << ((inplace) ? "in" : "outof") << "place" << endl;
+         << ((inplace) ? "in" : "outof") << "place" << endl;
 
   uint64_t ndat = input->get_ndat();
   unsigned nchan = input->get_nchan();
@@ -380,7 +515,7 @@ void dsp::Detection::polarimetry () try
   {
     // only when ndim==2 is this transformation really inplace.
     // so when ndim==1 or 4, a copy of the data must be made
-    
+
     // need to copy both polarizations
     if (ndim == 1)
       required_space = input_ndim * input_npol * ndat;
@@ -391,7 +526,7 @@ void dsp::Detection::polarimetry () try
 
     if (verbose)
       cerr << "dsp::Detection::polarimetry require_floats="
-	   << required_space << endl;
+           << required_space << endl;
 
     copyp = scratch->space<float> (unsigned(required_space));
 
@@ -407,42 +542,42 @@ void dsp::Detection::polarimetry () try
   {
     const float* p = input->get_datptr (ichan, 0);
     const float* q = input->get_datptr (ichan, 1);
-	  
+
     if (inplace && ndim != 2)
     {
       if (verbose && ichan == 0)
-	      cerr << "dsp::Detection::polarimetry copy_bytes=" 
+              cerr << "dsp::Detection::polarimetry copy_bytes="
              << copy_bytes << endl;
-	      
+
       memcpy (copyp, p, size_t(copy_bytes));
       p = copyp;
-      
+
       if (ndim == 1)
       {
         memcpy (copyq, q, size_t(copy_bytes));
         q = copyq;
       }
     }
-    
+
     get_result_pointers (ichan, inplace, r);
-    
+
     if (state == Signal::Stokes)
       stokes_detect (unsigned(ndat), p, q, r[0], r[1], r[2], r[3], ndim);
     else
       cross_detect (ndat, p, q, r[0], r[1], r[2], r[3], ndim);
   }
-  
+
   if (verbose)
     cerr << "dsp::Detection::polarimetry exit" << endl;
-  
+
 }
 catch (Error& error)
 {
   throw error += "dsp::Detection::polarimetry";
 }
 
-void dsp::Detection::get_result_pointers (unsigned ichan, bool inplace, 
-					  float* r[4])
+void dsp::Detection::get_result_pointers (unsigned ichan, bool inplace,
+                                          float* r[4])
 {
   if (verbose && ichan == 0)
     cerr << "dsp::Detection::get_result_pointers ndim=" << ndim << endl;
@@ -490,7 +625,7 @@ void dsp::Detection::get_result_pointers (unsigned ichan, bool inplace,
 
   default:
     throw Error (InvalidState, "dsp::Detection::get_result_pointers",
-		 "invalid ndim=%d", ndim);
+                 "invalid ndim=%d", ndim);
   }
 }
 
@@ -500,23 +635,23 @@ void dsp::Detection::checks()
   {
     if (get_input()->get_npol() != 2)
       throw Error (InvalidState, "dsp::Detection::checks",
-		   "invalid npol=%d for %s formation",
-		   input->get_npol(), Signal::state_string(state));
-    
-    if (get_input()->get_state() != Signal::Analytic && 
-	get_input()->get_state() != Signal::Nyquist)
+                   "invalid npol=%d for %s formation",
+                   input->get_npol(), Signal::state_string(state));
+
+    if (get_input()->get_state() != Signal::Analytic &&
+        get_input()->get_state() != Signal::Nyquist)
       throw Error (InvalidState, "dsp::Detection::checks",
-		   "invalid state=%s for %s formation",
-		   tostring(get_input()->get_state()).c_str(),
-		   tostring(state).c_str());
-    
+                   "invalid state=%s for %s formation",
+                   tostring(get_input()->get_state()).c_str(),
+                   tostring(state).c_str());
+
     // Signal::Coherence product and Signal::Stokes parameter
     // formation can be performed in three ways, corresponding to
     // ndim = 1,2,4
-    
+
     if (!(ndim==1 || ndim==2 || ndim==4))
       throw Error (InvalidState, "dsp::Detection::checks",
-		   "invalid ndim=%d for %s formation",
-		   ndim, Signal::state_string(state));
+                   "invalid ndim=%d for %s formation",
+                   ndim, Signal::state_string(state));
   }
 }
