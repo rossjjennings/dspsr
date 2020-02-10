@@ -50,7 +50,7 @@ public:
 
 private:
 
-  std::map<std::string, std::vector<FuncType*>> event_map;
+  std::map<std::string, std::vector<FuncType*> > event_map;
 
 };
 
@@ -121,7 +121,7 @@ public:
 
 private:
 
-  std::map<std::string, std::vector<FuncType*>> event_map;
+  std::map<std::string, std::vector<FuncType*> > event_map;
 
 };
 

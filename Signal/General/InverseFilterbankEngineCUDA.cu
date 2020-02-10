@@ -239,7 +239,7 @@ __global__ void k_overlap_discard (
         in_offset = ichan*npol*in_ndat + ipol*in_ndat + (ipart + ipart_begin_in)*step;
         out_offset = ichan*npol*out_ndat + ipol*out_ndat + (ipart + ipart_begin_out)*samples_per_part;
         for (int idat=idx; idat<samples_per_part; idat += total_size_x) {
-          if (resp == nullptr) {
+          if (resp == NULL) {
             t_out[out_offset + idat] = t_in[in_offset + idat];
           } else {
             // t_out[out_offset + idat] = cuCmulf(resp[idat], t_in[in_offset + idat]);
@@ -290,7 +290,7 @@ __global__ void k_overlap_discard_single_part (
       in_offset = ichan*npol*in_ndat + ipol*in_ndat + ipart*step;
       out_offset = ichan*npol*out_ndat + ipol*out_ndat;
       for (int idat=dat_idx; idat<samples_per_part; idat += total_size_ndat) {
-        if (resp == nullptr) {
+        if (resp == NULL) {
           t_out[out_offset + idat] = t_in[in_offset + idat];
         } else {
           // t_out[out_offset + idat] = cuCmulf(resp[idat], t_in[in_offset + idat]);
@@ -445,7 +445,7 @@ __global__ void k_response_stitch (
           //   printf("k_response_stitch: overreaching input\n");
           // }
 
-          if (response != nullptr) {
+          if (response != NULL) {
             f_out[out_offset + out_idx_bot] = cuCmulf(response[out_idx_bot], f_in[in_offset + in_idx_bot]);
             f_out[out_offset + out_idx_top] = cuCmulf(response[out_idx_top], f_in[in_offset + in_idx_top]);
           } else {
@@ -594,7 +594,7 @@ __global__ void k_response_stitch_single_part (
           }
         }
 
-        if (response != nullptr) {
+        if (response != NULL) {
           f_out[out_offset + out_idx_bot] = cuCmulf(response[out_idx_bot], f_in[in_offset + in_idx_bot]);
           f_out[out_offset + out_idx_top] = cuCmulf(response[out_idx_top], f_in[in_offset + in_idx_top]);
         } else {
@@ -684,7 +684,7 @@ __global__ void k_response_stitch_single_part (
 //       }
 //     }
 //
-//     if (response != nullptr) {
+//     if (response != NULL) {
 //       f_out[out_offset + out_idx_bot] = cuCmulf(response[out_idx_bot], f_in[in_offset + in_idx_bot]);
 //       f_out[out_offset + out_idx_top] = cuCmulf(response[out_idx_top], f_in[in_offset + in_idx_top]);
 //     } else {
@@ -708,15 +708,15 @@ CUDA::InverseFilterbankEngineCUDA::InverseFilterbankEngineCUDA (cudaStream_t _st
   input_fft_length = 0;
   forward_fft_plan_setup = false;
   backward_fft_plan_setup = false;
-  response = nullptr;
-  fft_window = nullptr;
+  response = NULL;
+  fft_window = NULL;
 
-  d_scratch = nullptr;
-  d_input_overlap_discard = nullptr;
-  d_stitching = nullptr;
+  d_scratch = NULL;
+  d_input_overlap_discard = NULL;
+  d_stitching = NULL;
 
-  d_response = nullptr;
-  d_fft_window = nullptr;
+  d_response = NULL;
+  d_fft_window = NULL;
 
   pfb_dc_chan = 0;
   pfb_all_chan = 0;
@@ -770,7 +770,7 @@ CUDA::InverseFilterbankEngineCUDA::~InverseFilterbankEngineCUDA ()
   //
   // for (int i=0; i<n_scratches; i++)
   // {
-  //   if (cuda_scratches[i] != nullptr) {
+  //   if (cuda_scratches[i] != NULL) {
   //     cudaError_t error = cudaFree (cuda_scratches[i]);
   //     if (error != cudaSuccess) {
   //       if (verbose) {
@@ -1078,7 +1078,7 @@ void CUDA::InverseFilterbankEngineCUDA::perform (
   uint64_t out_step
 )
 {
-  perform(in, out, nullptr, npart, in_step, out_step);
+  perform(in, out, NULL, npart, in_step, out_step);
 }
 
 void CUDA::InverseFilterbankEngineCUDA::perform (
@@ -1515,7 +1515,7 @@ void CUDA::InverseFilterbankEngineCUDA::apply_k_overlap_discard (
   // std::cerr << threads.x << " " << threads.y << " " << threads.z << std::endl;
 
   k_overlap_discard<<<grid, threads>>>(
-    in_device, nullptr, out_device, discard, discard, 0, 0, npart, npol, nchan, ndat, in_ndat, out_ndat);
+    in_device, NULL, out_device, discard, discard, 0, 0, npart, npol, nchan, ndat, in_ndat, out_ndat);
 
   check_error( "CUDA::InverseFilterbankEngineCUDA::apply_k_overlap_discard" );
 

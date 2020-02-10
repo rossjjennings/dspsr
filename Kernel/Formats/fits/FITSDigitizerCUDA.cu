@@ -16,6 +16,8 @@
 #include <cuda_runtime.h>
 #include <unistd.h>
 
+#define FULLMASK 0xFFFFFFFF
+
 using namespace std;
 
 void check_error_stream (const char*, cudaStream_t);
@@ -151,12 +153,18 @@ __inline__ __device__ float fde_warp_reduce_sum(float val)
 {
   for (int offset = warpSize/2; offset > 0; offset /= 2)
   {
+#if (__CUDA_ARCH__ >= 300)
+#if (__CUDACC_VER_MAJOR__>= 9)
+    val += __shfl_down_sync(FULLMASK, val, offset);
+#else
     val += __shfl_down(val, offset);
+#endif
+#endif
   }
   return val;
 }
 
-// compute a sum of a float across aa block
+// compute a sum of a float across a block
 __inline__ __device__ float fde_block_reduce_sum (float val)
 {
   // shared mem for 32 partial sums

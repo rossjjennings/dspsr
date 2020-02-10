@@ -92,10 +92,10 @@ namespace dsp {
 
     // A event emitter that takes a data array, and the nchan, npol, ndat and ndim
     // associated with the data array
-    EventEmitter<Reporter<float>> float_reporter;
+    EventEmitter<Reporter<float> > float_reporter;
 
     // This is for reporting the state of the bit zapmask
-    EventEmitter<Reporter<unsigned char>> char_reporter;
+    EventEmitter<Reporter<unsigned char> > char_reporter;
 
     bool get_report () const { return report; }
 

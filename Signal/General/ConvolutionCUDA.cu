@@ -481,7 +481,7 @@ void CUDA::ConvolutionEngine::perform (
   unsigned npart
 )
 {
-  perform(input, output, nullptr, npart);
+  perform(input, output, NULL, npart);
 }
 
 // Perform convolution choosing the optimal batched size or if ndat is not as
@@ -630,7 +630,7 @@ void CUDA::ConvolutionEngine::perform_complex (
         k_ncopy_conv<<<blocks.x,mp.get_nthread(),0,stream>>> (out, nsamp_step,
                                                          buf + nfilt_pos, npt_bwd,
                                                          nsamp_step);
-        if (zero_DM_output != nullptr) {
+        if (zero_DM_output != NULL) {
 
         }
 #endif
