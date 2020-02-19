@@ -354,9 +354,14 @@ void dsp::LoadToFold::construct () try
     if (convolve_when == Filterbank::Config::During) {
       if (kernel) {
         std::cerr << "dspsr: adding InverseFilterbankResponse to Dedispersion kernel" << std::endl;
-        if (config->sk_zap && config->nosk_too) {
+        if (config->sk_zap) {
           std::cerr << "dspsr: using InverseFilterbankResponse as zero DM response" << std::endl;
           zero_DM_time_series = new_time_series();
+#if HAVE_CUDA
+          if (run_on_gpu) {
+            zero_DM_time_series->set_memory (device_memory);
+          }
+#endif
           inverse_filterbank->set_zero_DM(true);
           inverse_filterbank->set_zero_DM_output(zero_DM_time_series);
           // the following will be overwritten in InverseFilterbank::prepare
@@ -399,10 +404,10 @@ void dsp::LoadToFold::construct () try
       // new storage for filterbank output (must be out-of-place)
       filterbanked = new_time_series ();
 
-  #if HAVE_CUDA
+#if HAVE_CUDA
       if (run_on_gpu)
         filterbanked->set_memory (device_memory);
-  #endif
+#endif
 
       config->filterbank.set_device( device_memory.ptr() );
       config->filterbank.set_stream( gpu_stream );
@@ -422,7 +427,23 @@ void dsp::LoadToFold::construct () try
         filterbank->set_response (response);
         if (!config->integration_turns)
           filterbank->get_engine()->set_passband (passband);
+
+        // if coherent dedispersion is being performed and SK is required,
+        // a zero DM time series must be produced by the filterbank
+        if (config->coherent_dedispersion && config->sk_zap)
+        {
+          cerr << "dspsr: using Filterbank with zero DM output timeseries" << endl;
+          zero_DM_time_series = new_time_series();
+#if HAVE_CUDA
+          if (run_on_gpu) {
+            zero_DM_time_series->set_memory (device_memory);
+          }
+#endif
+          filterbank->set_zero_DM (true);
+          filterbank->set_zero_DM_output (zero_DM_time_series);
+        }
       }
+
       // Get order of operations correct
       if (!convolve_when == Filterbank::Config::Before){
         operations.push_back (filterbank.get());
@@ -451,13 +472,18 @@ void dsp::LoadToFold::construct () try
 
     convolved = new_time_series();
 
-
-    if (config->sk_zap && config->nosk_too) {
+    if (config->sk_zap)
+    {
+      cerr << "Using zero DM time_series with convolution" << endl;
       zero_DM_time_series = new_time_series();
+#if HAVE_CUDA
+      if (run_on_gpu) {
+        zero_DM_time_series->set_memory (device_memory);
+      }
+#endif
       convolution->set_zero_DM(true);
       convolution->set_zero_DM_output(zero_DM_time_series);
     }
-
 
     if (filterbank_after_dedisp)
     {
@@ -628,7 +654,7 @@ void dsp::LoadToFold::construct () try
       skestimator->set_zero_DM_buffering_policy (NULL);
     }
 
-    if (config->nosk_too) {
+    if (config->coherent_dedispersion && config->sk_zap) {
       skestimator->set_zero_DM(true);
       skestimator->set_zero_DM_input(zero_DM_time_series);
     }

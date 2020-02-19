@@ -194,6 +194,12 @@ void dsp::SpectralKurtosis::prepare_output ()
   output->copy_configuration (get_input());
   output->set_input_sample (input->get_input_sample ());
 
+  if (zero_DM)
+  {
+    if (get_zero_DM_input()->get_input_sample() != input->get_input_sample ())
+      throw Error (InvalidState, "dsp::SpectralKurtosis::prepare_output", "mismatch between normal and zero_DM input samples");
+  }
+
   // if (zero_DM) {
   //   get_zero_DM_input()->set_input_sample(input->get_input_sample());
   // }
@@ -356,8 +362,8 @@ void dsp::SpectralKurtosis::compute ()
     compute_input = get_zero_DM_input();
     if (verbose) {
       std::cerr << "dsp::SpectralKurtosis::compute: using zero DM input" << std::endl;
-      std::cerr << "dsp::SpectralKurtosis::compute: input->get_input_sample()=" << input->get_input_sample() << std::endl;
-      std::cerr << "dsp::SpectralKurtosis::compute: get_zero_DM_input()->get_input_sample()=" << get_zero_DM_input()->get_input_sample() << std::endl;
+      std::cerr << "dsp::SpectralKurtosis::compute: sample input=" << input->get_input_sample() << " zero_DM_input=" << get_zero_DM_input()->get_input_sample() << std::endl;
+      std::cerr << "dsp::SpectralKurtosis::compute: ndate input=" << input->get_ndat() <<  " zero_DM_input=" << get_zero_DM_input()->get_ndat() << std::endl;
     }
     // compute_input->set_input_sample(input->get_input_sample());
   }
@@ -938,7 +944,7 @@ void dsp::SpectralKurtosis::mask ()
   }
   else
   {
-    // mask is a TFP ordered bit series, output is FTP order TimeSeries
+    // mask is a TFP ordered bit series, output is FPT order TimeSeries
     const unsigned nfloat = M * ndim;
     for (unsigned ichan=0; ichan < nchan; ichan++)
     {

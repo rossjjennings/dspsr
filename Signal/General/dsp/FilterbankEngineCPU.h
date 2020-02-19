@@ -59,7 +59,7 @@ namespace dsp
     //! This is an array of float pointers because
     //! we might be dealing not only with multiple
     //! polarizations, but also with cross polarization.
-    float* freq_domain_scratch[2];
+    float* freq_domain_scratch[3];
 
     //! scratch space for backward fft
     float* time_domain_scratch;
@@ -69,6 +69,9 @@ namespace dsp
 
     //! response kernel, from Filterbank
     const dsp::Response* response;
+
+    //! zero DM response, from Filterbank
+    const dsp::Response* zero_DM_response;
 
     //! apodization kernel, from Filterbank
     const dsp::Apodization* apodization;
@@ -93,7 +96,6 @@ namespace dsp
 
     //! number of samples in forward fft
     uint64_t nsamp_fft;
-
 
     //! number of samples to keep from each input sample.
     //! This is essentially the number of fft points minus the total

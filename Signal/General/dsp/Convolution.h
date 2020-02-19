@@ -170,6 +170,9 @@ namespace dsp {
     //! Product of response and normaliser
     Reference::To<ResponseProduct> response_product;
 
+    //! Product of response and normaliser
+    Reference::To<ResponseProduct> zero_dm_response_product;
+
     //! Apodization function (time domain window)
     Reference::To<Apodization> apodization;
 
@@ -183,6 +186,7 @@ namespace dsp {
     //! without any dedispersion
     bool zero_DM;
 
+    //! zero DM output timeseries from convolution
     Reference::To<dsp::TimeSeries> zero_DM_output;
 
   private:

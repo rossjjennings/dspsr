@@ -143,9 +143,9 @@ __device__ float _warp_reduce_sum (float val) {
 
 
 //! @method calc_sk_estimate_warp_reduction
-//! gridDim.x is nchan, so blockIdx.x is ichan
-//! gridDim.y is ipol, so blockIdx.y is ipol
-//! gridDim.z is ipart, so blockIdx.z is ipart
+//! gridDim.x is ipart, so blockIdx.x is ipart
+//! gridDim.y is nchan, so blockIdx.y is ichan
+//! gridDim.z is ipol, so blockIdx.z is ipol
 //! blockDim.x is for M, so threadIdx.x iterates over individual parts
 //! @param in FPT ordered (nchan, npol, M*npart)
 //! @param sums TFP ordered (npart, nchan, npol)
@@ -173,10 +173,11 @@ __global__ void calc_sk_estimate_warp_reduction (
   const unsigned ichan = blockIdx.y;
   const unsigned ipol = blockIdx.z;
   const unsigned ipart = blockIdx.x;
-  if (ichan > nchan || ipol > npol || ipart > npart) {
+  if (ichan >= nchan || ipol >= npol || ipart >= npart) {
     return;
   }
 
+  // input is FPT ordered
   in += (ichan * in_stride * npol) + (ipol * in_stride) + (ipart * M);
 
   float power;
@@ -571,7 +572,13 @@ void CUDA::SKComputerEngine::compute (const dsp::TimeSeries* input,
   const uint64_t ndat = output->get_ndat() * M;
   const unsigned nchan = input->get_nchan ();
   const unsigned npol  = input->get_npol ();
+  const unsigned ndim = input->get_ndim ();
   const unsigned nchanpol = nchan * npol;
+
+  // assume input is complex
+  if (ndim != 2)
+      throw Error (InvalidState, "CUDA::SKComputerEngine::compute",
+                   "Only complex input is supported");
 
   if (dsp::Operation::verbose)
     std::cerr << "CUDA::SKComputerEngine::compute ndat=" << ndat << " nchan="
@@ -618,25 +625,24 @@ void CUDA::SKComputerEngine::compute (const dsp::TimeSeries* input,
 
       if (dsp::Operation::verbose) {
         std::cerr << "CUDA::SKComputerEngine::compute ndat=" << ndat
-             << " blocks=(" << blocks.x << "," << blocks.y << ")"
+             << " blocks=(" << blocks.x << "," << blocks.y << ", " << blocks.z << ")"
              << " nthreads=" << nthreads << std::endl;
       }
       // require an S1 and S2 value for each warp in each block
       size_t shm_bytes_1 = 32 * sizeof(float2);
-      uint64_t in_stride = input->get_stride();
+      uint64_t in_stride = input->get_stride() / ndim;
       unsigned npart = output->get_ndat();
       unsigned input_ndat = input->get_ndat();
 
       if (dsp::Operation::verbose) {
         std::cerr << "CUDA::SKComputerEngine::compute work_buffer=" << (void *) work_buffer << std::endl;
-        std::cerr << "CUDA::SKComputerEngine::compute "
+        std::cerr << "CUDA::SKComputerEngine::compute indat=" << (void *) indat << std::endl;
+        std::cerr << "CUDA::SKComputerEngine::compute"
           << " in_stride=" << in_stride
           << " npart=" << npart
           << " input_ndat=" << input_ndat
           << std::endl;
       }
-      // for float2
-      in_stride /= 2;
 
       // reduce_sqld_new<<<blocks,nthreads,shm_bytes_1,stream>>> (
       //   (float2 *) indat, (float2 *) work_buffer, outdat, in_stride, M);

@@ -449,6 +449,68 @@ dsp::Response::operate (float* spectrum, unsigned poln, int ichan_start, unsigne
   // cerr << "dsp::Response::operate done" << endl;
 }
 
+//! Multiply spectrum by complex frequency response
+void
+dsp::Response::operate (float* input_spectrum, float * output_spectrum,
+                        unsigned poln, int ichan_start, unsigned nchan_op) const
+{
+  assert (ndim == 2);
+
+  unsigned ipol = poln;
+
+  // one filter may apply to two polns
+  if (ipol >= npol)
+    ipol = 0;
+
+  // do all channels at once if ichan < 0
+  unsigned npts = ndat;
+  if (ichan_start < 0) {
+    npts *= nchan;
+    ichan_start = 0;
+  }
+  else
+    npts *= nchan_op;
+
+  register float* d_from = input_spectrum;
+  register float* d_into = output_spectrum;
+  register float* f_p = buffer + offset * ipol + ichan_start * ndat * ndim;
+
+  /*
+    this operates on spectrum; i.e.  C = A * B where
+    A = input_spectrum
+    B = this->buffer
+    C = output_spectrum
+  */
+
+#ifdef _DEBUG
+  cerr << "dsp::Response::operate nchan=" << nchan << " ipol=" << ipol
+       << " buf=" << buffer << " f_p=" << f_p
+       << " off=" << offset(ipol) << endl;
+#endif
+
+  // the idea is that by explicitly calling the values from the
+  // arrays into local stack space, the routine should run faster
+  register float d_r;
+  register float d_i;
+  register float f_r;
+  register float f_i;
+
+  for (unsigned ipt=0; ipt<npts; ipt++)
+  {
+    d_r = d_from[0];
+    d_i = d_from[1];
+    f_r = f_p[0];
+    f_i = f_p[1];
+
+    d_into[0] = f_r * d_r - f_i * d_i;
+    d_into[1] = f_i * d_r + f_r * d_i;
+
+    d_from += 2 * step;
+    d_into += 2 * step;
+    f_p += 2;
+  }
+}
+
 // /////////////////////////////////////////////////////////////////////////
 
 /*! Adds the square of each complex point to the current power spectrum

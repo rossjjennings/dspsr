@@ -39,6 +39,7 @@ dsp::Convolution::Convolution (const char* _name, Behaviour _type)
 
   zero_DM = false;
   zero_DM_output = new dsp::TimeSeries;
+  zero_DM_response  = NULL;
 }
 
 dsp::Convolution::~Convolution ()
@@ -184,6 +185,10 @@ void dsp::Convolution::prepare ()
   if (passband)
     passband->match (response);
 
+  // zero_DM response should at least have a normalizer
+  if (zero_DM && zero_DM_response)
+    zero_DM_response->match (input);
+
   // response must have at least two points in it
   if (response->get_ndat() < 2)
     throw Error (InvalidState, "dsp::Convolution::prepare",
@@ -266,6 +271,24 @@ void dsp::Convolution::prepare ()
 
   response->match(input);
 
+  if (zero_DM)
+  {
+    if (zero_DM_response)
+    {
+      response_product = new ResponseProduct ();
+      response_product->add_response (zero_DM_response);
+      response_product->add_response (normalizer);
+      response_product->set_copy_index (0);
+      response_product->set_match_index (0);
+      zero_DM_response = response_product;
+    }
+    else
+      zero_DM_response = normalizer;
+  }
+
+  if (zero_DM_response)
+    zero_DM_response->match (input);
+
   // the FFT size must be greater than the number of discarded points
   if (nsamp_fft < nsamp_overlap)
     throw Error (InvalidState, "dsp::Convolution::prepare",
@@ -280,7 +303,7 @@ void dsp::Convolution::prepare ()
     get_buffering_policy()->set_minimum_samples (nsamp_fft);
   }
   if (zero_DM) {
-    if (! zero_DM) {
+    if (!zero_DM) {
       zero_DM_output = new dsp::TimeSeries;
     }
   }

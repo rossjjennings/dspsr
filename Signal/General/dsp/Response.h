@@ -125,6 +125,10 @@ namespace dsp {
     void operate (float* spectrum, unsigned poln,
 		  int ichan_start, unsigned nchan_op) const;
 
+    //! Multiply spectrum by complex frequency response, out-of-place
+    void operate (float* input_spectrum, float * output_spectrum,
+                  unsigned poln, int ichan_start, unsigned nchan_op) const;
+
     //! Multiply spectrum vector by complex matrix frequency response
     void operate (float* spectrum1, float* spectrum2, int ichan=-1) const;
 

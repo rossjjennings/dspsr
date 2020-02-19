@@ -70,12 +70,16 @@ namespace CUDA
     //! inplace FFT in CUDA memory
     float2* d_fft;
 
+    //! zero DM response in CUDA memory
+    float2* d_zero_DM_response;
+
     //! convolution kernel in CUDA memory
     float2* d_kernel;
 
     //! device scratch sapce
     float* scratch;
 
+    unsigned npt_fwd;
     unsigned nchan_subband;
     unsigned freq_res;
     unsigned nfilt_pos;

@@ -100,6 +100,9 @@ namespace dsp {
     //! Interface to alternate processing engine (e.g. GPU)
     Reference::To<Engine> engine;
 
+    //! Scalar filter (normalizer)
+    Reference::To<ScalarFilter> zero_DM_normalizer;
+
   private:
 
     void make_preparations ();
