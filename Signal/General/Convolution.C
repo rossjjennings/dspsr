@@ -505,7 +505,10 @@ void dsp::Convolution::transformation ()
   if (engine)
   {
     engine->set_scratch (spectrum[0]);
-    engine->perform (input, output, npart);
+    if (zero_DM)
+      engine->perform (input, output, zero_DM_output, npart);
+    else
+      engine->perform (input, output, npart);
     return;
   }
   float* complex_time  = spectrum[1] + n_fft * 2;

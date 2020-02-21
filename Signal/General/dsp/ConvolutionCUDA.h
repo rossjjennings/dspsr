@@ -89,6 +89,8 @@ namespace CUDA
 
     cufftComplex * buf;
 
+    cufftComplex * buf_zdm;
+
     void * work_area;
 
     size_t work_area_size;

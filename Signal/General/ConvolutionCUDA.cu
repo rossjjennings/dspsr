@@ -91,6 +91,7 @@ CUDA::ConvolutionEngine::ConvolutionEngine (cudaStream_t _stream)
   work_area_size = 0;
 
   buf = 0;
+  buf_zdm = 0;
   d_kernels = 0;
 }
 
@@ -185,8 +186,8 @@ void CUDA::ConvolutionEngine::setup_kernel (const dsp::Response * response)
   assert (ndim == 2);
   assert (d_kernels == 0);
 
-	// allocate memory for dedispersion kernel of all channels
-	unsigned kernels_size = ndat * sizeof(cufftComplex) * nchan;
+  // allocate memory for dedispersion kernel of all channels
+  unsigned kernels_size = ndat * sizeof(cufftComplex) * nchan;
   cudaError_t error = cudaMalloc ((void**)&d_kernels, kernels_size);
   if (error != cudaSuccess)
   {
@@ -260,6 +261,16 @@ void CUDA::ConvolutionEngine::setup_singular ()
     throw Error (FailedCall, "CUDA::ConvolutionEngine::setup_singular",
                  "cudaMalloc(%x, %u): %s", &buf, buffer_size,
                  cudaGetErrorString (error));
+
+  // R2C convolutions requires a buffer for the zero DM output
+  if (type_fwd == CUFFT_R2C)
+  {
+    cudaError_t error = cudaMalloc ((void **) &buf_zdm, buffer_size);
+    if (error != cudaSuccess)
+      throw Error (FailedCall, "CUDA::ConvolutionEngine::setup_singular",
+                   "cudaMalloc(%x, %u): %s", &buf_zdm, buffer_size,
+                   cudaGetErrorString (error));
+  }
 }
 
 
@@ -382,7 +393,21 @@ void CUDA::ConvolutionEngine::setup_batched (unsigned _nbatch)
                  "cudaMalloc(%x, %u): %s", &buf, batched_buffer_size,
                  cudaGetErrorString (error));
 
-	// allocate device memory for dedispsersion kernel (1 channel)
+  // R2C convolutions requires a buffer for the zero DM output
+  if (type_fwd == CUFFT_R2C)
+  {
+    error = cudaFree (buf_zdm);
+    if (error != cudaSuccess)
+      throw Error (FailedCall, "CUDA::ConvolutionEngine::setup_batched",
+                   "cudaFree(%x): %s", &buf_zdm, cudaGetErrorString (error));
+    error = cudaMalloc ((void **) &buf_zdm, batched_buffer_size);
+    if (error != cudaSuccess)
+      throw Error (FailedCall, "CUDA::ConvolutionEngine::setup_batched",
+                   "cudaMalloc(%x, %u): %s", &buf_zdm, batched_buffer_size,
+                   cudaGetErrorString (error));
+  }
+
+  // allocate device memory for dedispsersion kernel (1 channel)
 
   if (work_area_size > 0)
   {
@@ -418,8 +443,8 @@ void CUDA::ConvolutionEngine::setup_callbacks ()
   cufftCallbackStoreC h_store_bwd_batch;
 
   error = cudaMemcpyFromSymbolAsync(&h_store_fwd, d_store_fwd,
-																		sizeof(h_store_fwd), 0,
-																		cudaMemcpyDeviceToHost, stream);
+                                    sizeof(h_store_fwd), 0,
+                                    cudaMemcpyDeviceToHost, stream);
   if (error != cudaSuccess)
     throw Error (FailedCall, "CUDA::ConvolutionEngine::setup_callbacks",
                  "cudaMemcpyFromSymbolAsync failed for h_store_fwd");
@@ -457,13 +482,13 @@ void CUDA::ConvolutionEngine::setup_callbacks ()
     throw CUFFTError (result, "CUDA::ConvolutionEngine::setup_callbacks",
       "cufftXtSetCallback (plan_bwd, h_store_bwd)");
 
-	if (nbatch > 0)
-	{
-		result = cufftXtSetCallback (plan_fwd_batched, (void **)&h_store_fwd_batch,
-																 CUFFT_CB_ST_COMPLEX, (void **)&d_kernels);
-		if (result != CUFFT_SUCCESS)
-			throw CUFFTError (result, "CUDA::ConvolutionEngine::setup_callbacks",
-				"cufftXtSetCallback (plan_fwd_batched, h_store_fwd_batch)");
+  if (nbatch > 0)
+  {
+    result = cufftXtSetCallback (plan_fwd_batched, (void **)&h_store_fwd_batch,
+                                 CUFFT_CB_ST_COMPLEX, (void **)&d_kernels);
+    if (result != CUFFT_SUCCESS)
+      throw CUFFTError (result, "CUDA::ConvolutionEngine::setup_callbacks",
+        "cufftXtSetCallback (plan_fwd_batched, h_store_fwd_batch)");
 
     result = cufftXtSetCallback (plan_bwd_batched, (void **)&h_store_bwd_batch,
                                  CUFFT_CB_ST_COMPLEX, 0);
@@ -489,7 +514,7 @@ void CUDA::ConvolutionEngine::perform (
 void CUDA::ConvolutionEngine::perform (
   const dsp::TimeSeries* input,
   dsp::TimeSeries* output,
-  dsp::TimeSeries* zero_DM_output,
+  dsp::TimeSeries* output_zdm,
   unsigned npart
 )
 {
@@ -500,15 +525,15 @@ void CUDA::ConvolutionEngine::perform (
     return;
 
   if (type_fwd == CUFFT_C2C)
-    perform_complex (input, output, zero_DM_output, npart);
+    perform_complex (input, output, output_zdm, npart);
   else
-    perform_real (input, output, zero_DM_output, npart);
+    perform_real (input, output, output_zdm, npart);
 }
 
 void CUDA::ConvolutionEngine::perform_complex (
   const dsp::TimeSeries* input,
   dsp::TimeSeries * output,
-  dsp::TimeSeries* zero_DM_output,
+  dsp::TimeSeries* output_zdm,
   unsigned npart
 )
 {
@@ -518,6 +543,7 @@ void CUDA::ConvolutionEngine::perform_complex (
 
   cufftComplex * in;
   cufftComplex * out;
+  cufftComplex * out_zdm;
   cufftResult result;
 
   const unsigned in_step_batch  = nsamp_step * nbatch;
@@ -527,10 +553,10 @@ void CUDA::ConvolutionEngine::perform_complex (
   if (nbatch > 0)
     nbp = npart / nbatch;
 
-	if (dsp::Operation::verbose)
-  	cerr << "CUDA::ConvolutionEngine::perform_complex npart=" << npart
+  if (dsp::Operation::verbose)
+    cerr << "CUDA::ConvolutionEngine::perform_complex npart=" << npart
          << " nbatch=" << nbatch
-				 << " npb=" << nbp << " nsamp_step=" << nsamp_step << endl;
+         << " npb=" << nbp << " nsamp_step=" << nsamp_step << endl;
 
 #if !HAVE_CUFFT_CALLBACKS
   dim3 blocks = dim3 (nsamp_step, nbatch, 0);
@@ -544,17 +570,7 @@ void CUDA::ConvolutionEngine::perform_complex (
 #if HAVE_CUFFT_CALLBACKS
     // determine convolution kernel offset
     h_conv_params[0] = ichan * npt_bwd;
-
     setup_callbacks_conv_params (h_conv_params, sizeof(unsigned), stream);
-
-/*
-		// update the channel offset in constant memory
-		cudaError_t error = cudaMemcpyToSymbolAsync (conv_params, (void *) &h_conv_params,
-                          sizeof(unsigned), 0, cudaMemcpyHostToDevice, stream);
-    if (error != cudaSuccess)
-      throw Error (InvalidState, "CUDA::ConvolutionEngine::setup_kernel",
-                   "could not update conv_params in device memory");
-*/
 #else
     const unsigned k_offset = ichan * npt_bwd;
 #endif
@@ -563,6 +579,20 @@ void CUDA::ConvolutionEngine::perform_complex (
     {
       in  = (cufftComplex *) input->get_datptr (ichan, ipol);
       out = (cufftComplex *) output->get_datptr (ichan, ipol);
+      out_zdm = (cufftComplex *) output_zdm->get_datptr (ichan, ipol);
+
+      if (output_zdm != NULL)
+      {
+        // simply copy from input to output, excluding nfilt_pos and nfilt_neg
+        out_zdm = (cufftComplex *) output_zdm->get_datptr (ichan, ipol);
+
+        unsigned nsamp_zdm = nsamp_step * npart;
+        cudaMemcpyAsync (out_zdm,
+                         in + nfilt_pos,
+                         nsamp_zdm * sizeof(cufftComplex),
+                         cudaMemcpyDeviceToDevice,
+                         stream);
+      }
 
       // for each batched FFT
       for (unsigned i=0; i<nbp; i++)
@@ -630,9 +660,6 @@ void CUDA::ConvolutionEngine::perform_complex (
         k_ncopy_conv<<<blocks.x,mp.get_nthread(),0,stream>>> (out, nsamp_step,
                                                          buf + nfilt_pos, npt_bwd,
                                                          nsamp_step);
-        if (zero_DM_output != NULL) {
-
-        }
 #endif
 
         in  += nsamp_step;
@@ -648,7 +675,7 @@ void CUDA::ConvolutionEngine::perform_complex (
 void CUDA::ConvolutionEngine::perform_real(
   const dsp::TimeSeries* input,
   dsp::TimeSeries* output,
-  dsp::TimeSeries* zero_DM_output,
+  dsp::TimeSeries* output_zdm,
   unsigned npart
 )
 {
@@ -658,6 +685,7 @@ void CUDA::ConvolutionEngine::perform_real(
 
   cufftReal * in;
   cufftComplex * out;
+  cufftComplex * out_zdm;
   cufftResult result;
 
   const unsigned out_nsamp_step = nsamp_step / 2;
@@ -685,6 +713,7 @@ void CUDA::ConvolutionEngine::perform_real(
     {
       in  = (cufftReal *) input->get_datptr (ichan, ipol);
       out = (cufftComplex *) output->get_datptr (ichan, ipol);
+      out_zdm = (cufftComplex *) output_zdm->get_datptr (ichan, ipol);
 
       // for each batched FFT
       for (unsigned i=0; i<nbp; i++)
@@ -694,6 +723,21 @@ void CUDA::ConvolutionEngine::perform_real(
         if (result != CUFFT_SUCCESS)
           throw CUFFTError (result, "CUDA::ConvolutionEngine::perform_real",
                             "cufftExecC2C(plan_fwd_batched)");
+
+        // require a zero DM version of the output
+        if (output_zdm != NULL)
+        {
+          // perform the inverse batched FFT (in-place)
+          result = cufftExecC2C (plan_bwd_batched, buf, buf_zdm, CUFFT_INVERSE);
+          if (result != CUFFT_SUCCESS)
+            throw CUFFTError (result, "CUDA::ConvolutionEngine::perform_real",
+                              "cufftExecC2C(plan_bwd_batched)");
+
+          // copy batches of output from input
+          k_ncopy_conv<<<blocks,mp.get_nthread(),0,stream>>> (out_zdm, out_nsamp_step,
+                                                         buf_zdm + nfilt_pos, npt_bwd,
+                                                         out_step_batch);
+        }
 
         // multiply by the dedispersion kernel
         k_multiply_conv<<<mp.get_nblock(),mp.get_nthread(),0,stream>>> (buf,
@@ -721,6 +765,21 @@ void CUDA::ConvolutionEngine::perform_real(
         if (result != CUFFT_SUCCESS)
           throw CUFFTError (result, "CUDA::ConvolutionEngine::perform_real",
                             "cufftExecC2C(plan_fwd)");
+
+        // require a zero DM version of the output
+        if (output_zdm != NULL)
+        {
+          // perform the inverse batched FFT (in-place)
+          result = cufftExecC2C (plan_bwd, buf, buf_zdm, CUFFT_INVERSE);
+          if (result != CUFFT_SUCCESS)
+            throw CUFFTError (result, "CUDA::ConvolutionEngine::perform_real",
+                              "cufftExecC2C(plan_bwd_batched)");
+
+          // copy batches of output from input
+          k_ncopy_conv<<<blocks.x,mp.get_nthread(),0,stream>>> (out_zdm, out_nsamp_step,
+                                                                buf_zdm + nfilt_pos, npt_bwd,
+                                                                out_step_batch);
+        }
 
         // multiply by the dedispersion kernel
         k_multiply_conv<<<mp.get_nblock(),mp.get_nthread(),0,stream>>> (buf,
