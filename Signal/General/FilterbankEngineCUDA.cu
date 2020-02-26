@@ -316,8 +316,8 @@ void CUDA::FilterbankEngine::perform (
         const unsigned to_copy = nkeep;
         DEBUG("CUDA::FilterbankEngine::perform input_stride=" << input_stride << " to_copy=" << to_copy);
 
-        dim3 threads = { multiply.get_nthread(), 1, 1 };
-        dim3 blocks = { nkeep / threads.x, nchan_subband, 1 };
+        dim3 threads = dim3 ( multiply.get_nthread(), 1, 1 );
+        dim3 blocks = dim3 ( nkeep / threads.x, nchan_subband, 1 );
         if (nkeep % threads.x)
           blocks.x ++;
 
