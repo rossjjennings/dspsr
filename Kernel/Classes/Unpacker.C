@@ -103,13 +103,16 @@ void dsp::Unpacker::transformation ()
       "  seek=" << input->get_request_offset() <<
       "  ndat=" << input->get_request_ndat() << endl;;
 
-  // Set the input_sample attribute
-  output->input_sample = input->input_sample;
+  if (output->get_ndat())
+  {
+    // Set the input_sample attribute
+    output->input_sample = input->input_sample;
 
-  // The following lines deal with time sample resolution of the data source
-  output->seek (input->get_request_offset());
+    // The following lines deal with time sample resolution of the data source
+    output->seek (input->get_request_offset());
 
-  output->decrease_ndat (input->get_request_ndat());
+    output->decrease_ndat (input->get_request_ndat());
+  }
 
   if (verbose)
     cerr << "dsp::Unpacker::transformation exit" << endl;;

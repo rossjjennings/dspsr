@@ -216,7 +216,9 @@ void dsp::Mark5bFile::open_file (const char* filename)
 
   double Mega_samples_per_second = m5stream->Mbps / m5stream->nbit;
 
-  double npol = round( (bw * 2) / Mega_samples_per_second );
+  cerr << "Mbps" << m5stream->Mbps << endl;
+
+  double npol = round( Mega_samples_per_second / fabs(bw * 2) );
   cerr << "NPOL=" << npol << endl;
   
   cerr << "NCHAN = " << m5stream->nchan / npol << endl;
