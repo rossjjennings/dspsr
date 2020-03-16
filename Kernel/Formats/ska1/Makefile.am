@@ -1,9 +1,9 @@
 
 noinst_LTLIBRARIES = libska1.la
 
-nobase_include_HEADERS =  dsp/SKA1Unpacker.h
+nobase_include_HEADERS =  dsp/SKA1Unpacker.h dsp/LFAASPEADUnpacker.h
 
-libska1_la_SOURCES = SKA1Unpacker.C
+libska1_la_SOURCES = SKA1Unpacker.C LFAASPEADUnpacker.C
 
 if HAVE_CUDA
 
