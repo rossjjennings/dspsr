@@ -15,14 +15,13 @@
 #include "dsp/Unpacker.h"
 #include "dsp/LoadToFold1.h"
 #include "dsp/LoadToFoldConfig.h"
-#include "dsp/ConvolutionConfig.h"
 #include "dsp/InverseFilterbankConfig.h"
 
-#include "util.hpp"
+#include "util/util.hpp"
+#include "util/TestConfig.hpp"
 
-const std::string file_path = util::get_test_data_dir() + "/channelized.simulated_pulsar.noise_0.0.nseries_3.ndim_2.dump";
-const double dm = 2.64476;
-const double folding_period = 0.00575745;
+static test::util::TestConfig test_config;
+
 
 class PipelineConfig {
 
@@ -32,7 +31,7 @@ class PipelineConfig {
     void build_loadtofold (dsp::LoadToFold& loader);
     void run_loadtofold (dsp::LoadToFold& loader);
     void change_inverse_filterbank_config (const std::string& config_str);
-    void setup_config ();
+    void setup_config (const double dm, const double period);
     void setup_input (std::string file_path);
 
     Reference::To<dsp::LoadToFold::Config> config;
@@ -47,14 +46,14 @@ void PipelineConfig::change_inverse_filterbank_config (
     const std::string& config_str)
 {
   // set up inverse filterbank configuration
-  std::istringstream iss = std::istringstream(config_str);
+  std::istringstream iss (config_str);
   iss >> config->inverse_filterbank;
 }
 
-void PipelineConfig::setup_config ()
+void PipelineConfig::setup_config (const double dm, const double period)
 {
   config->dispersion_measure = dm;
-  config->folding_period = folding_period;
+  config->folding_period = period;
   config->coherent_dedispersion = true;
   config->do_deripple = true;
 
@@ -85,11 +84,26 @@ void PipelineConfig::setup_input (std::string file_path) {
 }
 
 
-TEST_CASE("InverseFilterbank works in larger LoadToFold context", "[.]")
+TEST_CASE(
+  "InverseFilterbank works in larger LoadToFold context",
+  "[InverseFilterbank][integration]"
+)
 {
-  // util::set_verbose(true);
+
+  const double dm = test_config.get_field<double>(
+    "InverseFilterbank.test_InverseFilterbankPipeline.dm");
+  const double folding_period = test_config.get_field<double>(
+    "InverseFilterbank.test_InverseFilterbankPipeline.period");
+
+  const std::string file_name = test_config.get_field<std::string>(
+    "InverseFilterbank.test_InverseFilterbankPipeline.file_name");
+
+  const std::string file_path = (
+    test::util::get_test_data_dir() + "/" + file_name);
+
+  // test::util::set_verbose(true);
   PipelineConfig pipeline_config;
-  pipeline_config.setup_config();
+  pipeline_config.setup_config(dm, folding_period);
   pipeline_config.setup_input(file_path);
 
   SECTION("InverseFilterbank works in no dedispersion case")
@@ -98,7 +112,7 @@ TEST_CASE("InverseFilterbank works in larger LoadToFold context", "[.]")
 
     pipeline_config.change_inverse_filterbank_config("1:1024:128");
 
-    REQUIRE(pipeline_config.config->inverse_filterbank.get_convolve_when() == dsp::Convolution::Config::After);
+    REQUIRE(pipeline_config.config->inverse_filterbank.get_convolve_when() == dsp::Filterbank::Config::After);
     REQUIRE(pipeline_config.config->inverse_filterbank.get_freq_res() == 1024);
 
     pipeline_config.config->coherent_dedispersion = false;
@@ -123,7 +137,7 @@ TEST_CASE("InverseFilterbank works in larger LoadToFold context", "[.]")
 
     pipeline_config.change_inverse_filterbank_config("1:D:128");
 
-    REQUIRE(pipeline_config.config->inverse_filterbank.get_convolve_when() == dsp::Convolution::Config::During);
+    REQUIRE(pipeline_config.config->inverse_filterbank.get_convolve_when() == dsp::Filterbank::Config::During);
     REQUIRE(pipeline_config.config->inverse_filterbank.get_freq_res() == 0);
 
     pipeline_config.config->coherent_dedispersion = true;
@@ -147,7 +161,7 @@ TEST_CASE("InverseFilterbank works in larger LoadToFold context", "[.]")
 
     pipeline_config.change_inverse_filterbank_config("1:1024:128");
 
-    REQUIRE(pipeline_config.config->inverse_filterbank.get_convolve_when() == dsp::Convolution::Config::After);
+    REQUIRE(pipeline_config.config->inverse_filterbank.get_convolve_when() == dsp::Filterbank::Config::After);
     REQUIRE(pipeline_config.config->inverse_filterbank.get_freq_res() == 1024);
 
     pipeline_config.config->coherent_dedispersion = true;

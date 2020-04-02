@@ -28,7 +28,6 @@ dsp::ASCIIObservation::ASCIIObservation (const char* header)
   required_keys.clear();
   required_keys.push_back("TELESCOPE");
   required_keys.push_back("SOURCE");
-  required_keys.push_back("CALFREQ");
   required_keys.push_back("FREQ");
   required_keys.push_back("BW");
   required_keys.push_back("NPOL");

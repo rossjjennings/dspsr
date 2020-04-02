@@ -125,6 +125,33 @@ namespace dsp {
 
     Engine* get_engine();
 
+    //! get the zero_DM flag
+    bool get_zero_DM () const { return zero_DM; }
+
+    //! set the zero_DM flag
+    void set_zero_DM (bool _zero_DM) { zero_DM = _zero_DM; }
+
+    //! Return true if the zero_DM_output attribute has been set
+    bool has_zero_DM_output () const;
+
+    //! Set the zero_DM_output TimeSeries object
+    virtual void set_zero_DM_output (TimeSeries* zero_DM_output);
+
+    //! Return a pointer to the zero_DM_output TimeSeries object
+    virtual const TimeSeries* get_zero_DM_output() const;
+    virtual TimeSeries* get_zero_DM_output();
+
+
+    //! Return true if the zero DM response attribute has been set
+    bool has_zero_DM_response () const;
+
+    //! Return a pointer to the zero DM frequency response function
+    virtual const Response* get_zero_DM_response() const;
+    virtual Response* get_zero_DM_response();
+
+    //! Set the zero DM frequency response function
+    virtual void set_zero_DM_response (Response* response);
+
 
   protected:
 
@@ -137,8 +164,14 @@ namespace dsp {
     //! Frequency response (convolution kernel)
     Reference::To<Response> response;
 
+    //! Frequency response to use in zero DM case
+    Reference::To<Response> zero_DM_response;
+
     //! Product of response and normaliser
     Reference::To<ResponseProduct> response_product;
+
+    //! Product of response and normaliser
+    Reference::To<ResponseProduct> zero_dm_response_product;
 
     //! Apodization function (time domain window)
     Reference::To<Apodization> apodization;
@@ -148,6 +181,13 @@ namespace dsp {
 
     //! Prepare the output TimeSeries
     void prepare_output ();
+
+    //! zero DM flag -- this indicates whether to do a parallel transformation
+    //! without any dedispersion
+    bool zero_DM;
+
+    //! zero DM output timeseries from convolution
+    Reference::To<dsp::TimeSeries> zero_DM_output;
 
   private:
 
@@ -191,6 +231,8 @@ class dsp::Convolution::Engine : public Reference::Able
     virtual void prepare (dsp::Convolution * convolution) = 0;
 
     virtual void perform (const dsp::TimeSeries* in, dsp::TimeSeries* out, unsigned npart) = 0;
+
+    virtual void perform (const dsp::TimeSeries* in, dsp::TimeSeries* out, dsp::TimeSeries* zero_DM_out, unsigned npart) = 0;
 };
 
 #endif

@@ -16,7 +16,8 @@ endif
 #############################################################################
 
 
-LDADD = $(top_builddir)/Kernel/libdspbase.la @PSRCHIVE_LIBS@ @CUDA_LIBS@ @CUFFT_LIBS@ @OPENMP_CFLAGS@
+LDADD = $(top_builddir)/Kernel/libdspbase.la @PSRCHIVE_LIBS@ \
+	@CUDA_LIBS@ @CUFFT_LIBS@ @OPENMP_CFLAGS@
 
 include $(top_srcdir)/config/Makefile.include
 

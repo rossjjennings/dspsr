@@ -36,12 +36,12 @@ void dsp::TimeOrder::transformation(){
     bs_ndat = bitseries_ndat;
 
   if( verbose )
-    fprintf(stderr,"dsp::TimeOrder::transformation() will output a BitSeries of ndat "I64" offset by "UI64" samps (input ndat="UI64")\n",
+    fprintf(stderr,"dsp::TimeOrder::transformation() will output a BitSeries of ndat " I64 " offset by " UI64 " samps (input ndat=" UI64 ")\n",
 	    bs_ndat, offset, input->get_ndat());
 
   if( bs_ndat <= 0 )
     throw Error(InvalidParam,"dsp::TimeOrder::transformation()",
-		"Your bitseries ndat came out to be 0 or negative (precisely: "I64").  This means your offset ("UI64") and your requested bitseries ndat ("UI64") were incompatible with the actual timeseries ndat ("UI64").  Try reducing your offset.",
+		"Your bitseries ndat came out to be 0 or negative (precisely: " I64 ").  This means your offset (" UI64 ") and your requested bitseries ndat (" UI64 ") were incompatible with the actual timeseries ndat (" UI64 ").  Try reducing your offset.",
 		bs_ndat, offset, bitseries_ndat, input->get_ndat());
 		
   output->Observation::operator=( *input );

@@ -119,6 +119,9 @@ namespace dsp {
     //! Optional Spectral Kurtosis (for convolution)
     Reference::To<SpectralKurtosis> skestimator;
 
+    //! Optional zero DM TimeSeries for Spectral Kurtosis
+    Reference::To<TimeSeries> zero_DM_time_series;
+
     //! Optional SK Resizer
     Reference::To<Resize> skresize;
 
@@ -152,7 +155,7 @@ namespace dsp {
     Reference::To<Detection> detect;
 
     //! Prepare to remove interchannel dispersion delays
-    void prepare_interchan (TimeSeries*);
+    void prepare_interchan (TimeSeries*, bool run_on_gpu=false);
 
     //! Build to fold the given TimeSeries
     void build_fold (TimeSeries*);

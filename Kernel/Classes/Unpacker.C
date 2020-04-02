@@ -12,7 +12,7 @@ using namespace std;
 
 //! Constructor
 dsp::Unpacker::Unpacker (const char* name)
-  : Transformation <BitSeries, TimeSeries> (name, outofplace) 
+  : Transformation <BitSeries, TimeSeries> (name, outofplace)
 {
   output_order = TimeSeries::OrderFPT;
 }
@@ -40,6 +40,11 @@ void dsp::Unpacker::prepare ()
 
 void dsp::Unpacker::reserve ()
 {
+  // set the Observation information, required if 
+  // subsequence transformations operate in-place on
+  // the data dimensions
+  output->Observation::operator=(*input);
+
   // resize the output
   output->set_order (output_order);
 
@@ -98,13 +103,16 @@ void dsp::Unpacker::transformation ()
       "  seek=" << input->get_request_offset() <<
       "  ndat=" << input->get_request_ndat() << endl;;
 
-  // Set the input_sample attribute
-  output->input_sample = input->input_sample;
+  if (output->get_ndat())
+  {
+    // Set the input_sample attribute
+    output->input_sample = input->input_sample;
 
-  // The following lines deal with time sample resolution of the data source
-  output->seek (input->get_request_offset());
+    // The following lines deal with time sample resolution of the data source
+    output->seek (input->get_request_offset());
 
-  output->decrease_ndat (input->get_request_ndat());
+    output->decrease_ndat (input->get_request_ndat());
+  }
 
   if (verbose)
     cerr << "dsp::Unpacker::transformation exit" << endl;;

@@ -281,7 +281,7 @@ void dsp::TimeDivide::set_bounds (const Observation* input)
 #endif
 
     throw Error (InvalidState, "dsp::TimeDivide::bound",
-		 "idat_end="UI64" <= idat_start="UI64, idat_end, idat_start);
+		 "idat_end=" UI64 " <= idat_start=" UI64, idat_end, idat_start);
   }
 
   if (idat_end > input_ndat)

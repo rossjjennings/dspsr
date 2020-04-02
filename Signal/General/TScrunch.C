@@ -18,6 +18,7 @@ dsp::TScrunch::TScrunch (Behaviour place)
   factor = 0;
   time_resolution = 0;
   use_tres = false;
+  prepared = false;
 
   set_buffering_policy (new InputBuffering (this));
 }
@@ -84,15 +85,14 @@ void dsp::TScrunch::prepare ()
   if (verbose)
     cerr << "dsp::TScrunch::prepare prepare_output()" << endl;
   prepare_output ();
-
   prepared = true;
 }
 
 // reserve the maximum required output space
 void dsp::TScrunch::reserve ()
 {
-  output_ndat = get_input()->get_ndat() / sfactor;
-
+  if (verbose)
+    cerr << "dsp::TScrunch::reserve prepare_output()" << endl;
   prepare_output();
 
   if (verbose)
@@ -107,6 +107,8 @@ void dsp::TScrunch::reserve ()
 // preapre the output TimeSeries
 void dsp::TScrunch::prepare_output ()
 {
+  output_ndat = get_input()->get_ndat() / sfactor;
+
   if (input.get() != output.get())
   {
     if (verbose)
@@ -118,6 +120,7 @@ void dsp::TScrunch::prepare_output ()
   get_output()->set_input_sample (get_input()->get_input_sample() / sfactor);
   output->rescale (sfactor);
   output->set_rate (input->get_rate() / sfactor);
+  output->set_order (input->get_order());
 }
 
 void dsp::TScrunch::transformation ()

@@ -40,7 +40,7 @@ uint64_t dsp::BlockFile::get_block_data_bytes() const
 
   if (non_data_bytes > block_bytes)
     throw Error (InvalidState, "dsp::BlockFile::get_block_data_bytes",
-		 "block_bytes="UI64" < header+tailer_bytes="UI64,
+		 "block_bytes=" UI64 " < header+tailer_bytes=" UI64,
 		 block_bytes, non_data_bytes);
 
   return block_bytes - non_data_bytes;
@@ -123,7 +123,7 @@ int64_t dsp::BlockFile::seek_bytes (uint64_t nbytes)
 
   if (lseek (fd, to_byte, SEEK_SET) < 0)
     throw Error (FailedSys, "dsp::BlockFile::seek_bytes",
-		 "lseek ("UI64")", to_byte);
+		 "lseek (" UI64 ")", to_byte);
 
   return nbytes;
 }

@@ -36,11 +36,32 @@ void dsp::CyclicFold::prepare ()
   // Init engine if it's not already
   if (!engine) 
     set_engine (new CyclicFoldEngine);
+  else
+    setup_engine();
+
+  Fold::prepare ();
+}
+
+void dsp::CyclicFold::set_engine (Fold::Engine *_engine)
+{
+  if (verbose) 
+    cerr << "dsp::CyclicFold::set_engine" << endl;
+
+  Fold::set_engine(_engine);
+
+  if (engine)
+    setup_engine();
+}
+
+void dsp::CyclicFold::setup_engine ()
+{
+  if (verbose) 
+    cerr << "dsp::CyclicFold::setup_engine" << endl;
 
   // Check for appropriate engine type
   CyclicFoldEngine *cfe = dynamic_cast<CyclicFoldEngine *>(engine.get());
   if (!cfe)
-    throw Error (InvalidState, "dsp::CyclicFold:prepare",
+    throw Error (InvalidState, "dsp::CyclicFold::setup_engine",
         "Folding engine is not a CyclicFoldEngine");
 
   // Set params in fold engine
@@ -48,9 +69,6 @@ void dsp::CyclicFold::prepare ()
   cfe->set_mover (mover);
   cfe->set_npol (npol);
   cfe->set_profiles (output);
-
-  Fold::prepare ();
-
 }
 
 void dsp::CyclicFold::check_input() try
@@ -285,7 +303,8 @@ void dsp::CyclicFoldEngine::zero ()
 	if (parent->verbose) {
 		cerr << "dsp::CyclicFoldEngine::zero: zeroing profiles " << endl;
 	}
-  get_profiles()->zero();
+  if (get_profiles()) 
+      get_profiles()->zero();
   if (lagdata && lagdata_size>0) 
     memset(lagdata, 0, sizeof(float)*lagdata_size);
 }

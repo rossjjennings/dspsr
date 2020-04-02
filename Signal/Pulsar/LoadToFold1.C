@@ -55,6 +55,7 @@
 #include "dsp/MemoryCUDA.h"
 #include "dsp/SpectralKurtosisCUDA.h"
 #include "dsp/CyclicFoldEngineCUDA.h"
+#include "dsp/SampleDelayCUDA.h"
 #endif
 
 #include "dsp/SampleDelay.h"
@@ -124,6 +125,8 @@ void dsp::LoadToFold::construct () try
 #if HAVE_CUDA
   bool run_on_gpu = thread_id < config->get_cuda_ndevice();
   cudaStream_t stream = reinterpret_cast<cudaStream_t>( gpu_stream );
+#else
+  const bool run_on_gpu = false;
 #endif
 
   if (manager->get_info()->get_detected())
@@ -300,6 +303,7 @@ void dsp::LoadToFold::construct () try
 
   // convolved and filterbank are out of place
   TimeSeries* filterbanked = unpacked;
+  zero_DM_time_series = unpacked;
 
   Filterbank::Config::When convolve_when;
   unsigned filter_channels;
@@ -312,6 +316,11 @@ void dsp::LoadToFold::construct () try
     filter_channels = config->inverse_filterbank.get_nchan();
 
     filterbanked = new_time_series();
+#if HAVE_CUDA
+    if (run_on_gpu) {
+      filterbanked->set_memory (device_memory);
+    }
+#endif
     config->inverse_filterbank.set_device( device_memory.ptr() );
     config->inverse_filterbank.set_stream( gpu_stream );
 
@@ -332,6 +341,7 @@ void dsp::LoadToFold::construct () try
     Reference::To<dsp::InverseFilterbankResponse> inverse_filterbank_response = new dsp::InverseFilterbankResponse;
     inverse_filterbank_response->set_apply_deripple(false);
     inverse_filterbank_response->set_input_overlap(config->inverse_filterbank.get_input_overlap());
+    inverse_filterbank_response->set_pfb_dc_chan (manager->get_info()->get_pfb_dc_chan());
 
     if (manager->get_info()->get_deripple_stages() > 0) {
       dsp::FIRFilter first_filter = manager->get_info()->get_deripple()[0];
@@ -344,10 +354,28 @@ void dsp::LoadToFold::construct () try
     if (convolve_when == Filterbank::Config::During) {
       if (kernel) {
         std::cerr << "dspsr: adding InverseFilterbankResponse to Dedispersion kernel" << std::endl;
+        if (config->sk_zap) {
+          std::cerr << "dspsr: using InverseFilterbankResponse as zero DM response" << std::endl;
+          zero_DM_time_series = new_time_series();
+#if HAVE_CUDA
+          if (run_on_gpu) {
+            zero_DM_time_series->set_memory (device_memory);
+          }
+#endif
+          inverse_filterbank->set_zero_DM(true);
+          inverse_filterbank->set_zero_DM_output(zero_DM_time_series);
+          // the following will be overwritten in InverseFilterbank::prepare
+          inverse_filterbank_response->resize(1, 1, config->inverse_filterbank.get_freq_res(), 2);
+          Reference::To<
+            dsp::InverseFilterbankResponse
+          > zero_DM_response = new dsp::InverseFilterbankResponse(*inverse_filterbank_response);
+          inverse_filterbank->set_zero_DM_response(zero_DM_response);
+        }
+
         if (!response_product) {
           response_product = new ResponseProduct;
         }
-        inverse_filterbank_response->set_pfb_dc_chan (manager->get_info()->get_pfb_dc_chan());
+
         response_product->add_response (inverse_filterbank_response);
         response_product->add_response (kernel);
 
@@ -376,10 +404,10 @@ void dsp::LoadToFold::construct () try
       // new storage for filterbank output (must be out-of-place)
       filterbanked = new_time_series ();
 
-  #if HAVE_CUDA
+#if HAVE_CUDA
       if (run_on_gpu)
         filterbanked->set_memory (device_memory);
-  #endif
+#endif
 
       config->filterbank.set_device( device_memory.ptr() );
       config->filterbank.set_stream( gpu_stream );
@@ -399,7 +427,23 @@ void dsp::LoadToFold::construct () try
         filterbank->set_response (response);
         if (!config->integration_turns)
           filterbank->get_engine()->set_passband (passband);
+
+        // if coherent dedispersion is being performed and SK is required,
+        // a zero DM time series must be produced by the filterbank
+        if (config->coherent_dedispersion && config->sk_zap)
+        {
+          cerr << "dspsr: using Filterbank with zero DM output timeseries" << endl;
+          zero_DM_time_series = new_time_series();
+#if HAVE_CUDA
+          if (run_on_gpu) {
+            zero_DM_time_series->set_memory (device_memory);
+          }
+#endif
+          filterbank->set_zero_DM (true);
+          filterbank->set_zero_DM_output (zero_DM_time_series);
+        }
       }
+
       // Get order of operations correct
       if (!convolve_when == Filterbank::Config::Before){
         operations.push_back (filterbank.get());
@@ -427,6 +471,19 @@ void dsp::LoadToFold::construct () try
       convolution->set_passband (passband);
 
     convolved = new_time_series();
+
+    if (config->sk_zap)
+    {
+      cerr << "Using zero DM time_series with convolution" << endl;
+      zero_DM_time_series = new_time_series();
+#if HAVE_CUDA
+      if (run_on_gpu) {
+        zero_DM_time_series->set_memory (device_memory);
+      }
+#endif
+      convolution->set_zero_DM(true);
+      convolution->set_zero_DM_output(zero_DM_time_series);
+    }
 
     if (filterbank_after_dedisp)
     {
@@ -456,9 +513,9 @@ void dsp::LoadToFold::construct () try
   }
 
   if (filterbank_after_dedisp)
-    prepare_interchan (convolved);
+    prepare_interchan (convolved, run_on_gpu);
   else
-    prepare_interchan (convolved);
+    prepare_interchan (convolved, run_on_gpu);
 
   if (filterbank_after_dedisp && filterbank) {
     if (! using_inverse_filterbank) {
@@ -548,51 +605,59 @@ void dsp::LoadToFold::construct () try
   // peform zapping based on the results of the SKFilterbank
   if (config->sk_zap)
   {
-    if (config->nosk_too)
-    {
-      Detection* presk_detect = new Detection;
-
-      // set up an out-of-place detection to effect a fork in the signal path
-      TimeSeries* presk_detected = new_time_series();
-
-#if HAVE_CUDA
-    if (run_on_gpu)
-      presk_detected->set_memory (device_memory);
-#endif
-
-      presk_detect->set_input (convolved);
-      presk_detect->set_output (presk_detected);
-
-      configure_detection (presk_detect, 0);
-
-      operations.push_back (presk_detect);
-
-      presk_unload = new Archiver;
-      presk_unload->set_extension( ".nosk" );
-      prepare_archiver( presk_unload );
-
-      build_fold (presk_fold, presk_unload);
-
-      presk_fold->set_input( presk_detected );
-
-#if HAVE_CUDA
-    if (run_on_gpu)
-      presk_fold->set_engine (new CUDA::FoldEngine(stream, false));
-#endif
-
-      presk_fold->prepare( manager->get_info() );
-      presk_fold->reset();
-
-      operations.push_back (presk_fold.get());
-    }
+//     if (config->nosk_too)
+//     {
+//       Detection* presk_detect = new Detection;
+//
+//       // set up an out-of-place detection to effect a fork in the signal path
+//       TimeSeries* presk_detected = new_time_series();
+//
+// #if HAVE_CUDA
+//     if (run_on_gpu)
+//       presk_detected->set_memory (device_memory);
+// #endif
+//
+//       presk_detect->set_input (convolved);
+//       presk_detect->set_output (presk_detected);
+//
+//       configure_detection (presk_detect, 0);
+//
+//       operations.push_back (presk_detect);
+//
+//       presk_unload = new Archiver;
+//       presk_unload->set_extension( ".nosk" );
+//       prepare_archiver( presk_unload );
+//
+//       build_fold (presk_fold, presk_unload);
+//
+//       presk_fold->set_input( presk_detected );
+//
+// #if HAVE_CUDA
+//     if (run_on_gpu)
+//       presk_fold->set_engine (new CUDA::FoldEngine(stream, false));
+// #endif
+//
+//       presk_fold->prepare( manager->get_info() );
+//       presk_fold->reset();
+//
+//       operations.push_back (presk_fold.get());
+//     }
 
     cleaned = new_time_series();
 
-    if (!skestimator)
+    if (!skestimator) {
       skestimator = new SpectralKurtosis();
+    }
 
-    if (!config->input_buffering)
+    if (!config->input_buffering) {
       skestimator->set_buffering_policy (NULL);
+      skestimator->set_zero_DM_buffering_policy (NULL);
+    }
+
+    if (config->coherent_dedispersion && config->sk_zap) {
+      skestimator->set_zero_DM(true);
+      skestimator->set_zero_DM_input(zero_DM_time_series);
+    }
 
     skestimator->set_input (convolved);
     skestimator->set_output (cleaned);
@@ -687,7 +752,7 @@ catch (Error& error)
   throw error += "dsp::LoadToFold::construct";
 }
 
-void dsp::LoadToFold::prepare_interchan (TimeSeries* data)
+void dsp::LoadToFold::prepare_interchan (TimeSeries* data, bool run_on_gpu)
 {
   if (! config->interchan_dedispersion)
     return;
@@ -704,6 +769,16 @@ void dsp::LoadToFold::prepare_interchan (TimeSeries* data)
   sample_delay->set_function (new Dedispersion::SampleDelay);
   if (kernel)
     kernel->set_fractional_delay (true);
+
+#if HAVE_CUDA
+  if (run_on_gpu)
+  {
+    sample_delay->set_engine (
+        new CUDA::SampleDelayEngine ((cudaStream_t) gpu_stream));
+    // Note, this assumes the data TimeSeries memory has already been
+    // properly set up to use the GPU.
+  }
+#endif
 
   operations.push_back (sample_delay.get());
 }

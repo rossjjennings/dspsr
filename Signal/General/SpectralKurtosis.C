@@ -12,6 +12,7 @@
 #include <errno.h>
 #include <assert.h>
 #include <string.h>
+#include <fstream>
 
 using namespace std;
 
@@ -43,6 +44,11 @@ dsp::SpectralKurtosis::SpectralKurtosis() : Transformation<TimeSeries,TimeSeries
   prepared = false;
 
   set_buffering_policy(new InputBuffering(this));
+  set_zero_DM_buffering_policy(new InputBuffering(&zero_DM_input_container));
+
+  zero_DM = false;
+  set_zero_DM_input(new dsp::TimeSeries);
+
 }
 
 dsp::SpectralKurtosis::~SpectralKurtosis ()
@@ -63,7 +69,7 @@ dsp::SpectralKurtosis::~SpectralKurtosis ()
     percent_fscr = (100 * (float) zap_counts[ZAP_FSCR] / (float) npart_total);
   }
 
-  cerr << "Zapped: " 
+  cerr << "Zapped: "
        << " total=" << percent_all <<  "\%" << " skfb=" << percent_skfb << "\%"
        << " tscr=" << percent_tscr << "\%" << " fscr=" << percent_fscr << "\%"
        << endl;
@@ -88,6 +94,23 @@ void dsp::SpectralKurtosis::set_engine (Engine* _engine)
   engine = _engine;
 }
 
+void dsp::SpectralKurtosis::set_zero_DM_input (TimeSeries* _zero_DM_input)
+{
+  zero_DM_input_container.set_input(_zero_DM_input);
+}
+
+bool dsp::SpectralKurtosis::has_zero_DM_input () const {
+  return zero_DM_input_container.has_input();
+}
+
+const dsp::TimeSeries* dsp::SpectralKurtosis::get_zero_DM_input () const {
+  return zero_DM_input_container.get_input();
+}
+
+dsp::TimeSeries* dsp::SpectralKurtosis::get_zero_DM_input () {
+  return const_cast<dsp::TimeSeries*>(zero_DM_input_container.get_input());
+}
+
 
 /*
  * These are preparations that could be performed once at the start of
@@ -110,6 +133,9 @@ void dsp::SpectralKurtosis::prepare ()
   if (has_buffering_policy())
   {
     get_buffering_policy()->set_minimum_samples (M);
+    if (zero_DM) {
+      get_zero_DM_buffering_policy()->set_minimum_samples (M);
+    }
   }
 
   if (engine)
@@ -136,7 +162,7 @@ void dsp::SpectralKurtosis::prepare_output ()
 {
   if (verbose)
     cerr << "dsp::SpectralKurtosis::prepare_output()" << endl;
-    
+
   double mask_rate = input->get_rate() / M;
 
   estimates->copy_configuration (get_input());
@@ -165,11 +191,21 @@ void dsp::SpectralKurtosis::prepare_output ()
   zapmask->set_npol (1);
 
   // configure output timeseries (out-of-place) to match input
-  output->copy_configuration (get_input()); 
+  output->copy_configuration (get_input());
   output->set_input_sample (input->get_input_sample ());
+
+  if (zero_DM)
+  {
+    if (get_zero_DM_input()->get_input_sample() != input->get_input_sample ())
+      throw Error (InvalidState, "dsp::SpectralKurtosis::prepare_output", "mismatch between normal and zero_DM input samples");
+  }
+
+  // if (zero_DM) {
+  //   get_zero_DM_input()->set_input_sample(input->get_input_sample());
+  // }
 }
 
-/* ensure containers have correct dynamic size */ 
+/* ensure containers have correct dynamic size */
 void dsp::SpectralKurtosis::reserve ()
 {
   if (verbose)
@@ -180,7 +216,7 @@ void dsp::SpectralKurtosis::reserve ()
   output_ndat = npart * M;
 
   if (verbose)
-    cerr << "dsp::SpectralKurtosis::reserve input_ndat=" << ndat 
+    cerr << "dsp::SpectralKurtosis::reserve input_ndat=" << ndat
          << " npart=" << npart << " output_ndat=" << output_ndat << endl;
 
   // use resize since out of place operation
@@ -193,6 +229,13 @@ void dsp::SpectralKurtosis::reserve ()
 /* call set of transformations */
 void dsp::SpectralKurtosis::transformation ()
 {
+  if (zero_DM && has_zero_DM_buffering_policy())  {
+    if (verbose) {
+      std::cerr << "dsp::SpectralKurtosis::transformation zero_DM_buffering_policy pre_transformation" << std::endl;
+    }
+    get_zero_DM_buffering_policy()->pre_transformation();
+  }
+
   if (!prepared)
     prepare();
 
@@ -204,41 +247,130 @@ void dsp::SpectralKurtosis::transformation ()
   npart = ndat / M;
   output_ndat = npart * M;
 
-  if (verbose || debugd < 1)
+  if (verbose || debugd < 1) {
     cerr << "dsp::SpectralKurtosis::transformation input npart=" << npart
          << " output_ndat=" << output_ndat << endl;
-
+  }
   if (has_buffering_policy())
   {
     if (verbose || debugd < 1)
       cerr << "dsp::SpectralKurtosis::transformation setting next_start_sample="
            << output_ndat << endl;
     get_buffering_policy()->set_next_start (output_ndat);
+
+
+    if (verbose) {
+      std::cerr << "dsp::SpectralKurtosis::transformation set_next_start done" << std::endl;
+    }
+  }
+  if (zero_DM && has_zero_DM_buffering_policy())  {
+    if (verbose) {
+      std::cerr << "dsp::SpectralKurtosis::transformation zero_DM_buffering_policy set_next_start " << std::endl;
+    }
+    get_zero_DM_buffering_policy()->set_next_start(output_ndat);
   }
 
   prepare_output ();
 
   // ensure output containers are sized correctly
-  reserve ();
-  
+  reserve();
+
   if ((ndat == 0) || (npart == 0))
     return;
 
   // perform SK functions
+  if (verbose) {
+    std::cerr << "dsp::SpectralKurtosis::transformation: calling compute" << std::endl;
+    std::cerr << "dsp::SpectralKurtosis::transformation:: detection_flags=["
+      << detection_flags[0] << ", "
+      << detection_flags[1] << ", "
+      << detection_flags[2] << "]" << std::endl;
+  }
+
   compute ();
+  if (verbose) {
+    std::cerr << "dsp::SpectralKurtosis::transformation: calling detect" << std::endl;
+  }
+
+  if (report) {
+    float_reporter.emit(
+      "input",
+      (float*) input->get_datptr(),
+      input->get_nchan(),
+      input->get_npol(),
+      input->get_ndat(),
+      input->get_ndim());
+
+    float_reporter.emit(
+      "estimates",
+      estimates->get_dattfp(),
+      estimates->get_nchan(),
+      estimates->get_npol(),
+      estimates->get_ndat(),
+      estimates->get_ndim());
+
+    float_reporter.emit(
+      "estimates_tscr",
+      estimates_tscr->get_dattfp(),
+      estimates_tscr->get_nchan(),
+      estimates_tscr->get_npol(),
+      estimates_tscr->get_ndat(),
+      estimates_tscr->get_ndim());
+  }
+
+
   detect ();
+  if (verbose) {
+    std::cerr << "dsp::SpectralKurtosis::transformation: calling mask" << std::endl;
+  }
+  if (report) {
+    char_reporter.emit(
+      "zapmask",
+      zapmask->get_datptr(),
+      zapmask->get_nchan(),
+      zapmask->get_npol(),
+      zapmask->get_ndat(),
+      zapmask->get_ndim());
+  }
+
   mask ();
+  if (verbose) {
+    std::cerr << "dsp::SpectralKurtosis::transformation: done" << std::endl;
+  }
+
+  if (report) {
+    float_reporter.emit(
+      "output",
+      output->get_datptr(),
+      output->get_nchan(),
+      output->get_npol(),
+      output->get_ndat(),
+      output->get_ndim());
+  }
+
   //insertsk();
 }
 
 void dsp::SpectralKurtosis::compute ()
 {
-  if (verbose)
+  if (verbose) {
     cerr << "dsp::SpectralKurtosis::compute" << endl;
+  }
+  const dsp::TimeSeries* compute_input = get_input();;
+
+  if (zero_DM) {
+    compute_input = get_zero_DM_input();
+    if (verbose) {
+      std::cerr << "dsp::SpectralKurtosis::compute: using zero DM input" << std::endl;
+      std::cerr << "dsp::SpectralKurtosis::compute: sample input=" << input->get_input_sample() << " zero_DM_input=" << get_zero_DM_input()->get_input_sample() << std::endl;
+      std::cerr << "dsp::SpectralKurtosis::compute: ndate input=" << input->get_ndat() <<  " zero_DM_input=" << get_zero_DM_input()->get_ndat() << std::endl;
+    }
+    // compute_input->set_input_sample(input->get_input_sample());
+  }
 
   if (engine)
   {
-    engine->compute (input, estimates, estimates_tscr, M);
+    engine->compute (compute_input, estimates, estimates_tscr, M);
   }
   else
   {
@@ -250,19 +382,22 @@ void dsp::SpectralKurtosis::compute ()
     }
 
     float S1_sum, S2_sum;
-    const float M_fac = (M+1) / (M-1);
+    const float M_fac = (float)(M+1) / (M-1);
     float * outdat = estimates->get_dattfp();
 
-    switch (input->get_order())
+    switch (compute_input->get_order())
     {
       case dsp::TimeSeries::OrderTFP:
       {
+        if (verbose) {
+          std::cerr << "dsp::SpectralKurtosis::compute: OrderTFP" << std::endl;
+        }
         const unsigned int chan_stride = nchan * npol * ndim;
         float * indat;
 
         for (unsigned ipart=0; ipart < npart; ipart++)
         {
-          indat = (float *) input->get_dattfp() + (M * ipart * chan_stride);
+          indat = (float *) compute_input->get_dattfp() + (M * ipart * chan_stride);
 
           for (unsigned ichan=0; ichan<nchan; ichan++)
           {
@@ -301,6 +436,9 @@ void dsp::SpectralKurtosis::compute ()
 
       case dsp::TimeSeries::OrderFPT:
       {
+        if (verbose) {
+          std::cerr << "dsp::SpectralKurtosis::compute: OrderFPT" << std::endl;
+        }
         const unsigned int nfloat = M * ndim;
         // foreach input channel
         for (unsigned ipart=0; ipart < npart; ipart++)
@@ -310,7 +448,8 @@ void dsp::SpectralKurtosis::compute ()
             for (unsigned ipol=0; ipol < npol; ipol++)
             {
               // input pointer for channel pol
-              const float* indat = input->get_datptr (ichan, ipol) + ipart * nfloat;
+              const float* indat = compute_input->get_datptr (ichan, ipol) + ipart * nfloat;
+              // std::cerr << "  ichan=" << ichan << ", ipol=" << ipol << ", ipart=" << ipart << std::endl;
 
               S1_sum = 0;
               S2_sum = 0;
@@ -318,6 +457,8 @@ void dsp::SpectralKurtosis::compute ()
               // Square Law Detect for S1 + S2
               for (unsigned i=0; i<nfloat; i+=2)
               {
+                // std::cerr << "  ichan=" << ichan << ", ipol=" << ipol << ", ipart=" << ipart;
+                // std::cerr << " " << indat[i] << ", " << indat[i+1] << std::endl;
                 float sqld = (indat[i] * indat[i]) + (indat[i+1] * indat[i+1]);
                 S1_sum += sqld;
                 S2_sum += (sqld * sqld);
@@ -329,7 +470,6 @@ void dsp::SpectralKurtosis::compute ()
                 S1_tscr [ichan*npol + ipol] += S1_sum;
                 S2_tscr [ichan*npol + ipol] += S2_sum;
               }
-
               // calculate the SK estimator
               if (S1_sum == 0)
                 outdat[ichan*npol + ipol] = 0;
@@ -371,6 +511,7 @@ void dsp::SpectralKurtosis::compute ()
     }
   }
 
+
   if (verbose || debugd < 1)
     cerr << "dsp::SpectralKurtosis::compute done" << endl;
   if (debugd < 1)
@@ -402,7 +543,7 @@ void dsp::SpectralKurtosis::set_channel_range (unsigned start, unsigned end)
   channels[1] = end;
 }
 
-void dsp::SpectralKurtosis::set_options (bool _disable_fscr, 
+void dsp::SpectralKurtosis::set_options (bool _disable_fscr,
     bool _disable_tscr, bool _disable_ft)
 {
   detection_flags[0] = _disable_fscr;
@@ -421,13 +562,13 @@ void dsp::SpectralKurtosis::detect ()
 
   if (verbose || debugd < 1)
   {
-    cerr << "dsp::SpectralKurtosis::detect npart= " << npart  
-         << " nchan=" << nchan << " nbit=" << input->get_nbit() 
+    cerr << "dsp::SpectralKurtosis::detect npart= " << npart
+         << " nchan=" << nchan << " nbit=" << input->get_nbit()
          << " npol=" << npol << " ndim=" << ndim << endl;
 
     cerr << "dsp::SpectralKurtosis::detect OUTPUT ndat="
          << zapmask->get_ndat() << " nchan=" << zapmask->get_nchan()
-         << " nbit=" << zapmask->get_nbit() << " npol=" << zapmask->get_npol() 
+         << " nbit=" << zapmask->get_nbit() << " npol=" << zapmask->get_npol()
          << " ndim=" << zapmask->get_ndim() << endl;
   }
 
@@ -436,17 +577,45 @@ void dsp::SpectralKurtosis::detect ()
   // reset the mask to all 0 (no zapping)
   reset_mask();
 
-  // apply the tscrunches SKFB estiamtes to the mask
+  // apply the tscrunches SKFB estimates to the mask
   if (!detection_flags[1])
     detect_tscr ();
+  if (report) {
+    char_reporter.emit(
+      "zapmask_tscr",
+      zapmask->get_datptr(),
+      zapmask->get_nchan(),
+      zapmask->get_npol(),
+      zapmask->get_ndat(),
+      zapmask->get_ndim());
+  }
 
   // apply the SKFB estimates to the mask
   if (!detection_flags[2])
     detect_skfb ();
 
+  if (report ){
+    char_reporter.emit(
+      "zapmask_skfb",
+      zapmask->get_datptr(),
+      zapmask->get_nchan(),
+      zapmask->get_npol(),
+      zapmask->get_ndat(),
+      zapmask->get_ndim());
+  }
+
   if (!detection_flags[0])
     detect_fscr ();
 
+  if (report) {
+    char_reporter.emit(
+      "zapmask_fscr",
+      zapmask->get_datptr(),
+      zapmask->get_nchan(),
+      zapmask->get_npol(),
+      zapmask->get_ndat(),
+      zapmask->get_ndim());
+  }
   count_zapped ();
 
   if (debugd < 1)
@@ -499,7 +668,7 @@ void dsp::SpectralKurtosis::detect_tscr ()
       thresholds_tscr_lower.push_back(lower);
       thresholds_tscr_upper.push_back(upper);
     }
-  
+
     if (verbose)
       cerr << "dsp::SpectralKurtosis::detect_tscr M=" << M_tscr << " std_devs="
            << std_devs  << " [" << lower << " - " << upper << "]" << endl;
@@ -523,9 +692,9 @@ void dsp::SpectralKurtosis::detect_tscr ()
 
     if (zap_chan)
     {
-      if (verbose)
-        cerr << "dsp::SpectralKurtosis::detect_tscr zap V=" << V << ", " 
-             << "ichan=" << ichan << endl;
+      // if (verbose)
+      //   cerr << "dsp::SpectralKurtosis::detect_tscr zap V=" << V << ", "
+      //        << "ichan=" << ichan << endl;
       outdat = zapmask->get_datptr();
       for (unsigned ipart=0; ipart < npart; ipart++)
       {
@@ -579,7 +748,7 @@ void dsp::SpectralKurtosis::detect_skfb ()
     }
 
     indat += nchan * npol;
-    outdat += nchan; 
+    outdat += nchan;
   }
 }
 
@@ -648,7 +817,7 @@ void dsp::SpectralKurtosis::count_zapped ()
       unfiltered_sum[outdex] += indat[index];
       if (npol == 2)
         unfiltered_sum[outdex+1] += indat[index+1];
-  
+
       if (outdat[(ipart*nchan) + ichan] == 1)
       {
         zap_counts[ZAP_ALL] ++;
@@ -674,10 +843,16 @@ void dsp::SpectralKurtosis::detect_fscr ()
 
   if (engine)
   {
-    float one_sigma_idat   = sqrt(mu2 / (float) nchan);
-    const float upper = 1 + ((1+std_devs) * one_sigma_idat);
-    const float lower = 1 - ((1+std_devs) * one_sigma_idat);
-    engine->detect_fscr (estimates, zapmask, lower, upper, channels[0], channels[1]);
+    // float one_sigma_idat   = sqrt(mu2 / (float) nchan);
+    // const float upper = 1 + ((1+std_devs) * one_sigma_idat);
+    // const float lower = 1 - ((1+std_devs) * one_sigma_idat);
+    // std::cerr << "dsp::SpectralKurtosis::detect_fscr:" <<
+    //   " upper=" << upper <<
+    //   " lower=" << lower << std::endl;
+    // engine->detect_fscr (estimates, zapmask, lower, upper, channels[0], channels[1]);
+
+    engine->detect_fscr (estimates, zapmask, mu2, std_devs, channels[0], channels[1]);
+
     return;
   }
 
@@ -686,7 +861,7 @@ void dsp::SpectralKurtosis::detect_fscr ()
 
   float sk_avg;
   unsigned sk_avg_cnt = 0;
-  
+
   unsigned zap_ipart;
   uint64_t nzap = 0;
 
@@ -717,10 +892,11 @@ void dsp::SpectralKurtosis::detect_fscr ()
         float avg_lower_thresh = 1 - ((1+std_devs) * one_sigma_idat);
         if ((sk_avg > avg_upper_thresh) || (sk_avg < avg_lower_thresh))
         {
-          if (verbose)
-            cerr << "Zapping ipart=" << ipart << " ipol=" << ipol << " sk_avg=" << sk_avg
+          if (verbose) {
+            std::cerr << "Zapping ipart=" << ipart << " ipol=" << ipol << " sk_avg=" << sk_avg
                  << " [" << avg_lower_thresh << " - " << avg_upper_thresh
-                 << "] cnt=" << sk_avg_cnt << endl;
+                 << "] cnt=" << sk_avg_cnt << std::endl;
+          }
           zap_ipart = 1;
         }
       }
@@ -753,7 +929,7 @@ void dsp::SpectralKurtosis::mask ()
   if (engine)
   {
     if (verbose)
-      cerr << "dsp::SpectralKurtosis::transformation output->resize(" << output->get_ndat() << ")" << endl;
+      cerr << "dsp::SpectralKurtosis::transformation: output->resize(" << output->get_ndat() << ")" << endl;
     output->resize (output->get_ndat());
   }
 
@@ -768,8 +944,8 @@ void dsp::SpectralKurtosis::mask ()
   }
   else
   {
-    // mask is a TFP ordered bit series, output is FTP order Timeseries
-    const unsigned nfloat = M * ndim;      
+    // mask is a TFP ordered bit series, output is FPT order TimeSeries
+    const unsigned nfloat = M * ndim;
     for (unsigned ichan=0; ichan < nchan; ichan++)
     {
       for (unsigned ipol=0; ipol < npol; ipol++)
@@ -800,10 +976,9 @@ void dsp::SpectralKurtosis::mask ()
     debugd++;
 }
 
-//! 
+//!
 void dsp::SpectralKurtosis::insertsk ()
 {
   if (engine)
     engine->insertsk (estimates, output, M);
 }
-

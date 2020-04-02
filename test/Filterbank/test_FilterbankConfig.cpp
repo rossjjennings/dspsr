@@ -6,7 +6,10 @@
 
 #include "dsp/FilterbankConfig.h"
 
-TEST_CASE("FilterbankConfig can intake arguments", "[FilterbankConfig]")
+TEST_CASE(
+  "FilterbankConfig can intake arguments",
+  "[unit][no_file][FilterbankConfig]"
+)
 {
 
   SECTION ("istream method produces correct configuration")
@@ -20,7 +23,8 @@ TEST_CASE("FilterbankConfig can intake arguments", "[FilterbankConfig]")
     REQUIRE(config.get_nchan() == 1);
 
     stringvalues = "1:16384";
-    iss = std::istringstream(stringvalues);
+    iss.clear();
+    iss.str(stringvalues);
 
     iss >> config;
     REQUIRE(config.get_convolve_when() == dsp::Filterbank::Config::After);
@@ -29,7 +33,10 @@ TEST_CASE("FilterbankConfig can intake arguments", "[FilterbankConfig]")
   }
 }
 
-TEST_CASE("Filterbank can stream correct internal representation", "[FilterbankConfig]")
+TEST_CASE(
+  "FilterbankConfig can stream correct internal representation",
+  "[unit][no_file][FilterbankConfig]"
+)
 {
   dsp::Filterbank::Config config;
   // std::string stringvalues = "1:D";

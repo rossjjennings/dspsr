@@ -7,6 +7,7 @@
 
 #include "Rational.h"
 #include <stdlib.h>
+#include <stdexcept>
 
 std::istream& operator >> (std::istream& in, Rational& r)
 {

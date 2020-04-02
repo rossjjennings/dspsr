@@ -89,8 +89,19 @@ namespace CUDA
     void perform (const dsp::TimeSeries* in, dsp::TimeSeries* out,
                   uint64_t npart, uint64_t in_step=0, uint64_t out_step=0);
 
+    void perform (const dsp::TimeSeries * in,
+                  dsp::TimeSeries * out,
+                  dsp::TimeSeries* zero_DM_out,
+                  uint64_t npart,
+                  const uint64_t in_step=0,
+                  const uint64_t out_step=0);
+
     //! Do any actions to clean up after `perform`.
     void finish ();
+
+    void set_record_time (bool _record_time) { record_time  = _record_time; }
+
+    bool get_record_time () const { return record_time; }
 
     //! setup backward fft plans. This is public so we can test it.
     std::vector<cufftResult> setup_backward_fft_plan (
@@ -239,8 +250,16 @@ namespace CUDA
     //! scratch space for overlap discard on input data
     float2* d_input_overlap_discard;
 
+    //! Scratch space, in samples, needed for the d_input_overlap_discard space
+    unsigned d_input_overlap_discard_samples;
+
     //! scratch space for stitching together results of forward FFTs
     float2* d_stitching;
+
+    //! Scratch space, in samples, needed for the d_stitching space
+    unsigned d_stitching_samples;
+
+    bool record_time;
 
   };
 

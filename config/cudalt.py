@@ -48,7 +48,7 @@ args.append("-o")
 args.append(pic_filepath)
 args = map(quote_arg,args)
 command = " ".join(args)
-print command
+print(command)
 
 # compile the .cu
 rv = os.system(command)
@@ -61,7 +61,7 @@ args.append("-o")
 args.append(npic_filepath)
 args = map(quote_arg,args)
 command = " ".join(args)
-print command
+print(command)
 
 # compile the .cu
 rv = os.system(command)

@@ -10,6 +10,7 @@
 #include "dsp/TimeSeries.h"
 #include "dsp/BitSeries.h"
 #include "dsp/Memory.h"
+#include "EventEmitter.h"
 
 #ifndef __SpectralKurtosis_h
 #define __SpectralKurtosis_h
@@ -83,6 +84,49 @@ namespace dsp {
 
     void set_engine (Engine*);
 
+    template<class T>
+    class Reporter {
+    public:
+      virtual void operator() (T*, unsigned, unsigned, unsigned, unsigned) {};
+    };
+
+    // A event emitter that takes a data array, and the nchan, npol, ndat and ndim
+    // associated with the data array
+    EventEmitter<Reporter<float> > float_reporter;
+
+    // This is for reporting the state of the bit zapmask
+    EventEmitter<Reporter<unsigned char> > char_reporter;
+
+    bool get_report () const { return report; }
+
+    void set_report (bool _report) { report = _report; }
+
+    //! Return true if the zero_DM_input attribute has been set
+    bool has_zero_DM_input () const;
+    virtual void set_zero_DM_input (TimeSeries* zero_DM_input);
+    virtual const TimeSeries* get_zero_DM_input() const;
+    virtual TimeSeries* get_zero_DM_input();
+
+    // bool has_zero_DM_input_container () const;
+    // virtual void set_zero_DM_input_container (const HasInput<TimeSeries> zero_DM_input_container&);
+    // virtual const HasInput<TimeSeries>& get_zero_DM_input_container() const;
+    // virtual HasInput<TimeSeries>& get_zero_DM_input_container();
+
+    virtual void set_zero_DM_buffering_policy (BufferingPolicy* policy)
+    { zero_DM_buffering_policy = policy; }
+
+    bool has_zero_DM_buffering_policy() const
+    { return zero_DM_buffering_policy; }
+
+    BufferingPolicy* get_zero_DM_buffering_policy () const
+    { return zero_DM_buffering_policy; }
+
+    //! get the zero_DM flag
+    bool get_zero_DM () const { return zero_DM; }
+
+    //! set the zero_DM flag
+    void set_zero_DM (bool _zero_DM) { zero_DM = _zero_DM; }
+
   protected:
 
     //! Perform the transformation on the input time series
@@ -90,6 +134,8 @@ namespace dsp {
 
     //! Interface to alternate processing engine (e.g. GPU)
     Reference::To<Engine> engine;
+
+
 
   private:
 
@@ -121,7 +167,7 @@ namespace dsp {
 
     uint64_t output_ndat;
 
-    //! SK Estimates 
+    //! SK Estimates
     Reference::To<TimeSeries> estimates;
 
     //! Tscrunched SK Estimate for block
@@ -176,6 +222,20 @@ namespace dsp {
 
     bool prepared;
 
+    //! flag that indicates whether or not to report intermediate data products
+    //! via the *_report EventEmitter objects.
+    bool report;
+
+    // //! Input TimeSeries that has not been dedispersed in some previous operation.
+    // Reference::To<dsp::TimeSeries> zero_DM_input;
+
+    //! HasInput continaer for zero_DM_input TimeSeries
+    HasInput<TimeSeries> zero_DM_input_container;
+
+    Reference::To<BufferingPolicy> zero_DM_buffering_policy;
+
+    bool zero_DM;
+
   };
 
   class SpectralKurtosis::Engine : public Reference::Able
@@ -193,14 +253,14 @@ namespace dsp {
                               float upper_thresh, float lower_thresh) = 0;
 
       virtual void detect_fscr (const TimeSeries* input, BitSeries* output,
-                                const float lower, const float upper,
+                                const float mu2, const unsigned std_devs,
                                 unsigned schan, unsigned echan) = 0;
 
       virtual void detect_tscr (const TimeSeries* input,
                                 const TimeSeries * input_tscr,
                                 BitSeries* output,
                                 float upper, float lower) = 0;
- 
+
       virtual int count_mask (const BitSeries* output) = 0;
 
       virtual float * get_estimates (const TimeSeries* input) = 0;

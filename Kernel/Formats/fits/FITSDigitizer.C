@@ -319,6 +319,15 @@ void dsp::FITSDigitizer::measure_scale ()
 
 void dsp::FITSDigitizer::pack ()
 {
+  // ChannelSort will re-organize the frequency channels in the output
+  if (upper_sideband_output)
+    output->set_bandwidth ( fabs(input->get_bandwidth()) );
+  else
+    output->set_bandwidth ( -fabs(input->get_bandwidth()) );
+  output->set_swap ( false );
+  output->set_nsub_swap ( 0 );
+  output->set_input_sample ( input->get_input_sample() );
+
   if (input->get_ndat() == 0)
     return;
 
@@ -331,15 +340,6 @@ void dsp::FITSDigitizer::pack ()
     rescale_pack ();
     return;
   }
-
-  // ChannelSort will re-organize the frequency channels in the output
-  if (upper_sideband_output)
-    output->set_bandwidth ( fabs(input->get_bandwidth()) );
-  else
-    output->set_bandwidth ( -fabs(input->get_bandwidth()) );
-  output->set_swap ( false );
-  output->set_nsub_swap ( 0 );
-  output->set_input_sample ( input->get_input_sample() );
 
   const unsigned npol = input->get_npol();
 
@@ -490,15 +490,6 @@ void dsp::FITSDigitizer::rescale_pack ()
     cerr << "dsp::FITSDigitizer::rescale_pack scale=" << scale << std::endl;
   if (!scale)
     init ();
-
-  // ChannelSort will re-organize the frequency channels in the output
-  if (upper_sideband_output)
-    output->set_bandwidth ( fabs(input->get_bandwidth()) );
-  else
-    output->set_bandwidth ( -fabs(input->get_bandwidth()) );
-  output->set_swap ( false );
-  output->set_nsub_swap ( 0 );
-  output->set_input_sample ( input->get_input_sample() );
 
   if (input->get_ndat() < rescale_nsamp)
   {

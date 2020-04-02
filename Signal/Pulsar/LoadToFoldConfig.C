@@ -143,6 +143,10 @@ dsp::LoadToFold::Config::Config ()
   // Output dynamic extensions by default
   no_dynamic_extensions = false;
 
+  do_deripple = false;
+
+  inverse_filterbank_fft_window = "tukey";
+
 }
 
 // set block size to this factor times the minimum possible

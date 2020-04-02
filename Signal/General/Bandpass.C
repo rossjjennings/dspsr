@@ -93,7 +93,7 @@ void dsp::Bandpass::transformation ()
   // there must be at least enough data for one FFT
   if (input->get_ndat() < nsamp_fft)
     throw Error (InvalidState, "dsp::Bandpass::transformation",
-		 "error ndat="I64" < nfft=%d", input->get_ndat(), nsamp_fft);
+		 "error ndat=" I64 " < nfft=%d", input->get_ndat(), nsamp_fft);
 
   // number of FFTs for this data block
   uint64_t npart = input->get_ndat() / nsamp_fft;

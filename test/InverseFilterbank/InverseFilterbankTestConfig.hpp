@@ -1,32 +1,74 @@
 // configuration for InverseFilterbank testing
 
-#ifndef __InverseFilterbankTestConfig_h
-#define __InverseFilterbankTestConfig_h
+#ifndef __InverseFilterbankTestConfig_hpp
+#define __InverseFilterbankTestConfig_hpp
 
 #include <vector>
 
-#include "util.hpp"
+#include "dsp/InverseFilterbank.h"
 
+#include "util/TestConfig.hpp"
+
+namespace test {
 namespace util {
   namespace InverseFilterbank {
 
-    class InverseFilterbankTestConfig {
+    class InverseFilterbankProxy {
 
     public:
 
-      InverseFilterbankTestConfig ();
+      InverseFilterbankProxy (
+        const Rational& _os_factor,
+        unsigned _npart,
+        unsigned _npol,
+        unsigned _input_nchan,
+        unsigned _output_nchan,
+        unsigned _input_ndat,
+        unsigned _input_overlap
+      ) : os_factor(_os_factor),
+          npart(_npart),
+          npol(_npol),
+          input_nchan(_input_nchan),
+          output_nchan(_output_nchan),
+          input_ndat(_input_ndat),
+          input_overlap(_input_overlap)
+      {
+        scratch = new dsp::Scratch;
+        filterbank = new dsp::InverseFilterbank;
+      }
 
-      std::vector<TestShape> get_test_vector_shapes ();
+      void setup (
+        dsp::TimeSeries* in,
+        dsp::TimeSeries* out,
+        bool, bool
+      );
 
-      std::vector<float> get_thresh ();
+      float* allocate_scratch(unsigned total_scratch_needed);
 
-      void load_json_config (bool force=false);
+      template<class MemoryType>
+      void set_memory (MemoryType* _memory);
+
+      Reference::To<dsp::Scratch> scratch;
+      Reference::To<dsp::InverseFilterbank> filterbank;
 
     private:
 
-      json json_config;
+      const Rational& os_factor;
+      unsigned npart;
+      unsigned npol;
+      unsigned input_nchan;
+      unsigned output_nchan;
+      unsigned input_ndat;
+      unsigned input_overlap;
 
-      bool json_config_loaded;
+    };
+
+    class InverseFilterbankTestConfig : public test::util::TestConfig {
+
+    public:
+
+      std::vector<TestShape> get_test_vector_shapes ();
+
     };
 
     template<typename T>
@@ -84,11 +126,24 @@ namespace util {
     );
   }
 }
+}
+
+template<typename MemoryType>
+void test::util::InverseFilterbank::InverseFilterbankProxy::set_memory (
+  MemoryType* _memory
+)
+{
+  if (_memory != nullptr) {
+    Reference::To<dsp::Scratch> new_scratch = new dsp::Scratch;
+    new_scratch->set_memory(_memory);
+    scratch = new_scratch;
+  }
+}
 
 
 
 template<typename T>
-void util::InverseFilterbank::response_stitch_cpu_FPT (
+void test::util::InverseFilterbank::response_stitch_cpu_FPT (
   const std::vector<T>& in,
   const std::vector<T>& resp,
   std::vector<T>& out,
@@ -179,7 +234,7 @@ void util::InverseFilterbank::response_stitch_cpu_FPT (
 
 
 template<typename T>
-void util::InverseFilterbank::apodization_overlap_cpu_FPT (
+void test::util::InverseFilterbank::apodization_overlap_cpu_FPT (
   const std::vector<T>& in,
   const std::vector<T>& apodization,
   std::vector<T>& out,
@@ -214,10 +269,10 @@ void util::InverseFilterbank::apodization_overlap_cpu_FPT (
             idat > apod_size ||
             idat + in_offset > in_size
           ) {
-            std::cerr << "util::apodization_overlap_cpu_FPT: watch out!" << std::endl;
-            std::cerr << "util::apodization_overlap_cpu_FPT: idat + out_offset=" << idat + out_offset << ", out_size=" << out_size << std::endl;
-            std::cerr << "util::apodization_overlap_cpu_FPT: idat + in_offset=" << idat + in_offset << ", in_size=" << in_size << std::endl;
-            std::cerr << "util::apodization_overlap_cpu_FPT: idat=" << idat  << ", apod_size=" << apod_size << std::endl;
+            std::cerr << "test::util::apodization_overlap_cpu_FPT: watch out!" << std::endl;
+            std::cerr << "test::util::apodization_overlap_cpu_FPT: idat + out_offset=" << idat + out_offset << ", out_size=" << out_size << std::endl;
+            std::cerr << "test::util::apodization_overlap_cpu_FPT: idat + in_offset=" << idat + in_offset << ", in_size=" << in_size << std::endl;
+            std::cerr << "test::util::apodization_overlap_cpu_FPT: idat=" << idat  << ", apod_size=" << apod_size << std::endl;
           }
 
           if (apodization.size() != 0) {
@@ -232,7 +287,7 @@ void util::InverseFilterbank::apodization_overlap_cpu_FPT (
 }
 
 template<typename T>
-void util::InverseFilterbank::overlap_discard_cpu_FPT (
+void test::util::InverseFilterbank::overlap_discard_cpu_FPT (
   const std::vector<T>& in,
   std::vector<T>& out,
   unsigned discard,
@@ -245,13 +300,13 @@ void util::InverseFilterbank::overlap_discard_cpu_FPT (
 )
 {
   std::vector<T> empty;
-  util::InverseFilterbank::apodization_overlap_cpu_FPT<T>(
+  test::util::InverseFilterbank::apodization_overlap_cpu_FPT<T>(
     in, empty, out, discard, npart, npol, nchan, samples_per_part, in_ndat, out_ndat
   );
 }
 
 template<typename T>
-void util::InverseFilterbank::overlap_save_cpu_FPT (
+void test::util::InverseFilterbank::overlap_save_cpu_FPT (
   const std::vector<T>& in,
   std::vector<T>& out,
   unsigned discard,
@@ -283,9 +338,9 @@ void util::InverseFilterbank::overlap_save_cpu_FPT (
             idat + out_offset > out_size ||
             idat + in_offset > in_size
           ) {
-            std::cerr << "util::overlap_save_cpu_FPT: watch out!" << std::endl;
-            std::cerr << "util::overlap_save_cpu_FPT: idat + out_offset=" << idat + out_offset << ", out_size=" << out_size << std::endl;
-            std::cerr << "util::overlap_save_cpu_FPT: idat + in_offset=" << idat + in_offset << ", in_size=" << in_size << std::endl;
+            std::cerr << "test::util::overlap_save_cpu_FPT: watch out!" << std::endl;
+            std::cerr << "test::util::overlap_save_cpu_FPT: idat + out_offset=" << idat + out_offset << ", out_size=" << out_size << std::endl;
+            std::cerr << "test::util::overlap_save_cpu_FPT: idat + in_offset=" << idat + in_offset << ", in_size=" << in_size << std::endl;
           }
           out[out_offset + idat] = in[in_offset + idat + discard];
         }

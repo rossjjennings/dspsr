@@ -16,25 +16,18 @@
 #include "dsp/InverseFilterbankEngineCPU.h"
 #include "dsp/InverseFilterbankResponse.h"
 
-#include "util.hpp"
+#include "util/util.hpp"
+#include "util/TestConfig.hpp"
 
-const std::string file_path = util::get_test_data_dir() + "/channelized.simulated_pulsar.noise_0.0.nseries_3.ndim_2.dump";
-const unsigned block_size = 699048; // this is taken from dspsr logs
-const double dm = 2.64476;
-const unsigned freq_res = 1024;
 
-TEST_CASE ("InverseFilterbank") {
+static test::util::TestConfig test_config;
+
+
+TEST_CASE (
+  "InverseFilterbank",
+  "[unit][no_file][InverseFilterbank]"
+) {
   dsp::InverseFilterbank filterbank;
-
-  SECTION ("InverseFilterbank prepare method runs")
-  {
-    // filterbank.prepare();
-  }
-
-  SECTION ("InverseFilterbank reserve method runs")
-  {
-    // filterbank.reserve();
-  }
 
   SECTION ("InverseFilterbank engine can be set")
   {
@@ -57,15 +50,27 @@ TEST_CASE ("InverseFilterbank") {
   }
 }
 
-TEST_CASE ("InverseFilterbank runs on channelized data", "")
+TEST_CASE (
+  "InverseFilterbank runs on channelized data",
+  "[InverseFilterbank][component]")
 {
-  // util::set_verbose(true);
+
+  const std::string file_name = test_config.get_field<std::string>(
+    "InverseFilterbank.test_InverseFilterbank.file_name");
+  const std::string file_path = test::util::get_test_data_dir() + "/" + file_name;
+
+  const unsigned block_size = test_config.get_field<unsigned>(
+    "InverseFilterbank.test_InverseFilterbank.block_size");
+  const double dm = test_config.get_field<double>(
+    "InverseFilterbank.test_InverseFilterbank.dm");
+  const unsigned freq_res = test_config.get_field<unsigned>(
+    "InverseFilterbank.test_InverseFilterbank.freq_res");
 
   dsp::IOManager manager;
   manager.open(file_path);
 
-  dsp::TimeSeries* unpacked = new dsp::TimeSeries;
-  util::load_psr_data(manager, block_size, unpacked);
+  Reference::To<dsp::TimeSeries> unpacked = new dsp::TimeSeries;
+  test::util::load_psr_data(manager, block_size, unpacked);
 
   dsp::Observation* info = manager.get_input()->get_info();
   info->set_dispersion_measure(dm);
@@ -74,7 +79,8 @@ TEST_CASE ("InverseFilterbank runs on channelized data", "")
   unsigned input_nchan = info->get_nchan();
   unsigned input_npol = info->get_npol();
 
-  dsp::TimeSeries* output = new dsp::TimeSeries;
+  Reference::To<dsp::TimeSeries> output = new dsp::TimeSeries;
+
   dsp::InverseFilterbank filterbank;
   filterbank.set_buffering_policy(NULL);
   filterbank.set_output_nchan(1);
@@ -90,12 +96,33 @@ TEST_CASE ("InverseFilterbank runs on channelized data", "")
   deripple->set_fir_filter(info->get_deripple()[0]);
   deripple->set_apply_deripple(false);
   deripple->set_ndat(freq_res);
-  // deripple->set_nchan(1);
-  // deripple->resize(input_npol, 1, ndat, 2);
+  deripple->resize(1, 1, freq_res, 2);
 
   filterbank.set_engine(filterbank_engine);
   filterbank.set_response(deripple);
 
-  filterbank.prepare();
-  filterbank.operate();
+  SECTION ("runs in zero DM case") {
+
+    Reference::To<
+      dsp::InverseFilterbankResponse
+    > zero_DM_response = new dsp::InverseFilterbankResponse;
+    *zero_DM_response = *deripple;
+
+    Reference::To<dsp::TimeSeries> zero_DM_output = new dsp::TimeSeries;
+
+    filterbank.set_zero_DM(true);
+    filterbank.set_zero_DM_output(zero_DM_output);
+    filterbank.set_zero_DM_response(zero_DM_response);
+
+    filterbank.prepare();
+    filterbank.operate();
+
+    REQUIRE(zero_DM_response->get_ndat() == filterbank.get_response()->get_ndat());
+  }
+
+  SECTION ("runs in non zero DM case") {
+    filterbank.prepare();
+    filterbank.operate();
+  }
+
 }

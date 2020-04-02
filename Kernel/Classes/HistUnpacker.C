@@ -161,7 +161,7 @@ unsigned dsp::HistUnpacker::get_nstate_internal () const
 void dsp::HistUnpacker::zero_histogram ()
 {
   if (verbose)
-    cerr << "dsp::HistUnpacker::zero_histogram" << endl;;
+    cerr << "dsp::HistUnpacker::zero_histogram" << endl;
 
   // if the input is not set, there may be no way to resize
   if (!input)
@@ -172,9 +172,9 @@ void dsp::HistUnpacker::zero_histogram ()
 
   for (unsigned idig=0; idig < histograms.size(); idig++)
   {
-    if (verbose)
-      cerr << "dsp::HistUnpacker::zero_histogram idig=" << idig
-           << " size=" << histograms[idig].size() << endl;
+    // if (verbose)
+    //   cerr << "dsp::HistUnpacker::zero_histogram idig=" << idig
+    //        << " size=" << histograms[idig].size() << endl;
     for (unsigned ibin=0; ibin<histograms[idig].size(); ibin++)
       histograms[idig][ibin] = 0;
   }
@@ -228,9 +228,9 @@ unsigned long dsp::HistUnpacker::get_histogram_total (unsigned idig) const
 
 unsigned long* dsp::HistUnpacker::get_histogram (unsigned idig, unsigned expect)
 {
-  if (verbose)
-    cerr << "dsp::HistUnpacker::get_histogram idig=" << idig
-         << " expect=" << expect << endl;
+  // if (verbose)
+  //   cerr << "dsp::HistUnpacker::get_histogram idig=" << idig
+  //        << " expect=" << expect << endl;
 
   if (resize_needed)
     resize ();

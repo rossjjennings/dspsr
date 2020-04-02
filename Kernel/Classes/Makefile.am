@@ -34,7 +34,9 @@ nobase_include_HEADERS = environ.h ascii_header.h Rational.h \
 	dsp/GenericFourBitUnpacker.h \
 	dsp/GenericTwoBitCorrection.h \
 	dsp/CommandLineHeader.h dsp/OutputFileShare.h \
-	dsp/FIRFilter.h
+	dsp/FIRFilter.h \
+	EventEmitter.h
+
 
 libClasses_la_SOURCES = ascii_header.c Rational.C ASCIIObservation.C \
 	InputBufferingShare.C Reserve.C \
@@ -71,9 +73,9 @@ libClasses_la_SOURCES += MemoryCUDA.C check_error.C GenericEightBitUnpackerCUDA.
 libClasses_la_LIBADD = @CUDA_LIBS@
 endif
 
-check_PROGRAMS = test_BlockIterator test_environ test_Rational
+
+check_PROGRAMS = test_BlockIterator test_environ
 test_BlockIterator_SOURCES = test_BlockIterator.C
-test_Rational_SOURCES = test_Rational.C
 
 #############################################################################
 #

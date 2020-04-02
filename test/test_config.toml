@@ -1,0 +1,107 @@
+atol = 1e-3
+rtol = 1e-3
+
+[SpectralKurtosis.test_SpectralKurtosis_integration]
+file_name = "1644-4559.pre_Convolution.dump"
+s_chan = 0
+e_chan = 128
+# file_name = "2016-04-28-14:14:19_0000000000000000.000000.dada"
+# s_chan = 0
+# e_chan = 4096
+tscrunch = 32
+std_devs = 5
+nparts = 2
+block_size = 1024
+disable_fscr = false
+disable_tscr = false
+disable_ft = false
+
+[test_Apodization]
+tukey_window_file_name = "tukey_window.dat"
+tophat_window_file_name = "tophat_window.dat"
+
+[test_FTransform_cufft_precision]
+nchan = 256
+fft_size = 256
+scale = 500.0
+
+[InverseFilterbank.test_InverseFilterbankEngine_integration]
+do_fft_window = true
+do_response = true
+
+[InverseFilterbank.test_InverseFilterbankResponse]
+fir_file_name = "fir.768.dada"
+
+[InverseFilterbank.test_InverseFilterbankPipeline]
+file_name = "channelized.simulated_pulsar.noise_0.0.nseries_3.ndim_2.dump"
+dm = 2.64476
+period = 0.00575745
+
+[InverseFilterbank.test_InverseFilterbank]
+file_name = "channelized.simulated_pulsar.noise_0.0.nseries_3.ndim_2.dump"
+dm = 2.64476
+block_size = 699048
+freq_res = 1024
+
+[[InverseFilterbank.test_shapes]]
+npart = 2
+input_nchan = 256
+output_nchan = 1
+input_npol = 1
+output_npol = 1
+input_ndat = 128
+output_ndat = 0
+overlap_pos = 16
+overlap_neg = 16
+#
+# [[InverseFilterbank.test_shapes]]
+# npart = 10
+# input_nchan = 256
+# output_nchan = 1
+# input_npol = 2
+# output_npol = 2
+# input_ndat = 128
+# output_ndat = 0
+# overlap_pos = 16
+# overlap_neg = 16
+#
+# [[InverseFilterbank.test_shapes]]
+# npart = 10
+# input_nchan = 256
+# output_nchan = 16
+# input_npol = 1
+# output_npol = 1
+# input_ndat = 128
+# output_ndat = 0
+# overlap_pos = 16
+# overlap_neg = 16
+#
+# [[InverseFilterbank.test_shapes]]
+# npart = 10
+# input_nchan = 256
+# output_nchan = 16
+# input_npol = 2
+# output_npol = 2
+# input_ndat = 128
+# output_ndat = 0
+# overlap_pos = 16
+# overlap_neg = 16
+
+# [[InverseFilterbank.test_shapes]]
+# npart = 2
+# input_nchan = 32768
+# output_nchan = 128
+# input_npol = 2
+# output_npol = 2
+# input_ndat = 1024
+# output_ndat = 0
+# overlap_pos = 16
+# overlap_neg = 16
+
+test_data_files = [
+  "tukey_window.dat",
+  "tophat_window.dat",
+  "fir.768.dada",
+  "channelized.simulated_pulsar.noise_0.0.nseries_3.ndim_2.dump",
+  "1644-4559.pre_Convolution.dump"
+]

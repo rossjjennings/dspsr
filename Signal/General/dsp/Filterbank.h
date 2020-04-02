@@ -66,8 +66,9 @@ namespace dsp {
     //! get the response's negative impulse
     unsigned get_nfilt_neg() {return nfilt_neg;}
 
-    FTransform::Plan* get_forward() {return forward;}
-    FTransform::Plan* get_backward() {return backward;}
+    FTransform::Plan* get_forward();
+
+    FTransform::Plan* get_backward();
 
     //! Engine used to perform discrete convolution step
     class Engine;
@@ -98,6 +99,9 @@ namespace dsp {
 
     //! Interface to alternate processing engine (e.g. GPU)
     Reference::To<Engine> engine;
+
+    //! Scalar filter (normalizer)
+    Reference::To<ScalarFilter> zero_DM_normalizer;
 
   private:
 

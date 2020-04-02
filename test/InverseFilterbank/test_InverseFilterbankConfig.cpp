@@ -7,7 +7,10 @@
 #include "dsp/InverseFilterbankConfig.h"
 #include "dsp/FilterbankConfig.h"
 
-TEST_CASE("InverseFilterbankConfig can intake arguments", "[InverseFilterbankConfig]")
+TEST_CASE(
+  "InverseFilterbankConfig can intake arguments",
+  "[unit][no_file][InverseFilterbankConfig]"
+)
 {
 
   SECTION ("istream method produces correct configuration")
@@ -21,7 +24,8 @@ TEST_CASE("InverseFilterbankConfig can intake arguments", "[InverseFilterbankCon
     REQUIRE(config.get_nchan() == 1);
 
     stringvalues = "1:16384";
-    iss = std::istringstream(stringvalues);
+    iss.clear();
+    iss.str(stringvalues);
 
     iss >> config;
     REQUIRE(config.get_convolve_when() == dsp::Filterbank::Config::After);
@@ -29,7 +33,8 @@ TEST_CASE("InverseFilterbankConfig can intake arguments", "[InverseFilterbankCon
     REQUIRE(config.get_freq_res() == 16384);
 
     stringvalues = "1:16384:128";
-    iss = std::istringstream(stringvalues);
+    iss.clear();
+    iss.str(stringvalues);
 
     iss >> config;
     REQUIRE(config.get_convolve_when() == dsp::Filterbank::Config::After);
@@ -39,7 +44,10 @@ TEST_CASE("InverseFilterbankConfig can intake arguments", "[InverseFilterbankCon
   }
 }
 
-TEST_CASE("InverseFilterbank can stream correct internal representation", "[InverseFilterbankConfig]")
+TEST_CASE(
+  "InverseFilterbankConfig can stream correct internal representation",
+  "[unit][no_file][InverseFilterbankConfig]"
+)
 {
   dsp::InverseFilterbank::Config config;
   // std::string stringvalues = "1:D";

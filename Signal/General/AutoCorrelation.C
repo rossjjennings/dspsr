@@ -44,7 +44,7 @@ void dsp::AutoCorrelation::transformation ()
   // there must be at least enough data for one FFT
   if (ndat < required)
     throw Error (InvalidState, "dsp::Convolution::transformation",
-		 "error ndat="I64" < min=%d", ndat, required);
+		 "error ndat=" I64 " < min=%d", ndat, required);
 
   // number of FFTs for this data block
   unsigned long npart = (ndat-nlag)/nlag;

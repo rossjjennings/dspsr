@@ -10,17 +10,30 @@ if ( ! -f $tarfile ) then
   exit
 endif
 
-# determine the SourceForge user name from CVS/Root
-set SFUSER = `awk -F@ '{print $1}' CVS/Root`
+# determine the SourceForge user name from the Git configuration
+
+set server = `git config --get remote.origin.url`
+
+if ( $server =~ git://* ) then
+  echo 'ERROR: this command can be run only by a developer'
+  exit -1
+endif
+
+set SFUSER = `echo $server | awk -F// '{print $2}' | awk -F@ '{print $1}'`
 
 # the sourceforge file release system details
 set frslogin = ${SFUSER},dspsr@frs.sourceforge.net
-set frspath = /home/frs/project/d/ds/dspsr/dspsr/@PACKAGE_VERSION@/$tarfile
+set frspath = /home/frs/project/d/ds/dspsr/dspsr/
 
 echo
 echo "This script will install the public release of $tarfile as $SFUSER"
 echo "Please hit <Enter> to continue or <Ctrl-C> to abort"
 $<
 
-rsync -e ssh $tarfile ${frslogin}:${frspath}
+mkdir -p @PACKAGE_VERSION@
+cp $tarfile @PACKAGE_VERSION@/
+
+rsync -e ssh -r @PACKAGE_VERSION@ ${frslogin}:${frspath}
+
+echo DSPSR @PACKAGE_VERSION@ released
 

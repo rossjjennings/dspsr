@@ -28,6 +28,12 @@ namespace dsp {
     //! Destructor
     ~InverseFilterbankResponse ();
 
+    //! Copy constructor
+    InverseFilterbankResponse (const InverseFilterbankResponse&);
+
+    //! Assignment operator
+    const InverseFilterbankResponse& operator = (const InverseFilterbankResponse&);
+
     //! Set the dimensions of the data, updating built attribute
     void resize(unsigned _npol, unsigned _nchan,
                 unsigned _ndat, unsigned _ndim);

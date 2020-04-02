@@ -47,7 +47,14 @@ namespace CUDA
     void perform (const dsp::TimeSeries* in, dsp::TimeSeries* out,
                   uint64_t npart, uint64_t in_step, uint64_t out_step);
 
+    void perform (const dsp::TimeSeries* in, dsp::TimeSeries* out, dsp::TimeSeries* zero_DM_out,
+                  uint64_t npart, uint64_t in_step, uint64_t out_step);
+
     void finish ();
+
+    FTransform::Plan* get_forward ();
+
+    FTransform::Plan* get_backward ();
 
   protected:
 
@@ -63,12 +70,16 @@ namespace CUDA
     //! inplace FFT in CUDA memory
     float2* d_fft;
 
+    //! zero DM response in CUDA memory
+    float2* d_zero_DM_response;
+
     //! convolution kernel in CUDA memory
     float2* d_kernel;
 
     //! device scratch sapce
     float* scratch;
 
+    unsigned npt_fwd;
     unsigned nchan_subband;
     unsigned freq_res;
     unsigned nfilt_pos;

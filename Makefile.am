@@ -1,12 +1,16 @@
 
 SUBDIRS	= config Kernel Signal Management
 
+if HAVE_CXX11
 if HAVE_CUDA
 SUBDIRS += test
 endif
+endif
 
 if HAVE_PYTHON
+if HAVE_SWIG
 SUBDIRS += python
+endif
 endif
 
 if HAVE_PGPLOT

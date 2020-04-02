@@ -27,7 +27,7 @@ void dsp::DataSeries::initi()
   instantiation_count++;
 
   Observation::init();
-  
+
   memory = Memory::get_manager();
 
   buffer = NULL;
@@ -37,7 +37,7 @@ void dsp::DataSeries::initi()
 
   shape_changed = true;
 }
-  
+
 dsp::DataSeries::DataSeries (const DataSeries& ms)
 {
   initi();
@@ -68,7 +68,7 @@ void dsp::DataSeries::set_ndat (uint64_t _ndat)
 {
   if( _ndat*get_ndim()*get_nbit() % 8 )
     throw Error(InvalidParam,"dsp::DataSeries::set_ndat",
-		"ndat="UI64" * ndim=%d * nbit=%d yields non-integer bytes",
+		"ndat=" UI64 " * ndim=%d * nbit=%d yields non-integer bytes",
                 _ndat, get_ndim(), get_nbit());
 
   Observation::set_ndat( _ndat );
@@ -79,8 +79,8 @@ void dsp::DataSeries::set_ndim (uint64_t _ndim)
 {
   if( _ndim*get_ndat()*get_nbit() % 8 )
     throw Error(InvalidParam,"dsp::DataSeries::set_ndim",
-                "ndat="UI64" * ndim=%d * nbit=%d yields non-integer bytes",
-                get_ndat(), _ndim, get_nbit()); 
+                "ndat=" UI64 " * ndim=%d * nbit=%d yields non-integer bytes",
+                get_ndat(), _ndim, get_nbit());
 
   bool dim_shape_changed = (_ndim != get_ndim());
   shape_changed |= dim_shape_changed;
@@ -149,34 +149,34 @@ void dsp::DataSeries::resize (uint64_t nsamples, unsigned char*& old_buffer)
 {
   if (verbose)
     cerr << "dsp::DataSeries::resize"
-            " nsamp=" << nsamples << 
+            " nsamp=" << nsamples <<
             " nbit=" << get_nbit() <<
-            " ndim=" << get_ndim() << 
+            " ndim=" << get_ndim() <<
             " (current ndat=" << get_ndat() << ")" << endl;
 
   // Number of bits needed to allocate a single pol/chan group
   uint64_t nbits_required = nsamples * get_nbit() * get_ndim();
 
   if (verbose)
-    cerr << "dsp::DataSeries::resize nbits=nsamp*nbit*ndim=" 
+    cerr << "dsp::DataSeries::resize nbits=nsamp*nbit*ndim="
 	 << nbits_required << endl;
 
   // check that nbits is a multiple of 8 (bits per byte)
   if (nbits_required & 0x07)
     throw Error (InvalidParam,"dsp::DataSeries::resize",
-		"nbit=%d ndim=%d nsamp="UI64" not an integer number of bytes",
+		"nbit=%d ndim=%d nsamp=" UI64 " not an integer number of bytes",
 		get_nbit(), get_ndim(), nsamples);
 
   if (verbose)
     cerr << "dsp::DataSeries::resize"
-            " npol=" << get_npol() << 
+            " npol=" << get_npol() <<
             " nchan=" << get_nchan() << endl;
 
   // Number of bytes needed to be allocated
   uint64_t require = (nbits_required*get_npol()*get_nchan())/8;
 
   if (verbose)
-    cerr << "dsp::DataSeries::resize nbytes=nbits/8*npol*nchan=" << require 
+    cerr << "dsp::DataSeries::resize nbytes=nbits/8*npol*nchan=" << require
          << " (current size=" << size << ")" << endl;
 
   if (!require || require > size) {
@@ -223,7 +223,7 @@ void dsp::DataSeries::resize (uint64_t nsamples, unsigned char*& old_buffer)
 
     if (!buffer)
       throw Error (InvalidState,"dsp::DataSeries::resize",
-		  "Could not allocate "UI64" bytes", require);
+		  "Could not allocate " UI64 " bytes", require);
 
     size = require;
     memory_used += size;
@@ -244,15 +244,17 @@ void dsp::DataSeries::reshape ()
 {
   subsize = (get_ndim() * get_ndat() * get_nbit()) / 8;
   shape_changed = false;
-  
-  if (subsize*get_npol()*get_nchan() > size)
-    throw Error (InvalidState, "dsp::DataSeries::reshape",
-		 "subsize="UI64" * npol=%d * nchan=%d > size="UI64,
-		 subsize, get_npol(), get_nchan(), size);
 
-  if (verbose)
+  if (subsize*get_npol()*get_nchan() > size) {
+    throw Error (InvalidState, "dsp::DataSeries::reshape",
+		 "subsize=" UI64 " * npol=%d * nchan=%d > size=" UI64,
+		 subsize, get_npol(), get_nchan(), size);
+  }
+
+  if (verbose) {
     cerr << "dsp::DataSeries::reshape size=" << size << " bytes"
       " (subsize=" << subsize << " bytes)" << endl;
+  }
 }
 
 void dsp::DataSeries::reshape (unsigned new_npol, unsigned new_ndim)
@@ -294,7 +296,7 @@ unsigned char* dsp::DataSeries::get_udatptr (unsigned ichan, unsigned ipol)
   if( ipol >= get_npol() )
     throw Error(InvalidState," dsp::DataSeries::get_udatptr()",
 		"Your ipol (%d) was >= npol (%d)",
-		ipol,get_npol()); 
+		ipol,get_npol());
 
   return get_data() + (ichan*get_npol() + ipol) * subsize;
 }
@@ -310,7 +312,7 @@ dsp::DataSeries::get_udatptr (unsigned ichan, unsigned ipol) const
   if( ipol >= get_npol() )
     throw Error(InvalidState," dsp::DataSeries::get_udatptr()",
 		"Your ipol (%d) was >= npol (%d)",
-		ipol,get_npol()); 
+		ipol,get_npol());
 
   return get_data() + (ichan*get_npol()+ipol)*subsize;
 }
@@ -335,7 +337,7 @@ dsp::DataSeries& dsp::DataSeries::operator = (const DataSeries& copy)
       memory->do_copy (dest, src, size_t(npt));
     }
   }
-  
+
   //  fprintf(stderr,"Returning from dsp::DataSeries::operator =()\n");
 
   return *this;
@@ -350,7 +352,7 @@ dsp::DataSeries& dsp::DataSeries::swap_data(dsp::DataSeries& ts)
 
   if( subsize*get_npol()*get_nchan() > size )
     throw Error(InvalidState,"dsp::DataSeries::swap_data()",
-		"BUG! subsize*get_npol()*get_nchan() > size ("UI64" * %d * %d > "UI64")\n",
+		"BUG! subsize*get_npol()*get_nchan() > size (" UI64 " * %d * %d > " UI64 ")\n",
 		subsize,get_npol(),get_nchan(),size);
 
   return *this;
@@ -376,7 +378,7 @@ void dsp::DataSeries::internal_match (const DataSeries* other)
     buffer = (unsigned char*) memory->do_allocate (required);
     if (!buffer)
       throw Error (InvalidState,"dsp::DataSeries::internal_match",
-		  "could not allocate "UI64" bytes", required);
+		  "could not allocate " UI64 " bytes", required);
 
     size = required;
     memory_used += size;
@@ -402,4 +404,3 @@ void dsp::DataSeries::copy_configuration (const Observation* copy)
     cerr << "dsp::Dataseries::copy_configuration ndat=" << get_ndat()
          << endl;
 }
-

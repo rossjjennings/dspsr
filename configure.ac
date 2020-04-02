@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.57)
-AC_INIT([DSPSR],[2016-06+],[dspsr-developers@lists.sourceforge.net])
+AC_INIT([DSPSR],[2020-01-10+],[dspsr-developers@lists.sourceforge.net])
 
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([config])
@@ -54,6 +54,9 @@ SWIN_COMPILER
 
 AM_INIT_AUTOMAKE([foreign subdir-objects])
 
+# Create static libraries by default
+LT_INIT([disable-shared])
+
 #
 # Check for selected formats in backends.list
 #
@@ -80,17 +83,9 @@ AC_PROG_INSTALL
 AC_PROG_LIBTOOL
 
 # check for C++11 compatibility
-AX_CXX_COMPILE_STDCXX_11
-AM_CONDITIONAL([HAVE_CXX11], [test x"$HAVE_CXX11" -eq x1])
+AX_CXX_COMPILE_STDCXX_11([noext], [optional])
+AM_CONDITIONAL([HAVE_CXX11], [test x"$HAVE_CXX11" == x1])
 
-# Create static libraries by default
-if test x"$enable_shared" == xyes; then
-  # echo "enable shared"
-  AC_ENABLE_SHARED
-else
-  # echo "disable shared"
-  AC_DISABLE_SHARED
-fi
 #
 # Disable the debugging information option, -g
 #
@@ -176,9 +171,14 @@ SWIN_FUNC_GETOPT_LONG
 SWIN_FUNC_AFFINITY
 
 #
-# Generate python module if --enable-shared is used
+# Generate python module if --enable-shared is used 
+# but not if --disable-python is also used.
 #
-if test x"$enable_shared" == xyes; then
+AC_ARG_ENABLE([python],
+              AC_HELP_STRING([--disable-python],
+              [Don't build python extensions]))
+
+if test x"$enable_shared" == xyes -a x"$enable_python" != xno; then
   AM_PATH_PYTHON(,, [:])
   AC_PROG_SWIG
   SWIG_ENABLE_CXX
@@ -188,6 +188,11 @@ else
 fi
 
 AM_CONDITIONAL([HAVE_PYTHON], [test "$PYTHON" != :])
+AM_CONDITIONAL([HAVE_SWIG], [test x"$SWIG" != x])
+
+# echo "HAVE_PYTHON=$HAVE_PYTHON"
+# echo "HAVE_CUDA=$HAVE_CUDA"
+#
 #
 # Initialize variables used by Makefile.include
 #
@@ -250,11 +255,11 @@ AC_CONFIG_FILES([Makefile
 		Management/dspsr_ldflags
 		Management/dspsr_cflags
 		Management/release.csh
-    More/Makefile
-    More/Plotting/Makefile
-    More/Applications/Makefile
+		More/Makefile
+		More/Plotting/Makefile
+		More/Applications/Makefile
 		python/Makefile
-    test/Makefile])
+		test/Makefile])
 
 AC_OUTPUT
 

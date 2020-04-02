@@ -726,12 +726,29 @@ void dsp::TimeSeries::set_engine( Engine* _engine )
 unsigned dsp::TimeSeries::get_stride () const
 {
   if (order == OrderFPT) {
+
     if (get_npol() > 1) {
+      if (verbose) {
+        std::cerr << "dsp::TimeSeries::get_stride: npol > 1" << std::endl;
+      }
       return get_datptr(0, 1) - get_datptr(0, 0);
     } else {
       if (get_nchan() > 1) {
+        if (verbose) {
+          std::cerr << "dsp::TimeSeries::get_stride: nchan > 1" << std::endl;
+          std::cerr << "dsp::TimeSeries::get_stride: ndat="
+            << get_ndat() << " get_datptr(1, 0) - get_datptr(0, 0)="
+            << get_datptr(1, 0) - get_datptr(0, 0)
+            << std::endl;
+        }
         return get_datptr(1, 0) - get_datptr(0, 0);
       } else {
+        if (verbose) {
+          std::cerr << "dsp::TimeSeries::get_stride: nchan = 1 and npol = 1" << std::endl;
+          std::cerr << "dsp::TimeSeries::get_stride: ndat="
+            << get_ndat() << " get_nfloat_span()=" << get_nfloat_span()
+            << std::endl;
+        }
         return (unsigned) get_nfloat_span();
       }
     }

@@ -60,13 +60,13 @@ void usage ()
     "Usage: the_decimator file1 [file2 ...] \n"
     "Options:\n"
     "\n"
-    "  -b bits   number of bits per sample output to file \n" 
+    "  -b bits   number of bits per sample output to file \n"
     "  -B secs   number of seconds per block \n"
     "  -c        keep offset and scale constant \n"
     "  -I secs   number of seconds between level updates \n"
     "  -m        do not create monitoring statistics\n"
     "  -n        do not create filterbank output file\n"
-    "  -o file   file stamp for filterbank file  \n" 
+    "  -o file   file stamp for filterbank file  \n"
     "  -r        report total Operation times \n"
     "  -p        revert to FPT order \n"
     "  -t factor tscrunch by factor  \n"
@@ -100,7 +100,7 @@ void usage ()
        << endl;
 }
 
-int main (int argc, char** argv) try 
+int main (int argc, char** argv) try
 {
   bool verbose = false;
   bool constant_offset_scale = false;
@@ -219,20 +219,20 @@ int main (int argc, char** argv) try
 
     if (write_sigproc_file)
     {
-      outfile = fopen (filename.c_str(),"wb"); 
+      outfile = fopen (filename.c_str(),"wb");
       if (!outfile)
         throw Error (FailedSys, "", "Could not open " + filename + " for output");
     }
   }
 
   vector <string> filenames;
-  
+
   for (int ai=optind; ai<argc; ai++)
     dirglob (&filenames, argv[ai]);
 
   if (filenames.size() == 0)
   {
-    cerr << "the_decimator: please specify a filename (-h for help)" 
+    cerr << "the_decimator: please specify a filename (-h for help)"
          << endl;
     return 0;
   }
@@ -309,7 +309,7 @@ int main (int argc, char** argv) try
   if (verbose)
     cerr << "the_decimator: creating 2nd sigproc digitizer for ringbuffer"
          << endl;
-  Reference::To<dsp::BitSeries> bitseries_rb = new dsp::BitSeries;    
+  Reference::To<dsp::BitSeries> bitseries_rb = new dsp::BitSeries;
   Reference::To<dsp::SigProcDigitizer> digitizer_rb = new dsp::SigProcDigitizer;
   digitizer_rb->set_nbit(8);
   digitizer_rb->set_input (timeseries);
@@ -326,7 +326,7 @@ int main (int argc, char** argv) try
 
   if (write_psrxml)
   {
-          // prepare the psrxml header 
+          // prepare the psrxml header
     psrxml_header = (psrxml*) malloc(sizeof(psrxml));
           // blank the xml header
     clearPsrXmlDoc(psrxml_header);
@@ -380,7 +380,7 @@ int main (int argc, char** argv) try
 
     if (verbose)
     {
-      cerr << "the_decimator: file " 
+      cerr << "the_decimator: file "
            << filenames[ifile] << " opened" << endl;
       cerr << "Source = " << obs->get_source() << endl;
       cerr << "Frequency = " << obs->get_centre_frequency() << endl;
@@ -399,7 +399,7 @@ int main (int argc, char** argv) try
     {
       multilog_t* mlog = multilog_open ("the_decimator",0);
       multilog_add (mlog, stderr);
-      
+
       hdu = dada_hdu_create(mlog);
       hdu->header = (char*) malloc(4096);
       dada_hdu_set_key(hdu,hdu_key);
@@ -431,7 +431,7 @@ int main (int argc, char** argv) try
         tscrunch->operate();
 
 #ifdef SIGPROC_FILTERBANK_RINGBUFFER
-        
+
       if (hdu_key)
       {
         if (ipcio_space_left(hdu->data_block))
@@ -454,10 +454,10 @@ int main (int argc, char** argv) try
         }
       }
 #endif
-    
+
       if (write_sigproc_file)
         digitizer->operate ();
-    
+
       if (!written_header)
       {
         if (write_sigproc_file)
@@ -480,7 +480,7 @@ int main (int argc, char** argv) try
           strcpy(psrxml_header->localTime,""); //@todo
           psrxml_header->nativeSampleRate = 1.0/(timeseries->get_rate());
           psrxml_header->currentSampleInterval = psrxml_header->nativeSampleRate; // we don't do any resampling
-          // number of samples is not yet defined... 
+          // number of samples is not yet defined...
           psrxml_header->requestedObsTime = 0; //@todo
           //actualObsTime is not yet defined.
           psrxml_header->centreFreqCh1 = timeseries->get_centre_frequency(0);
@@ -522,7 +522,7 @@ int main (int argc, char** argv) try
           psrxml_header->receiver.numberOfPolarisations = 2;
           psrxml_header->receiver.feedSymmetry = 0; // @todo
           psrxml_header->receiver.calXYPhase = 0; //@todo
- 
+
           psrxml_header->receiverBeamNumber = 0;//@todo
           psrxml_header->totalBeamsRecorded = 0;//@todo
           // sky beam number not known
@@ -568,7 +568,7 @@ int main (int argc, char** argv) try
         }
 #endif
       }
-    
+
       // output the result to stdout
       const uint64_t nbyte = bitseries->get_nbytes();
       unsigned char* data = bitseries->get_rawptr();
@@ -587,7 +587,7 @@ int main (int argc, char** argv) try
           blockHeaders = (dataBlockHeader*) realloc(blockHeaders,sizeof(dataBlockHeader)*blockHeaders_length);
         }
 #ifdef HAVE_OPENSSL_SHA_H
-        get_SHA_hash(data,nbyte,blockHeaders[numberOfBlocksRecorded].sha1_hash);    
+        get_SHA_hash(data,nbyte,blockHeaders[numberOfBlocksRecorded].sha1_hash);
         blockHeaders[numberOfBlocksRecorded].has_sha1_hash=1;
 #endif
       }
@@ -613,7 +613,7 @@ int main (int argc, char** argv) try
     {
       psrxml_header->numberOfSamples = totalSamplesRecorded;
       psrxml_header->actualObsTime = totalSamplesRecorded*psrxml_header->currentSampleInterval;
-  
+
       if (write_sigproc_file)
       {
         rawDataFile->blockHeaders_length = numberOfBlocksRecorded;
@@ -621,10 +621,10 @@ int main (int argc, char** argv) try
 
         psrxml_header->files_length = 1;
 
-        psrxml_header->files = (dataFile**) malloc(sizeof(dataFile*)*psrxml_header->files_length); 
+        psrxml_header->files = (dataFile**) malloc(sizeof(dataFile*)*psrxml_header->files_length);
         psrxml_header->files[0] = rawDataFile;
       }
-  
+
       char header_filename[80];
       sprintf(header_filename,"%s.psrxml",outfile_basename);
       writePsrXml(psrxml_header,header_filename);
@@ -669,4 +669,3 @@ char get_SHA_hash(unsigned char* buffer,int size, char* hashStr) {
         return 1;
 }
 #endif
-

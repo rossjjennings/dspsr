@@ -50,6 +50,7 @@ namespace dsp {
     // if (input_overlap) {
     //   filterbank->set_input_overlap(input_overlap);
     // }
+    filterbank->set_engine (new InverseFilterbankEngineCPU);
 
   #if HAVE_CUDA
     CUDA::DeviceMemory* device_memory =
@@ -65,11 +66,7 @@ namespace dsp {
       gpu_scratch->set_memory (device_memory);
       filterbank->set_scratch (gpu_scratch);
     }
-  #else
-    // default engine is the CPU engine.
-    filterbank->set_engine (new InverseFilterbankEngineCPU);
   #endif
-
     return filterbank.release();
   }
 

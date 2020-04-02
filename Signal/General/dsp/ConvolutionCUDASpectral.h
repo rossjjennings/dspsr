@@ -36,17 +36,22 @@ namespace CUDA
     void setup_kernel (const dsp::Response * response);
 
     //! configure batched FFT
-    void setup_batched (const dsp::TimeSeries* input, dsp::TimeSeries * output);
+    void setup_batched (const dsp::TimeSeries* input, dsp::TimeSeries * output, dsp::TimeSeries * output_zdm);
 
     void perform (const dsp::TimeSeries* input, dsp::TimeSeries* output,
                   unsigned npart);
 
+    void perform (const dsp::TimeSeries* input, dsp::TimeSeries* output,
+                  dsp::TimeSeries* zero_DM_out,
+                  unsigned npart);
+
+
   protected:
 
-    void perform_complex (const dsp::TimeSeries* input, dsp::TimeSeries * output,
+    void perform_complex (const dsp::TimeSeries* input, dsp::TimeSeries * output, dsp::TimeSeries * output_zdm,
                          unsigned npart);
 
-    void perform_real (const dsp::TimeSeries* input, dsp::TimeSeries * output,
+    void perform_real (const dsp::TimeSeries* input, dsp::TimeSeries * output, dsp::TimeSeries * output_zdm,
                        unsigned npart);
 
     cudaStream_t stream;
@@ -59,9 +64,9 @@ namespace CUDA
 
     cufftHandle plan_bwd;
 
-		size_t kernel_size;
+    size_t kernel_size;
 
-		// dedispersion kernel for all input channels in device memory
+    // dedispersion kernel for all input channels in device memory
     cufftComplex * d_kernels;
 
     // device scratch memory
@@ -87,6 +92,8 @@ namespace CUDA
 
     uint64_t output_stride;
 
+    uint64_t output_zdm_stride;
+
     uint64_t buf_stride;
 
     int npt_fwd;
@@ -98,7 +105,7 @@ namespace CUDA
     unsigned nsamp_overlap;
 
     unsigned nsamp_step;
-    
+
     unsigned nfilt_pos;
 
     unsigned nfilt_neg;
@@ -113,4 +120,3 @@ namespace CUDA
 }
 
 #endif
-

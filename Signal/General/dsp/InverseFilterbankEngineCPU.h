@@ -45,6 +45,13 @@ namespace dsp
     void perform (const dsp::TimeSeries* in, dsp::TimeSeries* out,
                   uint64_t npart, uint64_t in_step=0, uint64_t out_step=0);
 
+    void perform (const dsp::TimeSeries * in,
+                  dsp::TimeSeries * out,
+                  dsp::TimeSeries* zero_DM_out,
+                  uint64_t npart,
+                  const uint64_t in_step=0,
+                  const uint64_t out_step=0);
+
     //! Called when the the `InverseFilterbank` sees that the engine is done
     //! operating on data
     void finish ();
@@ -59,6 +66,9 @@ namespace dsp
 
     //! A response object that gets multiplied by assembled spectrum
     Response* response;
+
+    //! zero DM response
+    Response* zero_DM_response;
 
     //! FFT window applied before forward FFT
     Apodization* fft_window;
@@ -105,21 +115,6 @@ namespace dsp
     //! How much of the forward FFT to discard due to oversampling
     unsigned input_os_discard;
 
-    //! Scratch space for performing forward FFTs
-    float* input_fft_scratch;
-
-    //! Scratch space for input time series chunk
-    float* input_time_scratch;
-
-    //! Scratch space for performing backward FFTs
-    float* output_fft_scratch;
-
-    // float* response_stitch_scratch;
-    // float* fft_shift_scratch;
-
-    //! Scratch space where results of forward FFTs get assembled into
-    //! upsampled spectrum
-    float* stitch_scratch;
 
     //! Flag indicating whether FFT plans have been setup
     bool fft_plans_setup;
@@ -136,7 +131,7 @@ namespace dsp
   private:
 
 
-    //! device scratch sapce
+    //! device scratch space
     float* scratch;
 
     //! plan for computing forward fourier transforms
@@ -144,6 +139,35 @@ namespace dsp
 
     //! plan for computing inverse fourier transforms
     FTransform::Plan* backward;
+
+    //! Scratch space for performing forward FFTs
+    float* input_fft_scratch;
+
+    //! Scratch space, in samples, needed for the input_fft_scratch space
+    unsigned input_fft_scratch_samples;
+
+    //! Scratch space for input time series chunk
+    float* input_time_scratch;
+
+    //! Scratch space, in samples, needed for the input_time_scratch space
+    unsigned input_time_scratch_samples;
+
+    //! Scratch space for performing backward FFTs
+    float* output_fft_scratch;
+
+    //! Scratch space, in samples, needed for the output_fft_scratch space
+    unsigned output_fft_scratch_samples;
+
+    //! Scratch space where results of forward FFTs get assembled into
+    //! upsampled spectrum
+    float* stitch_scratch;
+
+    //! Scratch space, in samples, needed for the stitch_scratch space
+    unsigned stitch_scratch_samples;
+
+    float* stitch_scratch_zero_DM;
+
+
   };
 
 }

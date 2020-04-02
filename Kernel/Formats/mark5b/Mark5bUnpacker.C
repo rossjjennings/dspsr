@@ -54,8 +54,9 @@ void dsp::Mark5bUnpacker::unpack()
       data[ipol + npol*ichan] = output->get_datptr(ichan,ipol);
 
   if (mark5_stream_decode(m5stream, ndat, data) < 0)
-    throw Error (InvalidState, "dsp::Mark5bUnpacker::unpack",
-                 "error mark5_stream_decode (most likely EOD)");
-
+  {
+    const_cast<Mark5bFile*>(file)->set_eod(true);
+    output->set_ndat(0);
+  }
 }
 

@@ -12,6 +12,7 @@
 #include "dsp/Response.h"
 #include "dsp/Apodization.h"
 #include "dsp/InputBuffering.h"
+#include "dsp/Scratch.h"
 #include "dsp/OptimalFFT.h"
 
 #include "FTransform.h"
@@ -49,6 +50,22 @@ void dsp::Filterbank::prepare ()
 
   make_preparations ();
   prepared = true;
+}
+
+FTransform::Plan* dsp::Filterbank::get_forward()
+{
+  if (!engine)
+    throw Error (InvalidState, "dsp::Filterbank::get_forward",
+                 "no engine configured");
+  return engine->get_forward();
+}
+
+FTransform::Plan* dsp::Filterbank::get_backward()
+{
+  if (!engine)
+    throw Error (InvalidState, "dsp::Filterbank::get_backward",
+                 "no engine configured");
+  return engine->get_backward();
 }
 
 /*
@@ -188,6 +205,33 @@ void dsp::Filterbank::make_preparations ()
 
   response -> match (input, nchan);
 
+  if (zero_DM)
+  {
+    // configure normalizer with the width of the frequency response
+    zero_DM_normalizer = new ScalarFilter();
+    zero_DM_normalizer->set_ndat (freq_res);
+    zero_DM_normalizer->match (input, nchan);
+    zero_DM_normalizer->set_scale_factor (1.0 / scalefac);
+
+    if (zero_DM_response)
+    {
+      zero_dm_response_product = new ResponseProduct ();
+      zero_dm_response_product->add_response (zero_DM_response);
+      zero_dm_response_product->add_response (zero_DM_normalizer);
+      zero_dm_response_product->set_copy_index (0);
+      zero_dm_response_product->set_match_index (0);
+      zero_DM_response = zero_dm_response_product;
+    }
+    else
+    {
+      cerr << "Using zero_DM_normalizer as zero_DM_response" << endl;
+      zero_DM_response = zero_DM_normalizer;
+    }
+  }
+
+  if (zero_DM_response)
+    zero_DM_response->match (input, nchan);
+
   // number of timesamples between start of each big fft
   nsamp_step = nsamp_fft - nsamp_overlap;
 
@@ -275,6 +319,11 @@ void dsp::Filterbank::make_preparations ()
       cerr << "dsp::Filterbank::make_preparations setup engine" << endl;
     engine->setup (this);
     return;
+  }
+  else
+  {
+    throw Error (InvalidState, "dsp::Filterbank::make_preparations",
+                 "no engine configured");
   }
 }
 
@@ -385,6 +434,15 @@ void dsp::Filterbank::prepare_output (uint64_t ndat, bool set_ndat)
 
   output->change_start_time (nfilt_pos);
 
+  // zero DM output
+  if (zero_DM)
+  {
+    if (verbose)
+      cerr << "dsp::Filterbank::prepare_output copying output configuration to zero_DM_output" << endl;
+    zero_DM_output->copy_configuration(output);
+    zero_DM_output->resize(output->get_ndat());
+  }
+
   if (verbose)
     cerr << "dsp::Filterbank::prepare_output start time += "
          << nfilt_pos << " samps -> " << output->get_start_time() << endl;
@@ -476,6 +534,10 @@ void dsp::Filterbank::transformation ()
     output->set_input_sample ((input_sample / nsamp_step) * nkeep);
   }
 
+  if (zero_DM) {
+    zero_DM_output->set_input_sample(output->get_input_sample());
+  }
+
   if (verbose) {
     cerr << "dsp::Filterbank::transformation after prepare output"
             " ndat=" << output->get_ndat() <<
@@ -494,6 +556,16 @@ void dsp::Filterbank::transformation ()
 
 void dsp::Filterbank::filterbank ()
 {
+
+  // divide up the scratch space
+  scratch_needed = engine->get_total_scratch_needed();
+
+  if (verbose) {
+    std::cerr << "dsp::Filterbank:filterbank: allocating "<< scratch_needed <<" bytes of scratch space" << std::endl;
+  }
+
+  float* scratch_space = scratch->space<float>(scratch_needed);
+
   if (verbose){
     cerr << "dsp::Filterbank::filterbank: computing in_step and out_step" << endl;
   }
@@ -506,7 +578,20 @@ void dsp::Filterbank::filterbank ()
   // number of floats to step between output from filterbank
   const uint64_t out_step = nkeep * 2;
 
-  engine->perform (input, output, npart, in_step, out_step);
+  engine->set_scratch (scratch_space);
+  if (zero_DM)
+  {
+    if (verbose)
+      cerr << "dsp::Filterbank::filterbank engine->perform [ZeroDM]" << endl;
+    engine->perform (input, output, zero_DM_output, npart, in_step, out_step);
+  }
+  else
+  {
+    if (verbose)
+      cerr << "dsp::Filterbank::filterbank engine->perform" << endl;
+    engine->perform (input, output, npart, in_step, out_step);
+  }
+
   if (Operation::record_time){
     engine->finish ();
   }
