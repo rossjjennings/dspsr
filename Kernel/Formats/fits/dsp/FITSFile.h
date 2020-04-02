@@ -31,6 +31,12 @@ namespace dsp
       //! Returns true if filename appears to name a valid FITS file
       bool is_valid(const char* filename) const;
 
+      //! Close the file
+      void close ();
+
+      //! Reopen the file
+      void reopen ();
+
       void add_extensions (Extensions*);
       
       Callback<FITSFile*> update;
@@ -49,8 +55,8 @@ namespace dsp
       //! Load nbyte bytes of sampled data from the device into buffer.
       virtual int64_t load_bytes(unsigned char* buffer, uint64_t bytes);
 
-      //! Disable File::seek_bytes
-      int64_t seek_bytes (uint64_t bytes) { return bytes; }
+      //! Set the current byte offset in the file
+      int64_t seek_bytes (uint64_t bytes);
 
       void set_samples_in_row(const unsigned _samples_in_row) { samples_in_row =
         _samples_in_row; }

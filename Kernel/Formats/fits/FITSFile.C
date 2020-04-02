@@ -198,11 +198,46 @@ void dsp::FITSFile::open_file(const char* filename)
   dat_scl.resize(npol*nchan,1);
   dat_offs.resize(npol*nchan,0);
 
+#if 0
+  // WvS - not sure why a UNIX file descriptor is opened here
   fd = ::open(filename, O_RDONLY);
   if (fd < 0) {
     throw Error(FailedSys, "dsp::FITSFile::open",
         "failed open(%s)", filename);
   }
+#endif
+
+}
+
+void dsp::FITSFile::close ()
+{
+  int status = 0;
+  fits_close_file (fp, &status);
+
+  if (status)
+  {
+    fits_report_error (stderr, status);
+    throw FITSError (status, "FITSFile::close", "fits_close_file");
+  }
+}
+
+void dsp::FITSFile::reopen ()
+{
+  int status = 0;
+  fits_open_file (&fp, current_filename.c_str(), READONLY, &status);
+
+  if (status)
+  {
+    fits_report_error (stderr, status);
+    throw FITSError (status, "FITSFile::reopen", "fits_open_file");
+  }
+}
+
+int64_t dsp::FITSFile::seek_bytes (uint64_t bytes)
+{ 
+  // there should probably be some error checking here ...
+  current_byte = bytes;
+  return bytes;
 }
 
 int64_t dsp::FITSFile::load_bytes(unsigned char* buffer, uint64_t bytes)
