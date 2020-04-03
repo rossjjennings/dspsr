@@ -237,12 +237,10 @@ void dsp::FITSFile::reopen ()
 
   int status = 0;
   fits_open_file (&fp, current_filename.c_str(), READONLY, &status);
-
   if (status)
-  {
-    fits_report_error (stderr, status);
     throw FITSError (status, "FITSFile::reopen", "fits_open_file");
-  }
+
+  psrfits_move_hdu(fp, "SUBINT");
 }
 
 int64_t dsp::FITSFile::seek_bytes (uint64_t bytes)
