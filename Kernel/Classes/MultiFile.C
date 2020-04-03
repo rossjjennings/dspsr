@@ -260,6 +260,8 @@ int64_t dsp::MultiFile::load_bytes (unsigned char* buffer, uint64_t bytes) try
     throw Error(InvalidState,"dsp::MultiFile::load_bytes",
 		"No loader.  Possible MultiFile::open failure.");
 
+  loader->set_output( get_output() );
+
   uint64_t bytes_loaded = 0;
   unsigned index = current_index;
 
@@ -341,6 +343,10 @@ int64_t dsp::MultiFile::seek_bytes (uint64_t bytes)
 
 void dsp::MultiFile::set_loader (unsigned index) try
 {
+  if (verbose)
+    cerr << "MultiFile::set_loader index=" << index 
+         << " current=" << current_index << endl;
+
   if (index == current_index)
     return;
 
@@ -350,7 +356,7 @@ void dsp::MultiFile::set_loader (unsigned index) try
 
   loader = files[index];
 
-  //loader->set_output( get_output() );
+  loader->set_output( get_output() );
   loader->reopen();
 
   current_index = index;
