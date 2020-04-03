@@ -37,6 +37,7 @@ dsp::FITSFile::FITSFile (const char* filename)
 {
   current_byte = 0;
   zero_off = 0;
+  fp = NULL;
 }
 
 bool dsp::FITSFile::is_valid (const char* filename) const
@@ -211,8 +212,14 @@ void dsp::FITSFile::open_file(const char* filename)
 
 void dsp::FITSFile::close ()
 {
+  // cerr << "dsp::FITSFile::close" << endl;
+
   int status = 0;
-  fits_close_file (fp, &status);
+
+  if (fp)
+    fits_close_file (fp, &status);
+
+  fp = NULL;
 
   if (status)
   {
@@ -223,6 +230,11 @@ void dsp::FITSFile::close ()
 
 void dsp::FITSFile::reopen ()
 {
+  // cerr << "dsp::FITSFile::reopen" << endl;
+
+  if (fp != NULL)
+    throw Error (InvalidState, "FITSFile::reopen", "file already open");
+
   int status = 0;
   fits_open_file (&fp, current_filename.c_str(), READONLY, &status);
 
