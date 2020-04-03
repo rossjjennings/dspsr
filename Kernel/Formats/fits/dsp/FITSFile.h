@@ -14,7 +14,7 @@
 #include "Pulsar/Archive.h"
 
 #include "dsp/File.h"
-#include "Callback.h"
+#include "dsp/BitSeries.h"
 
 namespace dsp
 {
@@ -39,12 +39,11 @@ namespace dsp
 
       void add_extensions (Extensions*);
       
-      Callback<FITSFile*> update;
-
       unsigned get_samples_in_row() const { return samples_in_row; }
 
       unsigned get_bytes_per_row() { return bytes_per_row; }
 
+      class Extension;
 
     protected:
       friend class FITSUnpacker;
@@ -100,14 +99,23 @@ namespace dsp
 
       //! Offset to conver unsigned integers to signed integers
       float zero_off;
+  };
+
+  class FITSFile::Extension : public BitSeries::Extension
+  {
+    public:
+
+      //! Offset to conver unsigned integers to signed integers
+      float zero_off;
 
       //! Store reference spectrum
       std::vector<float> dat_scl;
 
       //! Store reference offset
       std::vector<float> dat_offs;
-
   };
+
 }
 
 #endif
+

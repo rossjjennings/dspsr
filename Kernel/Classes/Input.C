@@ -235,7 +235,7 @@ void dsp::Input::copy (const Input* input)
 }
 
 /*! 
-  Sets the Observation attributes of data and load the next block of data.
+  Set the Observation attributes of data and load the next block of data.
   Because set_output and operate must be called separately, the
   only thread-safe interface to the Input class.
  */

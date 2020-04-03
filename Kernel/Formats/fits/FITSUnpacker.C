@@ -34,31 +34,6 @@ const int BYTE_SIZE = 8;
 
 dsp::FITSUnpacker::FITSUnpacker(const char* name) : Unpacker(name)
 {
-  zero_off = 0;
-}
-
-void dsp::FITSUnpacker::set_parameters (FITSFile* ff)
-{
-  /*
-    WvS 2018 July 04 - Note that, if the CFITSIO library is not
-    detected by the dspsr configure script, then the code that sets
-    things up to call this method (in Signal/Pulsar/LoadToFold1.C)
-    does not get compiled.  However, before today, not detecting
-    CFITSIO (and therefore not defining HAVE_CFITSIO) did not stop one
-    from enabling PSRFITS support (by including "fits" in
-    backends.list).  Therefore, if everthing compiled and linked, it
-    was possible for dspsr to run with PSRFITS support enabled but
-    without CFITSIO-related code (like this method) enabled.
-  */
-  
-#if _DEBUG
-  cerr << "dsp::FITSUnpacker::set_parameters"
-    " dat_scl size=" << ff->dat_scl.size() << endl;
-#endif
-  
-  zero_off = ff->zero_off;
-  dat_scl = ff->dat_scl;
-  dat_offs = ff->dat_offs;
 }
 
 /**
@@ -102,16 +77,6 @@ void dsp::FITSUnpacker::unpack()
   const unsigned nchan = input->get_nchan();
   const unsigned ndat  = input->get_ndat();
 
-  // Make sure scales and offsets exist
-  if (dat_scl.size() == 0)
-  {
-#if _DEBUG
-    cerr << "dsp::FITSUnpacker::unpack dat_scl empty" << endl;
-#endif
-    dat_scl.assign(nchan*npol,1);
-    dat_offs.assign(nchan*npol,0);
-  }
-
   // Number of samples in one byte.
   const int samples_per_byte = BYTE_SIZE / nbit;
   const int mod_offset = samples_per_byte - 1;
@@ -119,9 +84,16 @@ void dsp::FITSUnpacker::unpack()
   const unsigned char* from = input->get_rawptr();
   const int16_t* from16 = (int16_t *)input->get_rawptr();
 
+  const FITSFile::Extension* ext = dynamic_cast<const FITSFile::Extension*>( get_input()->get_extension() );
+
+  zero_off = ext->zero_off;
+
   // more optimal 8-bit unpacker
   if (nbit == 8)
   {
+    const float* scl = &(ext->dat_scl[0]);
+    const float* off = &(ext->dat_offs[0]);
+
     const unsigned nchanpol = nchan * npol;
     for (unsigned ipol = 0; ipol < npol; ++ipol)
     {
@@ -131,8 +103,6 @@ void dsp::FITSUnpacker::unpack()
       for (unsigned ichan = 0; ichan < nchan; ++ichan)
       {
         const unsigned ipolchan = ipol * nchan + ichan;
-        const float scl = dat_scl[ipolchan];
-        const float off = dat_offs[ipolchan];
 
         // unpacking from TPF order to FPT
         float* into = output->get_datptr(ichan, ipol);
@@ -141,7 +111,7 @@ void dsp::FITSUnpacker::unpack()
         // samples stored in TPF order
         for (unsigned idat = 0; idat < ndat; ++idat)
         {
-          into[idat] = ((*this.*p)(*from_ptr)) * scl + off;
+          into[idat] = ((*this.*p)(*from_ptr)) * scl[ipolchan] + off[ipolchan];
           from_ptr += nchanpol;
         }
       }
@@ -156,8 +126,8 @@ void dsp::FITSUnpacker::unpack()
     //
     // TODO: Use a lookup table???
     for (unsigned idat = 0; idat < ndat; ++idat) {
-      float* scl = &dat_scl[0];
-      float* off = &dat_offs[0];
+      const float* scl = &(ext->dat_scl[0]);
+      const float* off = &(ext->dat_offs[0]);
       for (unsigned ipol = 0; ipol < npol; ++ipol) {
         for (unsigned ichan = 0; ichan < nchan;) {
 
@@ -185,8 +155,8 @@ void dsp::FITSUnpacker::unpack()
 
   else if (nbit==16) {
     for (unsigned idat=0; idat<ndat; idat++) {
-      float* scl = &dat_scl[0];
-      float* off = &dat_offs[0];
+      const float* scl = &(ext->dat_scl[0]);
+      const float* off = &(ext->dat_offs[0]);
       for (unsigned ipol=0; ipol<npol; ipol++) {
         for (unsigned ichan=0; ichan<nchan; ichan++) {
           float* into = output->get_datptr(ichan, ipol) + idat;

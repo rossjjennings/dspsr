@@ -24,9 +24,6 @@ namespace dsp
     public:
       FITSUnpacker(const char* name = "FITSUnpacker");
 
-      //! Used in callback to set zero offsets, reference spectra, etc.
-      void set_parameters (FITSFile* ff);
-
     protected:
 
       virtual void unpack();
@@ -41,10 +38,8 @@ namespace dsp
 
       float eightBitNumber(const int num);
 
-      float zero_off;
 
-      std::vector<float> dat_scl;
-      std::vector<float> dat_offs;
+      float zero_off;
   };
 }
 

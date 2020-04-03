@@ -45,7 +45,7 @@ namespace dsp {
     virtual BitSeries& operator = (const BitSeries& data);
 
     //! Same as operator= but takes a pointer
-    virtual void copy(const BitSeries* bs)
+    virtual void copy (const BitSeries* bs)
     { operator=( *bs ); }
 
     //! Set the Observation component of this equal to obs
@@ -85,6 +85,7 @@ namespace dsp {
     //! Return the sample offset from the start of the data source
     int64_t get_input_sample (Input* input = 0) const;
 
+    //! Accessing the Input is not thread-safe
     const Input* get_loader() const { return input; }
 
     void set_memory (Memory*);
@@ -94,9 +95,18 @@ namespace dsp {
     //! Match the internal memory layout of another BitSeries
     void internal_match (const BitSeries*);
 
-    //! Copy the configuration of another TimeSeries instance (not the data)
+    //! Copy the configuration of another BitSeries instance (not the data)
     void copy_configuration (const Observation* copy);
 
+    //! Any additional information required to describe the data
+    class Extension : public Reference::Able { };
+
+    void set_extension (Extension* ext) { extension = ext; }
+    bool has_extension () { return extension; }
+    Extension* get_extension () { return extension; }
+    const Extension* get_extension () const { return extension; }
+
+    
   protected:
 
     friend class Unpacker;
@@ -123,6 +133,9 @@ namespace dsp {
 
     //! The memory manager
     Reference::To<Memory> memory;
+
+    //! Any additional information required to describe the data
+    Reference::To<Extension> extension;
 
   };
   

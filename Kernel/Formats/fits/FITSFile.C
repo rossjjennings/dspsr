@@ -35,8 +35,8 @@ using Pulsar::warning;
 dsp::FITSFile::FITSFile (const char* filename)
   : File("FITSFile")
 {
+  zero_off = 0.0;
   current_byte = 0;
-  zero_off = 0;
   fp = NULL;
 }
 
@@ -194,20 +194,6 @@ void dsp::FITSFile::open_file(const char* filename)
   data_colnum = dsp::get_colnum(fp, "DATA");
   scl_colnum = dsp::get_colnum(fp, "DAT_SCL");
   offs_colnum = dsp::get_colnum(fp, "DAT_OFFS");
-
-  // Make sure buffer big enough for DAT_SCL/DAT_OFFS
-  dat_scl.resize(npol*nchan,1);
-  dat_offs.resize(npol*nchan,0);
-
-#if 0
-  // WvS - not sure why a UNIX file descriptor is opened here
-  fd = ::open(filename, O_RDONLY);
-  if (fd < 0) {
-    throw Error(FailedSys, "dsp::FITSFile::open",
-        "failed open(%s)", filename);
-  }
-#endif
-
 }
 
 void dsp::FITSFile::close ()
@@ -286,12 +272,28 @@ int64_t dsp::FITSFile::load_bytes(unsigned char* buffer, uint64_t bytes)
   unsigned bytes_remaining = bytes;
   unsigned bytes_read = 0;
 
+  // WvS 2020-04-04 The following assertions were added because 
+  // this code assumes that the block size is exactly one row
+
+  assert (byte_offset == 0);
+  assert (bytes <= bytes_per_row);
+
+  BitSeries* bs = get_output();
+  Extension* ext = 0;
+
+  if ( bs->has_extension() )
+    ext = dynamic_cast<Extension*>( bs->get_extension() );
+
+  if (!ext)
+    bs->set_extension( ext = new Extension );
+
+  // Make sure buffer big enough for DAT_SCL/DAT_OFFS
+  ext->dat_scl.resize(npol*nchan,1);
+  ext->dat_offs.resize(npol*nchan,0);
+
   while (bytes_remaining > 0 && current_row <= nrow)
   {
     // current_row = [1:nrow]
-    if (current_row > nrow)
-      throw Error(InvalidState, "FITSFile::load_bytes",
-          "current row=%u > nrow=%u", current_row, nrow);
 
     // Read from byte_offset to end of the row.
     unsigned this_read = bytes_per_row - byte_offset;
@@ -316,7 +318,7 @@ int64_t dsp::FITSFile::load_bytes(unsigned char* buffer, uint64_t bytes)
 
     // Read the scales
     fits_read_col(fp,TFLOAT,scl_colnum,current_row,1,nchan*npol,
-        NULL,&dat_scl[0],NULL,&status);
+        NULL,&(ext->dat_scl[0]),NULL,&status);
     if (status) 
     {
       fits_report_error(stderr, status);
@@ -325,7 +327,7 @@ int64_t dsp::FITSFile::load_bytes(unsigned char* buffer, uint64_t bytes)
 
     // Read the offsets
     fits_read_col(fp,TFLOAT,offs_colnum,current_row,1,nchan*npol,
-        NULL,&dat_offs[0],NULL,&status);
+        NULL,&(ext->dat_offs[0]),NULL,&status);
     if (status) 
     {
       fits_report_error(stderr, status);
@@ -350,12 +352,6 @@ int64_t dsp::FITSFile::load_bytes(unsigned char* buffer, uint64_t bytes)
     bytes_read += this_read;
     current_byte += this_read;
   }
-
-  // NB below should technically be inside the above loop, but only the last
-  // call has any effect further down the signal path.  We rely on the block
-  // size being set such that this method (and update) are called exactly
-  // once for each row in the input FITS file.
-  update(this);
 
   return bytes_read;
 }

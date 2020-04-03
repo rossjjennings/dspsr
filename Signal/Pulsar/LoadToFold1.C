@@ -140,52 +140,6 @@ void dsp::LoadToFold::construct () try
       unpacker->set_output_order (TimeSeries::OrderTFP);
     }
 
-#if HAVE_CFITSIO
-#if HAVE_fits
-
-    // Use callback to handle scales/offsets for read-in
-    if (config->apply_FITS_scale_and_offset &&
-	manager->get_info()->get_machine() == "FITS")
-    {
-      if (config->get_total_nthread() > 1)
-	throw Error (InvalidState, "",
-		     "cannot apply FITS scales and offsets"
-		     " in multi-threaded mode");
-
-      if (Operation::verbose)
-        cerr << "Using callback to read PSRFITS file." << endl;
-      // connect a callback
-      bool success = false;
-      FITSUnpacker* funp = dynamic_cast<FITSUnpacker*> (
-          manager->get_unpacker());
-      FITSFile* ffile = dynamic_cast<FITSFile*> (manager->get_input());
-      if (funp && ffile)
-      {
-        ffile->update.connect ( funp, &FITSUnpacker::set_parameters );
-        success = true;
-      }
-      else
-      {
-        MultiFile* mfile = dynamic_cast<MultiFile*> (manager->get_input());
-        if (mfile)
-        {
-          for (unsigned i=0; i < mfile->nfiles(); ++i)
-          {
-            ffile = dynamic_cast<FITSFile*> (mfile->get_files()[i].get());
-            if (funp && ffile) {
-              ffile->update.connect (
-                  funp, &FITSUnpacker::set_parameters );
-              success = true;
-            }
-          }
-        }
-      }
-      if (not success)
-        cerr << "dspsr: WARNING: FITS input but unable to apply scales and offsets." << endl;
-    }
-#endif
-#endif
-
     config->coherent_dedispersion = false;
     prepare_interchan (unpacked);
     build_fold (unpacked);

@@ -323,30 +323,6 @@ int main (int argc, char** argv) try {
       
     manager->open (filenames[ifile]);
 
-#if HAVE_fits
-    // Use callback to handle scales/offsets for read-in
-    if (manager->get_info()->get_machine() == "FITS")
-    {
-      if (dsp::Operation::verbose)
-        cerr << "Using callback to read PSRFITS file." << endl;
-      // connect a callback
-      bool success = false;
-      dsp::FITSUnpacker* funp = dynamic_cast<dsp::FITSUnpacker*> (
-          manager->get_unpacker());
-      dsp::FITSFile* ffile = dynamic_cast<dsp::FITSFile*> (
-          manager->get_input());
-      cerr << funp << endl;
-      cerr << ffile << endl;
-      if (funp && ffile)
-      {
-        ffile->update.connect ( funp, &dsp::FITSUnpacker::set_parameters );
-        success = true;
-      }
-      if (not success)
-        cerr << "dspsr: WARNING: FITS input input but unable to apply scales and offsets." << endl;
-    }
-#endif
-    
     if (verbose)
       cerr << "data file " << filenames[ifile] << " opened" << endl;
 
