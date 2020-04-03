@@ -142,130 +142,130 @@ void dsp::Archiver::pack (dspReduction* dspR, Operation* operation)
 
   excision = dynamic_cast<const ExcisionUnpacker*> ( operation );
 
-    // save it for the TwoBitStats Extension
-    if (excision)
-      excision_unpacker = excision;
+  // save it for the TwoBitStats Extension
+  if (excision)
+    excision_unpacker = excision;
 
-    // ////////////////////////////////////////////////////////////////////
-    //
-    // IOManager class may also contain a HistUnpacker
-    //
-    const HistUnpacker* hist = 0;
+  // ////////////////////////////////////////////////////////////////////
+  //
+  // IOManager class may also contain a HistUnpacker
+  //
+  const HistUnpacker* hist = 0;
 
-    hist = dynamic_cast<const HistUnpacker*> ( operation );
+  hist = dynamic_cast<const HistUnpacker*> ( operation );
 
-    // save for DigitiserCounts extension
-    if (hist)
-      hist_unpacker = hist;
+  // save for DigitiserCounts extension
+  if (hist && hist->get_ndig())
+    hist_unpacker = hist;
     
-    // ////////////////////////////////////////////////////////////////////
-    //
-    // Filterbank class parameters
-    //
-    Filterbank* filterbank = dynamic_cast<Filterbank*>( operation );
+  // ////////////////////////////////////////////////////////////////////
+  //
+  // Filterbank class parameters
+  //
+  Filterbank* filterbank = dynamic_cast<Filterbank*>( operation );
 
-    if (filterbank)
+  if (filterbank)
+  {
+    dspR->set_nchan ( filterbank->get_nchan() );
+    dspR->set_freq_res ( filterbank->get_freq_res() );
+    dspR->set_time_res ( 1 ); // filterbank->get_time_res() );
+  }
+
+  // ////////////////////////////////////////////////////////////////////
+  //
+  // Convolution class parameters
+  //
+
+  Convolution* convolution = dynamic_cast<Convolution*>(operation);
+
+  if (convolution)
+  {
+    if ( convolution->has_response() )
     {
-      dspR->set_nchan ( filterbank->get_nchan() );
-      dspR->set_freq_res ( filterbank->get_freq_res() );
-      dspR->set_time_res ( 1 ); // filterbank->get_time_res() );
-    }
+      if (verbose > 2) cerr << method << " Convolution with Response" << endl;
 
-    // ////////////////////////////////////////////////////////////////////
-    //
-    // Convolution class parameters
-    //
+      const Response* response = convolution->get_response ();
 
-    Convolution* convolution = dynamic_cast<Convolution*>(operation);
+      unsigned nsamp_fft = response->get_ndat();
+      unsigned nsamp_overlap_pos = response->get_impulse_pos ();
+      unsigned nsamp_overlap_neg = response->get_impulse_neg ();
 
-    if (convolution)
-    {
-      if ( convolution->has_response() )
+      const TimeSeries* input = convolution->get_input ();
+
+      set_coherent_dedispersion (input->get_state(), response);
+
+      if (input->get_state() == Signal::Nyquist)
       {
-        if (verbose > 2) cerr << method << " Convolution with Response" << endl;
-
-        const Response* response = convolution->get_response ();
-
-        unsigned nsamp_fft = response->get_ndat();
-        unsigned nsamp_overlap_pos = response->get_impulse_pos ();
-        unsigned nsamp_overlap_neg = response->get_impulse_neg ();
-
-        const TimeSeries* input = convolution->get_input ();
-
-        set_coherent_dedispersion (input->get_state(), response);
-
-        if (input->get_state() == Signal::Nyquist)
-        {
-          nsamp_fft *= 2;
-          nsamp_overlap_pos *= 2;
-          nsamp_overlap_neg *= 2;
-        }
-
-        dspR->set_nsamp_fft ( nsamp_fft );
-        dspR->set_nsamp_overlap_pos ( nsamp_overlap_pos );
-        dspR->set_nsamp_overlap_neg ( nsamp_overlap_neg );
+        nsamp_fft *= 2;
+        nsamp_overlap_pos *= 2;
+        nsamp_overlap_neg *= 2;
       }
 
-      // save it for the Passband Extension
-      if ( convolution->has_passband() )
-        passband = convolution->get_passband();
+      dspR->set_nsamp_fft ( nsamp_fft );
+      dspR->set_nsamp_overlap_pos ( nsamp_overlap_pos );
+      dspR->set_nsamp_overlap_neg ( nsamp_overlap_neg );
     }
 
-    // ////////////////////////////////////////////////////////////////////
-    //
-    // Tscrunch class parameters
-    //
-    TScrunch* tscrunch = dynamic_cast<TScrunch*>( operation );
-
-    if (tscrunch)
-      dspR->set_ScrunchFactor ( tscrunch->get_factor() );
-
-    // ////////////////////////////////////////////////////////////////////
-    //
-    // Spectral Kurtosis RFI mitigation extension
-    //
-    SpectralKurtosis* skestimator = dynamic_cast<SpectralKurtosis*>( operation );
-
-    if (skestimator)
-    {
-      if (verbose > 2)
-        cerr << "dsp::Archiver::set SpectralKurtosis in use" << endl;
-
-      unsigned nsubint = archive->get_nsubint();
-      Integration* subint = archive->get_Integration(nsubint - 1);
-
-      Pulsar::SpectralKurtosis* ext = subint -> getadd<Pulsar::SpectralKurtosis>();
-
-      unsigned nchan = skestimator->get_input()->get_nchan();
-      ext->set_nchan( nchan );
-
-      unsigned npol = skestimator->get_input()->get_npol();
-      ext->set_npol( npol );
-
-      ext->set_M( skestimator->get_M() );
-      ext->set_excision_threshold( skestimator->get_excision_threshold() );
-
-      vector<float> data;
-      skestimator->get_filtered_sum (data);
-      for (unsigned ichan = 0; ichan < nchan; ichan++)
-        for (unsigned ipol = 0; ipol < npol; ipol++)
-          ext->set_filtered_sum (ichan, ipol, data[ichan*npol + ipol]);
-
-      vector<uint64_t> hits;
-      skestimator->get_filtered_hits (hits);
-      for (unsigned ichan = 0; ichan < nchan; ichan++)
-        ext->set_filtered_hits (ichan, hits[ichan]);
-
-      skestimator->get_unfiltered_sum (data);
-      for (unsigned ichan = 0; ichan < nchan; ichan++)
-        for (unsigned ipol = 0; ipol < npol; ipol++)
-          ext->set_unfiltered_sum (ichan, ipol, data[ichan*npol + ipol]);
-
-      ext->set_unfiltered_hits( skestimator->get_unfiltered_hits() );
-
-      skestimator->reset_count();
-    }
+    // save it for the Passband Extension
+    if ( convolution->has_passband() )
+      passband = convolution->get_passband();
   }
+
+  // ////////////////////////////////////////////////////////////////////
+  //
+  // Tscrunch class parameters
+  //
+  TScrunch* tscrunch = dynamic_cast<TScrunch*>( operation );
+
+  if (tscrunch)
+    dspR->set_ScrunchFactor ( tscrunch->get_factor() );
+
+  // ////////////////////////////////////////////////////////////////////
+  //
+  // Spectral Kurtosis RFI mitigation extension
+  //
+  SpectralKurtosis* skestimator = dynamic_cast<SpectralKurtosis*>( operation );
+
+  if (skestimator)
+  {
+    if (verbose > 2)
+      cerr << "dsp::Archiver::set SpectralKurtosis in use" << endl;
+
+    unsigned nsubint = archive->get_nsubint();
+    Integration* subint = archive->get_Integration(nsubint - 1);
+
+    Pulsar::SpectralKurtosis* ext = subint -> getadd<Pulsar::SpectralKurtosis>();
+
+    unsigned nchan = skestimator->get_input()->get_nchan();
+    ext->set_nchan( nchan );
+
+    unsigned npol = skestimator->get_input()->get_npol();
+    ext->set_npol( npol );
+
+    ext->set_M( skestimator->get_M() );
+    ext->set_excision_threshold( skestimator->get_excision_threshold() );
+
+    vector<float> data;
+    skestimator->get_filtered_sum (data);
+    for (unsigned ichan = 0; ichan < nchan; ichan++)
+      for (unsigned ipol = 0; ipol < npol; ipol++)
+        ext->set_filtered_sum (ichan, ipol, data[ichan*npol + ipol]);
+
+    vector<uint64_t> hits;
+    skestimator->get_filtered_hits (hits);
+    for (unsigned ichan = 0; ichan < nchan; ichan++)
+      ext->set_filtered_hits (ichan, hits[ichan]);
+
+    skestimator->get_unfiltered_sum (data);
+    for (unsigned ichan = 0; ichan < nchan; ichan++)
+      for (unsigned ipol = 0; ipol < npol; ipol++)
+        ext->set_unfiltered_sum (ichan, ipol, data[ichan*npol + ipol]);
+
+    ext->set_unfiltered_hits( skestimator->get_unfiltered_hits() );
+
+    skestimator->reset_count();
+  }
+}
 
 
 void dsp::Archiver::set_coherent_dedispersion (Signal::State state,
