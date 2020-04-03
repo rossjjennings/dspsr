@@ -11,6 +11,7 @@
 #endif
 
 #include <fcntl.h>
+#include <assert.h>
 
 #include "Pulsar/Pulsar.h"
 #include "Pulsar/Archive.h"
