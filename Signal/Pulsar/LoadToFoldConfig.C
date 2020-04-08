@@ -73,6 +73,9 @@ dsp::LoadToFold::Config::Config ()
   // samples to integrate to form spectral kurtosis statistic
   sk_m = 128;
 
+  // oversampling factor by which neighbouring blocks of sk_m samples overlap
+  sk_noverlap = 1;
+
   // samples to integrate to form spectral kurtosis statistic
   sk_std_devs = 3;
 

@@ -39,6 +39,9 @@ namespace dsp {
 
     void set_M (unsigned _M) { M = _M; }
 
+    //! Set the number of overlapping M sample regions per time sample (oversampling)
+    void set_noverlap (unsigned _nover) { noverlap = _nover; }
+
     //! Set the RFI thresholds with the specified factor
     void set_thresholds (unsigned _M, unsigned _std_devs);
 
@@ -79,7 +82,7 @@ namespace dsp {
     void reset_count () { unfiltered_hits = 0; }
 
 
-    //! Engine used to perform discrete convolution step
+    //! Engine used to perform computations on device other than CPU
     class Engine;
 
     void set_engine (Engine*);
@@ -156,6 +159,11 @@ namespace dsp {
 
     //! number of samples used in each SK estimate
     unsigned M;
+
+    //! oversampling factor
+    /* NZAPP-206 WvS: I called this "noverlap" instead of oversampling_factor to 
+     * avoid confusion with polyphase filterbank oversampling */
+    unsigned noverlap;
 
     unsigned nchan;
 

@@ -298,6 +298,9 @@ void parse_options (int argc, char** argv) try
   arg = menu.add (config->sk_m, "skzm", "samples");
   arg->set_help ("samples to integrate for spectral kurtosis statistics");
 
+  arg = menu.add (config->sk_noverlap, "skzover", "integer");
+  arg->set_help ("oversampling factor (skzover must evenly divide skzm)");
+
   arg = menu.add (config->sk_std_devs, "skzs", "stddevs");
   arg->set_help ("number of std deviations to use for spectral kurtosis excisions");
 

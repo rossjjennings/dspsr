@@ -616,6 +616,7 @@ void dsp::LoadToFold::construct () try
     skestimator->set_input (convolved);
     skestimator->set_output (cleaned);
     skestimator->set_M (config->sk_m);
+    skestimator->set_noverlap (config->sk_noverlap);
 
 #if HAVE_CUDA
     if (run_on_gpu)

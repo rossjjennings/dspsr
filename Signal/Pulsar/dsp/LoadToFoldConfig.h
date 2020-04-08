@@ -114,8 +114,11 @@ namespace dsp {
     // also produce the non-zapped version of the output
     bool nosk_too;
 
-    // spectral kurtoscis integration factor
+    // spectral kurtosis integration factor
     unsigned sk_m;
+
+    // spectral kurtosis overlap factor
+    unsigned sk_noverlap;
 
     // number of stddevs to use for spectral kurtosis excision
     unsigned sk_std_devs;

@@ -16,7 +16,8 @@
 
 using namespace std;
 
-dsp::SpectralKurtosis::SpectralKurtosis() : Transformation<TimeSeries,TimeSeries>("SpectralKurtosis", outofplace)
+dsp::SpectralKurtosis::SpectralKurtosis()
+ : Transformation<TimeSeries,TimeSeries>("SpectralKurtosis", outofplace)
 {
   M = 128;
   debugd = 1;
