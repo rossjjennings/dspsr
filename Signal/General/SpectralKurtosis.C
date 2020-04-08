@@ -626,8 +626,13 @@ void dsp::SpectralKurtosis::compute ()
     debugd++;
 }
 
+void dsp::SpectralKurtosis::set_thresholds (float _std_devs)
+{
+  for (unsigned ires=0; ires < resolution.size(); ires++)
+    resolution[ires].set_thresholds (_std_devs, verbose);
+}
 
-void dsp::SpectralKurtosis::Resolution::set_thresholds (unsigned _std_devs, bool verbose)
+void dsp::SpectralKurtosis::Resolution::set_thresholds (float _std_devs, bool verbose)
 {
   std_devs = _std_devs;
 
@@ -672,17 +677,17 @@ void dsp::SpectralKurtosis::detect ()
 
   if (verbose || debugd < 1)
   {
-    cerr << "dsp::SpectralKurtosis::detect npart= " << npart
+    cerr << "dsp::SpectralKurtosis::detect INPUT"
          << " nchan=" << nchan << " nbit=" << input->get_nbit()
          << " npol=" << npol << " ndim=" << ndim << endl;
 
-    cerr << "dsp::SpectralKurtosis::detect OUTPUT ndat="
-         << zapmask->get_ndat() << " nchan=" << zapmask->get_nchan()
+    cerr << "dsp::SpectralKurtosis::detect OUTPUT"
+         << " ndat=" << zapmask->get_ndat() << " nchan=" << zapmask->get_nchan()
          << " nbit=" << zapmask->get_nbit() << " npol=" << zapmask->get_npol()
          << " ndim=" << zapmask->get_ndim() << endl;
   }
 
-  npart_total += (npart * nchan);
+  npart_total += (resolution.front().npart * nchan);
 
   // reset the mask to all 0 (no zapping)
   reset_mask();
@@ -700,33 +705,40 @@ void dsp::SpectralKurtosis::detect ()
       zapmask->get_ndim());
   }
 
-  // apply the SKFB estimates to the mask
-  if (!detection_flags[2])
-    detect_skfb ();
+  for (unsigned ires=0; ires < resolution.size(); ires++)
+  {
+    // apply the SKFB estimates to the mask
+    if (!detection_flags[2])
+      detect_skfb (ires);
 
-  if (report ){
-    char_reporter.emit(
+    if (report )
+    {
+      char_reporter.emit(
       "zapmask_skfb",
       zapmask->get_datptr(),
       zapmask->get_nchan(),
       zapmask->get_npol(),
       zapmask->get_ndat(),
       zapmask->get_ndim());
-  }
+    }
 
-  if (!detection_flags[0])
-    detect_fscr ();
+    if (!detection_flags[0])
+      detect_fscr (ires);
 
-  if (report) {
-    char_reporter.emit(
+    if (report)
+    {
+      char_reporter.emit(
       "zapmask_fscr",
       zapmask->get_datptr(),
       zapmask->get_nchan(),
       zapmask->get_npol(),
       zapmask->get_ndat(),
       zapmask->get_ndim());
+    }
+
+    if (ires == 0)
+      count_zapped ();
   }
-  count_zapped ();
 
   if (debugd < 1)
     debugd++;
@@ -737,11 +749,16 @@ void dsp::SpectralKurtosis::detect ()
  */
 void dsp::SpectralKurtosis::detect_tscr ()
 {
+  unsigned M = resolution.front().M;
+  unsigned noverlap = resolution.front().noverlap;
+  unsigned npart = resolution.front().npart;
+  unsigned overlap_offset = resolution.front().overlap_offset;
+
   if (verbose)
     cerr << "dsp::SpectralKurtosis::detect_tscr(" << npart << ")" << endl;
 
-  const float * indat    = estimates_tscr->get_dattfp();
-  unsigned char * outdat = 0;
+  const float* indat    = estimates_tscr->get_dattfp();
+  unsigned char* outdat = 0;
   unsigned zap_chan;
   float V;
 
@@ -764,6 +781,8 @@ void dsp::SpectralKurtosis::detect_tscr ()
         M_tscr = float(m);
       }
     }
+
+    float std_devs = resolution.front().std_devs;
 
     if (must_compute)
     {
@@ -817,10 +836,16 @@ void dsp::SpectralKurtosis::detect_tscr ()
   }
 }
 
-void dsp::SpectralKurtosis::detect_skfb ()
+void dsp::SpectralKurtosis::detect_skfb (unsigned ires)
 {
   if (verbose)
-    cerr << "dsp::SpectralKurtosis::detect_skfb(" << npart << ")" << endl;
+    cerr << "dsp::SpectralKurtosis::detect_skfb(" << ires << ")" << endl;
+
+  unsigned M = resolution[ires].M;
+  unsigned noverlap = resolution[ires].noverlap;
+  unsigned npart = resolution[ires].npart;
+  unsigned overlap_offset = resolution[ires].overlap_offset;
+  vector<float>& thresholds = resolution[ires].thresholds;
 
   if (engine)
   {
@@ -871,6 +896,10 @@ void dsp::SpectralKurtosis::reset_mask ()
     return;
   }
 
+  zapmask->zero();
+}
+
+#if 0
   unsigned char * outdat = zapmask->get_datptr();
 
   for (unsigned ichan=0; ichan < nchan; ichan++)
@@ -881,6 +910,7 @@ void dsp::SpectralKurtosis::reset_mask ()
     }
   }
 }
+#endif
 
 void dsp::SpectralKurtosis::count_zapped ()
 {
@@ -902,6 +932,13 @@ void dsp::SpectralKurtosis::count_zapped ()
     indat    = estimates->get_dattfp();
     outdat = zapmask->get_datptr();
   }
+
+  unsigned ires = 0;
+  unsigned M = resolution[ires].M;
+  unsigned noverlap = resolution[ires].noverlap;
+  unsigned npart = resolution[ires].npart;
+  unsigned overlap_offset = resolution[ires].overlap_offset;
+  vector<float>& thresholds = resolution[ires].thresholds;
 
   assert (npart == estimates->get_ndat());
   if (unfiltered_hits == 0)
@@ -944,10 +981,17 @@ void dsp::SpectralKurtosis::count_zapped ()
   }
 }
 
-void dsp::SpectralKurtosis::detect_fscr ()
+void dsp::SpectralKurtosis::detect_fscr (unsigned ires)
 {
   if (verbose)
     cerr << "dsp::SpectralKurtosis::detect_fscr()" << endl;
+
+  unsigned M = resolution[ires].M;
+  unsigned noverlap = resolution[ires].noverlap;
+  unsigned npart = resolution[ires].npart;
+  unsigned overlap_offset = resolution[ires].overlap_offset;
+  vector<float>& thresholds = resolution[ires].thresholds;
+  float std_devs = resolution[ires].std_devs;
 
   float _M = (float) M;
   float mu2 = (4 * _M * _M) / ((_M-1) * (_M + 2) * (_M + 3));
@@ -1047,6 +1091,11 @@ void dsp::SpectralKurtosis::mask ()
   // get base pointer to mask bitseries
   unsigned char * mask = zapmask->get_datptr ();
 
+  unsigned M = resolution.front().M;
+  unsigned noverlap = resolution.front().noverlap;
+  unsigned npart = resolution.front().npart;
+  unsigned overlap_offset = resolution.front().overlap_offset;
+
   if (engine)
   {
     if (verbose)
@@ -1093,6 +1142,6 @@ void dsp::SpectralKurtosis::mask ()
 void dsp::SpectralKurtosis::insertsk ()
 {
   if (engine)
-    engine->insertsk (estimates, output, M);
+    engine->insertsk (estimates, output, resolution.front().M);
 }
 

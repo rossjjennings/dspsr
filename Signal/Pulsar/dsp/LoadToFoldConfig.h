@@ -121,7 +121,7 @@ namespace dsp {
     unsigned sk_noverlap;
 
     // number of stddevs to use for spectral kurtosis excision
-    unsigned sk_std_devs;
+    float sk_std_devs;
 
     // first channel to begin SK Detection
     unsigned sk_chan_start;

@@ -628,7 +628,7 @@ void dsp::LoadToFold::construct () try
     }
 #endif
 
-    skestimator->set_thresholds (config->sk_m, config->sk_std_devs);
+    skestimator->set_thresholds (config->sk_std_devs);
     if (config->sk_chan_start > 0 && config->sk_chan_end < filter_channels)
       skestimator->set_channel_range (config->sk_chan_start, config->sk_chan_end);
     skestimator->set_options (config->sk_no_fscr, config->sk_no_tscr, config->sk_no_ft);

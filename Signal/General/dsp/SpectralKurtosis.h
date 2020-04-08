@@ -43,7 +43,7 @@ namespace dsp {
     void set_noverlap (unsigned _nover) { resolution[0].noverlap = _nover; }
 
     //! Set the RFI thresholds with the specified factor
-    void set_thresholds (unsigned _M, unsigned _std_devs);
+    void set_thresholds (float _std_devs);
 
     //! Set the channel range to conduct detection
     void set_channel_range (unsigned start, unsigned end);
@@ -61,7 +61,7 @@ namespace dsp {
     unsigned get_M () const { return resolution[0].M; }
 
     //! The excision threshold in number of standard deviations
-    unsigned get_excision_threshold () const { return std_devs; }
+    unsigned get_excision_threshold () const { return resolution[0].std_devs; }
 
     //! Total SK statistic for each poln/channel, post filtering
     void get_filtered_sum (std::vector<float>& sum) const
@@ -145,8 +145,8 @@ namespace dsp {
 
     void detect ();
     void detect_tscr ();
-    void detect_skfb ();
-    void detect_fscr ();
+    void detect_skfb (unsigned ires);
+    void detect_fscr (unsigned ires);
     void count_zapped ();
 
     void mask ();
@@ -159,6 +159,14 @@ namespace dsp {
     class Resolution
     {
     public:
+
+      Resolution ()
+      { 
+        M = overlap_offset = 128; noverlap = 1;
+        npart = output_ndat = 0;
+        std_devs = 3.0;
+      }
+
       //! number of samples used in each SK estimate
       unsigned M;
 
@@ -173,7 +181,7 @@ namespace dsp {
       //! number of SK estimates produced
       uint64_t npart;
 
-      //! sample offset to start of next overlapping M-sample block
+      //! number of output time samples flagged
       uint64_t output_ndat;
 
       //! ensure that noverlap divides M and compute overlap_offset
@@ -183,10 +191,10 @@ namespace dsp {
       void compatible (Resolution& that);
 
       //! compute the min and max SK thresholds
-      void set_thresholds (unsigned _std_devs, bool verbose = false);
+      void set_thresholds (float _std_devs, bool verbose = false);
 
       //! number of std devs used to calculate excision limits
-      unsigned std_devs;
+      float std_devs;
 
       //! lower and upper thresholds of excision limits
       std::vector<float> thresholds;
@@ -284,7 +292,7 @@ namespace dsp {
                               float upper_thresh, float lower_thresh) = 0;
 
       virtual void detect_fscr (const TimeSeries* input, BitSeries* output,
-                                const float mu2, const unsigned std_devs,
+                                const float mu2, const float std_devs,
                                 unsigned schan, unsigned echan) = 0;
 
       virtual void detect_tscr (const TimeSeries* input,
