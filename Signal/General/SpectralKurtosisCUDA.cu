@@ -2,7 +2,7 @@
 
 /***************************************************************************
  *
- *   Copyright (C) 2016 by Andre Jameson
+ *   Copyright (C) 2016 by Andrew Jameson
  *   Licensed under the Academic Free License version 2.1
  *
  ***************************************************************************/
@@ -102,3 +102,4 @@ void CUDA::SpectralKurtosisEngine::insertsk (const dsp::TimeSeries* input, dsp::
 {
   computer->insertsk (input, out, M);
 }
+

@@ -175,6 +175,9 @@ namespace dsp {
 
     uint64_t output_ndat;
 
+    //! sample offset to start of next overlapping M-sample block
+    unsigned overlap_offset;
+
     //! SK Estimates
     Reference::To<TimeSeries> estimates;
 
@@ -187,6 +190,7 @@ namespace dsp {
     //! accumulation arrays for S1 and S2 in t scrunch
     std::vector <float> S1_tscr;
     std::vector <float> S2_tscr;
+    uint64_t tscr_count;
 
     //! Total SK statistic for each poln/channel, post filtering
     std::vector<float> filtered_sum;
