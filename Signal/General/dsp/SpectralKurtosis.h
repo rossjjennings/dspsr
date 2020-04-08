@@ -37,10 +37,10 @@ namespace dsp {
 
     bool get_order_supported (TimeSeries::Order order) const;
 
-    void set_M (unsigned _M) { M = _M; }
+    void set_M (unsigned _M) { resolution[0].M = _M; }
 
     //! Set the number of overlapping M sample regions per time sample (oversampling)
-    void set_noverlap (unsigned _nover) { noverlap = _nover; }
+    void set_noverlap (unsigned _nover) { resolution[0].noverlap = _nover; }
 
     //! Set the RFI thresholds with the specified factor
     void set_thresholds (unsigned _M, unsigned _std_devs);
@@ -58,7 +58,7 @@ namespace dsp {
     void prepare_output ();
 
     //! The number of time samples used to calculate the SK statistic
-    unsigned get_M () const { return M; }
+    unsigned get_M () const { return resolution[0].M; }
 
     //! The excision threshold in number of standard deviations
     unsigned get_excision_threshold () const { return std_devs; }
@@ -139,7 +139,6 @@ namespace dsp {
     Reference::To<Engine> engine;
 
 
-
   private:
 
     void compute ();
@@ -157,26 +156,52 @@ namespace dsp {
 
     unsigned debugd;
 
-    //! number of samples used in each SK estimate
-    unsigned M;
+    class Resolution
+    {
+    public:
+      //! number of samples used in each SK estimate
+      unsigned M;
 
-    //! oversampling factor
-    /* NZAPP-206 WvS: I called this "noverlap" instead of oversampling_factor to 
-     * avoid confusion with polyphase filterbank oversampling */
-    unsigned noverlap;
+      //! oversampling factor
+      /* NZAPP-206 WvS: I called this "noverlap" instead of oversampling_factor
+         to avoid confusion with polyphase filterbank oversampling */
+      unsigned noverlap;
+
+      //! sample offset to start of next overlapping M-sample block
+      unsigned overlap_offset;
+
+      //! number of SK estimates produced
+      uint64_t npart;
+
+      //! sample offset to start of next overlapping M-sample block
+      uint64_t output_ndat;
+
+      //! ensure that noverlap divides M and compute overlap_offset
+      void prepare (uint64_t ndat = 0);
+
+      //! ensure that this shares boundaries with that
+      void compatible (Resolution& that);
+
+      //! compute the min and max SK thresholds
+      void set_thresholds (unsigned _std_devs, bool verbose = false);
+
+      //! number of std devs used to calculate excision limits
+      unsigned std_devs;
+
+      //! lower and upper thresholds of excision limits
+      std::vector<float> thresholds;
+    };
+
+    std::vector<Resolution> resolution;
+
+    // for sorting by M
+    static bool by_M (const Resolution& A, const Resolution& B);
 
     unsigned nchan;
 
     unsigned npol;
 
     unsigned ndim;
-
-    uint64_t npart;
-
-    uint64_t output_ndat;
-
-    //! sample offset to start of next overlapping M-sample block
-    unsigned overlap_offset;
 
     //! SK Estimates
     Reference::To<TimeSeries> estimates;
@@ -203,12 +228,6 @@ namespace dsp {
 
     //! Hits on unfiltered SK statistic, same for each channel
     uint64_t unfiltered_hits;
-
-    //! number of std devs used to calculate excision limits
-    unsigned std_devs;
-
-    //! lower and upper thresholds of excision limits
-    std::vector<float> thresholds;
 
     float one_sigma;
 

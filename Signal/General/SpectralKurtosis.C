@@ -12,15 +12,18 @@
 #include <errno.h>
 #include <assert.h>
 #include <string.h>
+
 #include <fstream>
+#include <algorithm>
 
 using namespace std;
 
 dsp::SpectralKurtosis::SpectralKurtosis()
  : Transformation<TimeSeries,TimeSeries>("SpectralKurtosis", outofplace)
 {
-  M = 128;
-  noverlap = 1;
+  resolution.resize(1);
+  resolution[0].M = 128;
+  resolution[0].noverlap = 1;
 
   debugd = 1;
 
@@ -29,10 +32,8 @@ dsp::SpectralKurtosis::SpectralKurtosis()
   zapmask = new BitSeries;
 
   // SK Detector
-  std_devs = 3;
   channels.resize(2);
   npart_total = 0;
-  thresholds.resize(2);
   thresholds_tscr_m.resize(1);
   thresholds_tscr_upper.resize(1);
   thresholds_tscr_lower.resize(1);
@@ -114,6 +115,38 @@ dsp::TimeSeries* dsp::SpectralKurtosis::get_zero_DM_input () {
   return const_cast<dsp::TimeSeries*>(zero_DM_input_container.get_input());
 }
 
+bool dsp::SpectralKurtosis::by_M (const Resolution& A, const Resolution& B)
+{
+  return A.M < B.M;
+}
+
+void dsp::SpectralKurtosis::Resolution::prepare (uint64_t ndat)
+{
+  if (M % noverlap)
+    throw Error (InvalidState, "dsp::SpectralKurtosis::Resolution::prepare",
+                 "noverlap=%u does not divide M=%u", noverlap, M);
+
+  overlap_offset = M / noverlap;
+
+  if (ndat < M)
+  {
+    npart = 0;
+    output_ndat = 0;
+  }
+  else
+  {
+    npart = (ndat-M) / overlap_offset + 1;
+    output_ndat = M + (npart-1) * overlap_offset;
+  }
+}
+
+void dsp::SpectralKurtosis::Resolution::compatible (Resolution& smaller)
+{
+  if (M <= smaller.M)
+    throw Error (InvalidState, "dsp::SpectralKurtosis::Resolution::compatible",
+                 "this.M=%u <= that.M=%u", M, smaller.M);
+}
+
 
 /*
  * These are preparations that could be performed once at the start of
@@ -124,9 +157,14 @@ void dsp::SpectralKurtosis::prepare ()
   if (verbose)
     cerr << "dsp::SpectralKurtosis::prepare()" << endl;
 
-  if (M % noverlap)
-    throw Error (InvalidState, "dsp::SpectralKurtosis::prepare",
-                 "noverlap=%u does not divide M=%u", noverlap, M);
+  std::sort (resolution.begin(), resolution.end(), by_M);
+
+  for (unsigned ires=0; ires < resolution.size(); ires++)
+  {
+    resolution[ires].prepare();
+    if (ires > 0)
+      resolution[ires].compatible( resolution[ires-1] );
+  }
 
   nchan = input->get_nchan();
   npol = input->get_npol();
@@ -137,12 +175,14 @@ void dsp::SpectralKurtosis::prepare ()
   estimates_tscr->set_memory (memory);
   zapmask->set_memory (memory);
 
+  // resolution vector sorted by M
+  unsigned max_M = resolution.back().M;
+
   if (has_buffering_policy())
   {
-    get_buffering_policy()->set_minimum_samples (M);
-    if (zero_DM) {
-      get_zero_DM_buffering_policy()->set_minimum_samples (M);
-    }
+    get_buffering_policy()->set_minimum_samples (max_M);
+    if (zero_DM)
+      get_zero_DM_buffering_policy()->set_minimum_samples (max_M);
   }
 
   if (engine)
@@ -170,10 +210,14 @@ void dsp::SpectralKurtosis::prepare_output ()
   if (verbose)
     cerr << "dsp::SpectralKurtosis::prepare_output()" << endl;
 
-  double mask_rate = input->get_rate() * noverlap / M;
+  // Resolution::compatible enforces decreasing overlap_offset order
+  unsigned min_offset = resolution.front().overlap_offset;
+  unsigned max_npart = resolution.front().npart;
+
+  double mask_rate = input->get_rate() / min_offset;
 
   estimates->copy_configuration (get_input());
-  estimates->set_ndim (1);                      // SK estimates have only single dimension
+  estimates->set_ndim (2);                      // S1_sum and S2_sum
   estimates->set_order (TimeSeries::OrderTFP);  // stored in TFP order
   estimates->set_scale (1.0);                   // no scaling
   estimates->set_rate (mask_rate);              // rate is *= noverlap/M
@@ -184,8 +228,9 @@ void dsp::SpectralKurtosis::prepare_output ()
     estimates->set_state (Signal::Intensity);
 
   double tscrunch_mask_rate = mask_rate;
-  if (npart > 0)
-    tscrunch_mask_rate /= npart;
+
+  if (max_npart > 0)
+    tscrunch_mask_rate /= max_npart;
 
   // tscrunched estimates have same configuration, except number of samples
   estimates_tscr->copy_configuration (estimates);
@@ -221,28 +266,26 @@ void dsp::SpectralKurtosis::reserve ()
 
   const uint64_t ndat  = input->get_ndat();
 
-  overlap_offset = M / noverlap;
+  for (unsigned ires=0; ires < resolution.size(); ires++)
+  {
+    resolution[ires].prepare (ndat);
+    if (ires > 0)
+      resolution[ires].compatible( resolution[ires-1] );
+  }
 
-  if (ndat < M)
-  {
-    npart = 0;
-    output_ndat = 0;
-  }
-  else
-  {
-    npart = (ndat-M) / overlap_offset + 1;
-    output_ndat = M + (npart-1) * overlap_offset;
-  }
+  unsigned max_npart = resolution.front().npart;
+  unsigned max_output_ndat = resolution.front().output_ndat;
 
   if (verbose)
     cerr << "dsp::SpectralKurtosis::reserve input_ndat=" << ndat
-         << " npart=" << npart << " output_ndat=" << output_ndat << endl;
+         << " max npart=" << max_npart 
+         << " output_ndat=" << max_output_ndat << endl;
 
   // use resize since out of place operation
-  estimates->resize (npart);
-  estimates_tscr->resize (npart > 0); // 1 if npart != 0
-  zapmask->resize (npart);
-  output->resize (output_ndat);
+  estimates->resize (max_npart);
+  estimates_tscr->resize (max_npart > 0); // 1 if npart != 0
+  zapmask->resize (max_npart);
+  output->resize (max_output_ndat);
 }
 
 /* call set of transformations */
@@ -260,43 +303,41 @@ void dsp::SpectralKurtosis::transformation ()
 
   const uint64_t ndat  = input->get_ndat();
   if (verbose || debugd < 1)
-    cerr << "dsp::SpectralKurtosis::transformation input ndat=" << ndat
-         << " tscrunch=" << M << endl;
+    cerr << "dsp::SpectralKurtosis::transformation input ndat=" << ndat << endl;
 
-  if (ndat < M)
+  for (unsigned ires=0; ires < resolution.size(); ires++)
   {
-    npart = 0;
-    output_ndat = 0;
-  }
-  else
-  {
-    npart = (ndat-M) / overlap_offset + 1;
-    output_ndat = M + (npart-1) * overlap_offset;
+    resolution[ires].prepare (ndat);
+    if (ires > 0)
+      resolution[ires].compatible( resolution[ires-1] );
   }
 
-  if (verbose || debugd < 1) {
-    cerr << "dsp::SpectralKurtosis::transformation input npart=" << npart
-         << " output_ndat=" << output_ndat << endl;
-  }
+  unsigned max_npart = resolution.front().npart;
+  unsigned max_output_ndat = resolution.front().output_ndat;
+
+  if (verbose || debugd < 1)
+    cerr << "dsp::SpectralKurtosis::transformation input max"
+         << " npart=" << max_npart
+         << " output_ndat=" << max_output_ndat << endl;
 
   if (has_buffering_policy())
   {
     if (verbose || debugd < 1)
       cerr << "dsp::SpectralKurtosis::transformation setting next_start_sample="
-           << output_ndat << endl;
-    get_buffering_policy()->set_next_start (output_ndat);
+           << max_output_ndat << endl;
 
+    // NZAPP-209 TO DO
+    get_buffering_policy()->set_next_start (max_output_ndat);
 
     if (verbose)
       cerr << "dsp::SpectralKurtosis::transformation set_next_start done" << endl;
- 
   }
   if (zero_DM && has_zero_DM_buffering_policy())
   {
     if (verbose)
       cerr << "dsp::SpectralKurtosis::transformation zero_DM_buffering_policy set_next_start " << endl;
  
-    get_zero_DM_buffering_policy()->set_next_start(output_ndat);
+    get_zero_DM_buffering_policy()->set_next_start(max_output_ndat);
   }
 
   prepare_output ();
@@ -304,7 +345,7 @@ void dsp::SpectralKurtosis::transformation ()
   // ensure output containers are sized correctly
   reserve();
 
-  if ((ndat == 0) || (npart == 0))
+  if ((ndat == 0) || (max_npart == 0))
     return;
 
   // perform SK functions
@@ -399,6 +440,11 @@ void dsp::SpectralKurtosis::compute ()
     // compute_input->set_input_sample(input->get_input_sample());
   }
 
+  unsigned M = resolution.front().M;
+  unsigned noverlap = resolution.front().noverlap;
+  unsigned npart = resolution.front().npart;
+  unsigned overlap_offset = resolution.front().overlap_offset;
+
   if (engine)
   {
     engine->compute (compute_input, estimates, estimates_tscr, M);
@@ -414,8 +460,10 @@ void dsp::SpectralKurtosis::compute ()
     }
 
     float S1_sum, S2_sum;
-    const float M_fac = (float)(M+1) / (M-1);
     float * outdat = estimates->get_dattfp();
+
+    const unsigned int out_ndim = estimates->get_ndim();
+    assert (out_ndim == 2);
 
     switch (compute_input->get_order())
     {
@@ -452,23 +500,29 @@ void dsp::SpectralKurtosis::compute ()
                 S2_sum += (sqld * sqld);
               }
 
+              unsigned out_index = ichan*npol + ipol;
+
               if (do_tscr)
               {
                 // add the sums to the M timeseries
-                S1_tscr [ichan*npol + ipol] += S1_sum;
-                S2_tscr [ichan*npol + ipol] += S2_sum;
+                S1_tscr [out_index] += S1_sum;
+                S2_tscr [out_index] += S2_sum;
               }
 
-              // calculate the SK estimator
+              // store the S1 and S2 estimates for later SK calculation
               if (S1_sum == 0)
-                outdat[ichan*npol + ipol] = 0;
+                outdat[out_index*2] = outdat[out_index*2+1] = 0;
               else
-                outdat[ichan*npol + ipol] = M_fac * (M * (S2_sum / (S1_sum * S1_sum)) - 1);
+              {
+                outdat[out_index*2] = S1_sum;
+                outdat[out_index*2+1] = S2_sum;
+              }
 
               indat += ndim;
             }
           }
-          outdat += nchan * npol;
+
+          outdat += nchan * npol * out_ndim;
         }
         break;
       }
@@ -511,27 +565,34 @@ void dsp::SpectralKurtosis::compute ()
                 S2_sum += (sqld * sqld);
               }
 
-              // add the sums to the M timeseries
+              unsigned out_index = ichan*npol + ipol;
               if (do_tscr)
               {
-                S1_tscr [ichan*npol + ipol] += S1_sum;
-                S2_tscr [ichan*npol + ipol] += S2_sum;
+                S1_tscr [out_index] += S1_sum;
+                S2_tscr [out_index] += S2_sum;
               }
-              // calculate the SK estimator
+
+              // store the S1 and S2 estimates for later SK calculation
               if (S1_sum == 0)
-                outdat[ichan*npol + ipol] = 0;
+                outdat[out_index*2] = outdat[out_index*2+1] = 0;
               else
-                outdat[ichan*npol + ipol] = M_fac * (M * (S2_sum / (S1_sum * S1_sum)) - 1);
+              {
+                outdat[out_index*2] = S1_sum;
+                outdat[out_index*2+1] = S2_sum;
+              }
+
             }
           }
-          outdat += nchan * npol;
+
+          outdat += nchan * npol * out_ndim;
         }
         break;
       }
 
       default:
       {
-        throw Error (InvalidState, "dsp::SpectralKurtosis::compute", "unsupported input order");
+        throw Error (InvalidState, "dsp::SpectralKurtosis::compute",
+                     "unsupported input order");
       }
     }
 
@@ -566,23 +627,24 @@ void dsp::SpectralKurtosis::compute ()
 }
 
 
-void dsp::SpectralKurtosis::set_thresholds (unsigned _M, unsigned _std_devs)
+void dsp::SpectralKurtosis::Resolution::set_thresholds (unsigned _std_devs, bool verbose)
 {
-  M = _M;
   std_devs = _std_devs;
 
   if (verbose)
-    cerr << "dsp::SpectralKurtosis::set_thresholds SKlimits(" << M << ", " << std_devs << ")" << endl;
+    std::cerr << "dsp::SpectralKurtosis::Resolution::set_thresholds "
+            "SKlimits(" << M << ", " << std_devs << ")" << endl;
   dsp::SKLimits limits(M, std_devs);
   limits.calc_limits();
 
+  thresholds.resize(2);
   thresholds[0] = (float) limits.get_lower_threshold();
   thresholds[1] = (float) limits.get_upper_threshold();
 
   if (verbose)
-    cerr << "dsp::SpectralKurtosis::set_thresholds M=" << M << " std_devs="
-         << std_devs  << " [" << thresholds[0] << " - " << thresholds[1]
-         << "]" << endl;
+    std::cerr << "dsp::SpectralKurtosis::Resolution::set_thresholds "
+         "M=" << M << " std_devs=" << std_devs  << 
+         " [" << thresholds[0] << " - " << thresholds[1] << "]" << endl;
 }
 
 void dsp::SpectralKurtosis::set_channel_range (unsigned start, unsigned end)
