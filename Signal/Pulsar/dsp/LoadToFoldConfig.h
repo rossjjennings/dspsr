@@ -115,13 +115,16 @@ namespace dsp {
     bool nosk_too;
 
     // spectral kurtosis integration factor
-    unsigned sk_m;
+    std::vector<unsigned> sk_m;
+    void set_sk_m (std::string txt);
 
     // spectral kurtosis overlap factor
-    unsigned sk_noverlap;
+    std::vector<unsigned> sk_noverlap;
+    void set_sk_noverlap (std::string txt);
 
     // number of stddevs to use for spectral kurtosis excision
-    float sk_std_devs;
+    std::vector<float> sk_std_devs;
+    void set_sk_std_devs (std::string txt);
 
     // first channel to begin SK Detection
     unsigned sk_chan_start;

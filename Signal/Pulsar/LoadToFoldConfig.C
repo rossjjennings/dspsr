@@ -71,13 +71,16 @@ dsp::LoadToFold::Config::Config ()
   nosk_too = false;
 
   // samples to integrate to form spectral kurtosis statistic
-  sk_m = 128;
+  sk_m.resize(1);
+  sk_m[0] = 128;
 
   // oversampling factor by which neighbouring blocks of sk_m samples overlap
-  sk_noverlap = 1;
+  sk_noverlap.resize(1);
+  sk_noverlap[0] = 1;
 
   // samples to integrate to form spectral kurtosis statistic
-  sk_std_devs = 3;
+  sk_std_devs.resize(1);
+  sk_std_devs[0] = 3;
 
   // first channel to conduct spectral kurtosis detection
   sk_chan_start = 0;
@@ -150,6 +153,42 @@ dsp::LoadToFold::Config::Config ()
 
   inverse_filterbank_fft_window = "tukey";
 
+}
+
+// set the spectral kurtosis window lengths
+void dsp::LoadToFold::Config::set_sk_m (string txt)
+{
+  sk_m.resize(0);
+
+  while (txt != "")
+  {
+    string dev = stringtok (txt, ",");
+    sk_m.push_back( fromstring<unsigned>(dev) );
+  }
+}
+
+// set the spectral kurtosis window overlap factors
+void dsp::LoadToFold::Config::set_sk_noverlap (string txt)
+{
+  sk_noverlap.resize(0);
+
+  while (txt != "")
+  {
+    string dev = stringtok (txt, ",");
+    sk_noverlap.push_back( fromstring<unsigned>(dev) );
+  }
+}
+
+// set the spectral kurtosis window overlap factors
+void dsp::LoadToFold::Config::set_sk_std_devs (string txt)
+{
+  sk_std_devs.resize(0);
+
+  while (txt != "")
+  {
+    string dev = stringtok (txt, ",");
+    sk_std_devs.push_back( fromstring<float>(dev) );
+  }
 }
 
 // set block size to this factor times the minimum possible
