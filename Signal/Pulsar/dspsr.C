@@ -295,13 +295,13 @@ void parse_options (int argc, char** argv) try
   arg = menu.add (config->nosk_too, "noskz_too");
   arg->set_help ("also produce un-zapped version of output");
 
-  arg = menu.add (config->sk_m, "skzm", "samples");
+  arg = menu.add (config.get(), &dsp::LoadToFold::Config::set_sk_m, "skzm", "samples");
   arg->set_help ("samples to integrate for spectral kurtosis statistics");
 
-  arg = menu.add (config->sk_noverlap, "skzover", "integer");
+  arg = menu.add (config.get(), &dsp::LoadToFold::Config::set_sk_noverlap, "skzover", "integer");
   arg->set_help ("oversampling factor (skzover must evenly divide skzm)");
 
-  arg = menu.add (config->sk_std_devs, "skzs", "stddevs");
+  arg = menu.add (config.get(), &dsp::LoadToFold::Config::set_sk_std_devs, "skzs", "stddevs");
   arg->set_help ("number of std deviations to use for spectral kurtosis excisions");
 
   arg = menu.add (config->sk_chan_start, "skz_start", "chan");

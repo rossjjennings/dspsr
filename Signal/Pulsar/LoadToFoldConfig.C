@@ -80,7 +80,7 @@ dsp::LoadToFold::Config::Config ()
 
   // samples to integrate to form spectral kurtosis statistic
   sk_std_devs.resize(1);
-  sk_std_devs[0] = 3;
+  sk_std_devs[0] = 3.0;
 
   // first channel to conduct spectral kurtosis detection
   sk_chan_start = 0;

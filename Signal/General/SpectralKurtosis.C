@@ -963,12 +963,18 @@ void dsp::SpectralKurtosis::detect_skfb (unsigned ires)
 
   unsigned nflag = 1;
   unsigned flag_step = 1;
+  unsigned flag_offset = 1;
 
   if (ires > 0)
   {
     nflag = M / resolution[0].M;
     flag_step = resolution[0].noverlap;
+    flag_offset = nflag * flag_step / resolution[ires].noverlap;
   }
+
+  if (verbose)
+    cerr << "dsp::SpectralKurtosis::detect_skfb "
+            "nflag=" << nflag << " step=" << flag_step << endl;
 
   if (engine)
   {
@@ -1011,7 +1017,7 @@ void dsp::SpectralKurtosis::detect_skfb (unsigned ires)
 
       if (zap)
       {
-        for (unsigned iflag; iflag < nflag; iflag++)
+        for (unsigned iflag=0; iflag < nflag; iflag++)
         {
           unsigned outdex = iflag*nchan*flag_step + ichan;
           outdat[outdex] = 1;
@@ -1023,7 +1029,7 @@ void dsp::SpectralKurtosis::detect_skfb (unsigned ires)
     }
 
     indat += nchan * npol * sum_ndim;
-    outdat += nchan * flag_step * nflag;
+    outdat += nchan * flag_offset;
   }
 }
 
@@ -1038,23 +1044,11 @@ void dsp::SpectralKurtosis::reset_mask ()
   zapmask->zero();
 }
 
-#if 0
-  unsigned char * outdat = zapmask->get_datptr();
-
-  for (unsigned ichan=0; ichan < nchan; ichan++)
-  {
-    for (uint64_t ipart=0; ipart < npart; ipart++)
-    {
-      outdat[(ipart*nchan) + ichan] = 0;
-    }
-  }
-}
-#endif
-
 void dsp::SpectralKurtosis::count_zapped ()
 {
   if (verbose)
-    cerr << "dsp::SpectralKurtosis::count_zapped hits=" << unfiltered_hits << endl;
+    cerr << "dsp::SpectralKurtosis::count_zapped hits=" 
+         << unfiltered_hits << endl;
 
   const float * indat;
   unsigned char * outdat;
@@ -1167,6 +1161,17 @@ void dsp::SpectralKurtosis::detect_fscr (unsigned ires)
   unsigned zap_ipart;
   uint64_t nzap = 0;
 
+  unsigned nflag = 1;
+  unsigned flag_step = 1;
+  unsigned flag_offset = 1;
+
+  if (ires > 0)
+  {
+    nflag = M / resolution[0].M;
+    flag_step = resolution[0].noverlap;
+    flag_offset = nflag * flag_step / resolution[ires].noverlap;
+  }
+
   // foreach SK integration
   for (uint64_t ipart=0; ipart < npart; ipart++)
   {
@@ -1212,16 +1217,19 @@ void dsp::SpectralKurtosis::detect_fscr (unsigned ires)
 
     if (zap_ipart)
     {
-      for (unsigned ichan=0; ichan<nchan; ichan++)
+      for (unsigned iflag=0; iflag < nflag; iflag++)
       {
-        outdat[ichan] = 1;
+        unsigned outdex = iflag*nchan*flag_step;
+        for (unsigned ichan=0; ichan<nchan; ichan++)
+          outdat[outdex + ichan] = 1;
       }
-      zap_counts[ZAP_FSCR] += nchan;
+      if (ires > 0)
+        zap_counts[ZAP_FSCR] += nchan;
       nzap += nchan;
     }
 
     indat += nchan * npol * sum_ndim;
-    outdat += nchan;
+    outdat += nchan * flag_offset;
   }
   //cerr << "dsp::SpectralKurtosis::detect_fscr ZAP=" << nzap << endl;
 }
