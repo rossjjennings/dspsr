@@ -813,9 +813,10 @@ void dsp::SpectralKurtosis::detect ()
 
 void dsp::SpectralKurtosis::tscrunch_sums (Resolution& from, Resolution& to)
 {
-  cerr << "dsp::SpectralKurtosis::tscrunch_sums from "
-          "M=" << from.M << " noverlap=" << from.noverlap << " to "
-          "M=" << to.M << " noverlap=" << to.noverlap << endl;
+  if (verbose)
+    cerr << "dsp::SpectralKurtosis::tscrunch_sums from "
+            "M=" << from.M << " noverlap=" << from.noverlap << " to "
+            "M=" << to.M << " noverlap=" << to.noverlap << endl;
 
   Resolution convert;
   convert.M = to.M / from.M;
@@ -956,9 +957,18 @@ void dsp::SpectralKurtosis::detect_skfb (unsigned ires)
 
   unsigned M = resolution[ires].M;
   unsigned npart = resolution[ires].npart;
-  vector<float>& thresholds = resolution[ires].thresholds;
 
+  vector<float>& thresholds = resolution[ires].thresholds;
   assert (thresholds.size() == 2);
+
+  unsigned nflag = 1;
+  unsigned flag_step = 1;
+
+  if (ires > 0)
+  {
+    nflag = M / resolution[0].M;
+    flag_step = resolution[0].noverlap;
+  }
 
   if (engine)
   {
@@ -966,8 +976,8 @@ void dsp::SpectralKurtosis::detect_skfb (unsigned ires)
     return;
   }
 
-  const float * indat    = sums->get_dattfp();
-  unsigned char * outdat = zapmask->get_datptr();
+  const float* indat    = sums->get_dattfp();
+  unsigned char* outdat = zapmask->get_datptr();
   const unsigned sum_ndim = sums->get_ndim();
   assert (sum_ndim == 2);
 
@@ -982,6 +992,11 @@ void dsp::SpectralKurtosis::detect_skfb (unsigned ires)
     for (unsigned ichan=0; ichan < nchan; ichan++)
     {
       zap = 0;
+
+      // only count skfb zapped channels in the in-band region
+      bool count_zapped = 
+        (ires == 0) && (ichan > channels[0]) && (ichan < channels[1]);
+ 
       for (unsigned ipol=0; ipol < npol; ipol++)
       {
         unsigned index = (npol*ichan + ipol) * sum_ndim;
@@ -991,22 +1006,24 @@ void dsp::SpectralKurtosis::detect_skfb (unsigned ires)
         float V = M_fac * (M * (S2_sum / (S1_sum * S1_sum)) - 1);
 
         if (V > thresholds[1] || V < thresholds[0])
-        {
           zap = 1;
-        }
       }
+
       if (zap)
       {
-        outdat[ichan] = 1;
+        for (unsigned iflag; iflag < nflag; iflag++)
+        {
+          unsigned outdex = iflag*nchan*flag_step + ichan;
+          outdat[outdex] = 1;
 
-        // only count skfb zapped channels in the in-band region
-        if (ichan > channels[0] && ichan < channels[1])
-          zap_counts[ZAP_SKFB]++;
+          if (count_zapped)
+            zap_counts[ZAP_SKFB]++;
+        }
       }
     }
 
     indat += nchan * npol * sum_ndim;
-    outdat += nchan;
+    outdat += nchan * flag_step * nflag;
   }
 }
 
