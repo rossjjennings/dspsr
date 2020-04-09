@@ -32,7 +32,7 @@ namespace dsp {
     ~SKDetector ();
 
     //! Set the RFI thresholds with the specified factor
-    void set_thresholds (unsigned _M, unsigned _n_std_devs);
+    void set_thresholds (unsigned _M, float _n_std_devs);
 
     //! Set the channel range to conduct detection
     void set_channel_range (unsigned start, unsigned end);
@@ -47,7 +47,7 @@ namespace dsp {
     unsigned get_M () const { return M; }
 
     //! The excision threshold in number of standard deviations
-    unsigned get_excision_threshold () const { return n_std_devs; }
+    float get_excision_threshold () const { return n_std_devs; }
 
     //! Total SK statistic for each poln/channel, post filtering
     void get_filtered_sum (std::vector<float>& sum) const
@@ -119,7 +119,7 @@ namespace dsp {
 
     float one_sigma;
 
-    unsigned n_std_devs;
+    float n_std_devs;
 
     float upper_thresh;
 
@@ -169,7 +169,7 @@ namespace dsp {
                             float upper_thresh, float lower_thresh) = 0;
 
     virtual void detect_fscr (const dsp::TimeSeries* input, dsp::BitSeries* output,
-                              const float mu2, const unsigned std_devs,
+                              const float mu2, const float std_devs,
                               unsigned s_chan, unsigned e_chan) = 0;
 
     virtual void detect_tscr (const dsp::TimeSeries* input,

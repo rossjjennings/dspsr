@@ -217,7 +217,6 @@ void dsp::SpectralKurtosis::prepare_output ()
   double mask_rate = input->get_rate() / min_offset;
 
   sums->copy_configuration (get_input());
-  sums->set_ndim (2);                      // S1_sum and S2_sum
   sums->set_order (TimeSeries::OrderTFP);  // stored in TFP order
   sums->set_scale (1.0);                   // no scaling
   sums->set_rate (mask_rate);              // rate is *= noverlap/M
@@ -226,6 +225,8 @@ void dsp::SpectralKurtosis::prepare_output ()
     sums->set_state (Signal::PPQQ);
   else
     sums->set_state (Signal::Intensity);
+
+  sums->set_ndim (2);                      // S1_sum and S2_sum
 
   double tscrunch_mask_rate = mask_rate;
 
@@ -987,7 +988,7 @@ void dsp::SpectralKurtosis::count_zapped ()
 
         unfiltered_sum[outdex] += V;
 
-        if (outdat[(ipart*nchan) + ichan] == 1)
+        if (ipol == 0 && outdat[(ipart*nchan) + ichan] == 1)
         {
           zap_counts[ZAP_ALL] ++;
           continue;
@@ -1004,7 +1005,7 @@ void dsp::SpectralKurtosis::count_zapped ()
 void dsp::SpectralKurtosis::detect_fscr (unsigned ires)
 {
   if (verbose)
-    cerr << "dsp::SpectralKurtosis::detect_fscr()" << endl;
+    cerr << "dsp::SpectralKurtosis::detect_fscr(" << ires << ")" << endl;
 
   unsigned M = resolution[ires].M;
   unsigned noverlap = resolution[ires].noverlap;
@@ -1098,7 +1099,7 @@ void dsp::SpectralKurtosis::detect_fscr (unsigned ires)
       nzap += nchan;
     }
 
-    indat += nchan * npol;
+    indat += nchan * npol * sum_ndim;
     outdat += nchan;
   }
   //cerr << "dsp::SpectralKurtosis::detect_fscr ZAP=" << nzap << endl;
