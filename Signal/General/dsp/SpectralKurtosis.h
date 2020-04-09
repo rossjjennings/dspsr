@@ -38,12 +38,15 @@ namespace dsp {
     bool get_order_supported (TimeSeries::Order order) const;
 
     void set_M (unsigned _M) { resolution[0].M = _M; }
+    void set_M (const std::vector<unsigned>&);
 
-    //! Set the number of overlapping M sample regions per time sample (oversampling)
+    //! Set the number of overlapping regions per time sample
     void set_noverlap (unsigned _nover) { resolution[0].noverlap = _nover; }
+    void set_noverlap (const std::vector<unsigned>&);
 
     //! Set the RFI thresholds with the specified factor
     void set_thresholds (float _std_devs);
+    void set_thresholds (const std::vector<float>&);
 
     //! Set the channel range to conduct detection
     void set_channel_range (unsigned start, unsigned end);
@@ -202,6 +205,11 @@ namespace dsp {
 
     std::vector<Resolution> resolution;
 
+    void resize_resolution (unsigned);
+
+    //! integrate the S1 and S2 sum to new M and noverlap
+    void tscrunch_sums (Resolution& from, Resolution& to);
+
     // for sorting by M
     static bool by_M (const Resolution& A, const Resolution& B);
 
@@ -236,8 +244,6 @@ namespace dsp {
 
     //! Hits on unfiltered SK statistic, same for each channel
     uint64_t unfiltered_hits;
-
-    float one_sigma;
 
     //! Number of samples integrated into tscr
     unsigned M_tscr;

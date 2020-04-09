@@ -115,6 +115,48 @@ dsp::TimeSeries* dsp::SpectralKurtosis::get_zero_DM_input () {
   return const_cast<dsp::TimeSeries*>(zero_DM_input_container.get_input());
 }
 
+void dsp::SpectralKurtosis::set_M (const std::vector<unsigned>& M)
+{
+  resize_resolution (M.size());
+  for (unsigned ires=0; ires < resolution.size(); ires++)
+    if (M.size() == 1)
+      resolution[ires].M = M[0];
+    else
+      resolution[ires].M = M[ires];
+}
+
+void dsp::SpectralKurtosis::set_noverlap (const std::vector<unsigned>& noverlap)
+{ 
+  resize_resolution (noverlap.size());
+  for (unsigned ires=0; ires < resolution.size(); ires++)
+    if (noverlap.size() == 1)
+      resolution[ires].noverlap = noverlap[0];
+    else
+      resolution[ires].noverlap = noverlap[ires];
+}
+
+void dsp::SpectralKurtosis::set_thresholds (const std::vector<float>& std_devs)
+{
+  resize_resolution (std_devs.size());
+  for (unsigned ires=0; ires < resolution.size(); ires++)
+    if (std_devs.size() == 1)
+      resolution[ires].std_devs = std_devs[0];
+    else
+      resolution[ires].std_devs = std_devs[ires];
+}
+
+void dsp::SpectralKurtosis::resize_resolution (unsigned nres)
+{
+  if (nres == 1)
+    return;
+
+  if (resolution.size() == 1)
+    resolution.resize (nres);
+  else if (nres != resolution.size())
+    throw Error (InvalidParam, "dsp::SpectralKurtosis::resize_resolution",
+                 "size mismatch n=%u != size=%u", nres, resolution.size());
+}
+
 bool dsp::SpectralKurtosis::by_M (const Resolution& A, const Resolution& B)
 {
   return A.M < B.M;
@@ -142,9 +184,14 @@ void dsp::SpectralKurtosis::Resolution::prepare (uint64_t ndat)
 
 void dsp::SpectralKurtosis::Resolution::compatible (Resolution& smaller)
 {
-  if (M <= smaller.M)
+  if (M % smaller.M)
     throw Error (InvalidState, "dsp::SpectralKurtosis::Resolution::compatible",
-                 "this.M=%u <= that.M=%u", M, smaller.M);
+                 "this.M=%u not divisible by that.M=%u", M, smaller.M);
+
+  if (overlap_offset % smaller.M)
+    throw Error (InvalidState, "dsp::SpectralKurtosis::Resolution::compatible",
+                 "overlap_offset=%u not divisible by that.M=%u", 
+                 overlap_offset, smaller.M);
 }
 
 
@@ -710,6 +757,9 @@ void dsp::SpectralKurtosis::detect ()
 
   for (unsigned ires=0; ires < resolution.size(); ires++)
   {
+    if (ires > 0)
+      tscrunch_sums (resolution[ires-1], resolution[ires]);
+
     // apply the SKFB estimates to the mask
     if (!detection_flags[2])
       detect_skfb (ires);
@@ -747,15 +797,60 @@ void dsp::SpectralKurtosis::detect ()
     debugd++;
 }
 
+void dsp::SpectralKurtosis::tscrunch_sums (Resolution& from, Resolution& to)
+{
+  cerr << "dsp::SpectralKurtosis::tscrunch_sums from "
+          "M=" << from.M << " noverlap=" << from.noverlap << " to "
+          "M=" << to.M << " noverlap=" << to.noverlap << endl;
+
+  Resolution convert;
+  convert.M = from.M / to.M;
+  convert.noverlap = to.noverlap;
+  convert.prepare (sums->get_ndat());
+
+  const unsigned nsum = convert.M;
+  const uint64_t npart = convert.npart;
+  const unsigned offset = convert.overlap_offset;
+
+  cerr << "dsp::SpectralKurtosis::tscrunch_sums convert "
+          "nsum=" << convert.M << " offset=" << offset << " "
+          "npart=" << npart << endl;
+
+  unsigned sum_ndim = sums->get_ndim();
+  assert (sum_ndim == 2);
+
+  // in place tscrunch
+  float* outdat = sums->get_dattfp();
+  float* indat = outdat;
+
+  const uint64_t fpd_blocksize = nchan * npol * sum_ndim;
+  const uint64_t input_stride = fpd_blocksize * from.noverlap;
+  const uint64_t input_offset = fpd_blocksize * offset;
+
+  // compare SK estimator for each pol to expected values
+  for (uint64_t ipart=0; ipart < npart; ipart++)
+  {
+    // for each channel and pol in the SKFB
+    for (unsigned idat=0; idat < fpd_blocksize; idat++)
+      outdat[idat] = indat[idat];
+
+    for (unsigned isum=1; isum < nsum; isum++)
+      for (unsigned idat=0; idat < fpd_blocksize; idat++)
+        outdat[idat] += indat[isum*input_stride+idat];
+
+    outdat += fpd_blocksize;
+    indat += input_offset;
+  }
+}
+
+
 /*
  * Use the tscrunched SK statistic from the SKFB to detect RFI on each channel
  */
 void dsp::SpectralKurtosis::detect_tscr ()
 {
   unsigned M = resolution.front().M;
-  unsigned noverlap = resolution.front().noverlap;
   unsigned npart = resolution.front().npart;
-  unsigned overlap_offset = resolution.front().overlap_offset;
 
   if (verbose)
     cerr << "dsp::SpectralKurtosis::detect_tscr(" << npart << ")" << endl;
@@ -845,9 +940,7 @@ void dsp::SpectralKurtosis::detect_skfb (unsigned ires)
     cerr << "dsp::SpectralKurtosis::detect_skfb(" << ires << ")" << endl;
 
   unsigned M = resolution[ires].M;
-  unsigned noverlap = resolution[ires].noverlap;
   unsigned npart = resolution[ires].npart;
-  unsigned overlap_offset = resolution[ires].overlap_offset;
   vector<float>& thresholds = resolution[ires].thresholds;
 
   if (engine)
@@ -950,10 +1043,7 @@ void dsp::SpectralKurtosis::count_zapped ()
 
   unsigned ires = 0;
   unsigned M = resolution[ires].M;
-  unsigned noverlap = resolution[ires].noverlap;
   unsigned npart = resolution[ires].npart;
-  unsigned overlap_offset = resolution[ires].overlap_offset;
-  vector<float>& thresholds = resolution[ires].thresholds;
 
   const float M_fac = (float)(M+1) / (M-1);
 
@@ -1008,10 +1098,7 @@ void dsp::SpectralKurtosis::detect_fscr (unsigned ires)
     cerr << "dsp::SpectralKurtosis::detect_fscr(" << ires << ")" << endl;
 
   unsigned M = resolution[ires].M;
-  unsigned noverlap = resolution[ires].noverlap;
   unsigned npart = resolution[ires].npart;
-  unsigned overlap_offset = resolution[ires].overlap_offset;
-  vector<float>& thresholds = resolution[ires].thresholds;
   float std_devs = resolution[ires].std_devs;
 
   float _M = (float) M;
@@ -1124,7 +1211,6 @@ void dsp::SpectralKurtosis::mask ()
   unsigned char * mask = zapmask->get_datptr ();
 
   unsigned M = resolution.front().M;
-  unsigned noverlap = resolution.front().noverlap;
   unsigned npart = resolution.front().npart;
   unsigned overlap_offset = resolution.front().overlap_offset;
 
