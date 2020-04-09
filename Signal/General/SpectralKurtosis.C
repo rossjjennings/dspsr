@@ -117,32 +117,46 @@ dsp::TimeSeries* dsp::SpectralKurtosis::get_zero_DM_input () {
 
 void dsp::SpectralKurtosis::set_M (const std::vector<unsigned>& M)
 {
+  // cerr << "SpectralKurtosis::set_M size=" << M.size() << endl;
+
   resize_resolution (M.size());
   for (unsigned ires=0; ires < resolution.size(); ires++)
+  {
     if (M.size() == 1)
       resolution[ires].M = M[0];
     else
+    {
+      // cerr << "SpectralKurtosis::set_M[" << ires << "]=" << M[ires] << endl;
       resolution[ires].M = M[ires];
+    }
+  }
 }
 
 void dsp::SpectralKurtosis::set_noverlap (const std::vector<unsigned>& noverlap)
 { 
+  // cerr << "SpectralKurtosis::set_noverlap size=" << noverlap.size() << endl;
+
   resize_resolution (noverlap.size());
   for (unsigned ires=0; ires < resolution.size(); ires++)
+  {
     if (noverlap.size() == 1)
       resolution[ires].noverlap = noverlap[0];
     else
+    {
+      // cerr << "SpectralKurtosis::set_noverlap[" << ires << "]=" << noverlap[ires] << endl;
       resolution[ires].noverlap = noverlap[ires];
+    }
+  }
 }
 
 void dsp::SpectralKurtosis::set_thresholds (const std::vector<float>& std_devs)
 {
   resize_resolution (std_devs.size());
   for (unsigned ires=0; ires < resolution.size(); ires++)
-    if (std_devs.size() == 1)
-      resolution[ires].std_devs = std_devs[0];
-    else
-      resolution[ires].std_devs = std_devs[ires];
+  {
+    unsigned jres = (std_devs.size() == 1) ? 0 : ires;
+    resolution[ires].set_thresholds( std_devs[jres] );
+  }
 }
 
 void dsp::SpectralKurtosis::resize_resolution (unsigned nres)
@@ -804,7 +818,7 @@ void dsp::SpectralKurtosis::tscrunch_sums (Resolution& from, Resolution& to)
           "M=" << to.M << " noverlap=" << to.noverlap << endl;
 
   Resolution convert;
-  convert.M = from.M / to.M;
+  convert.M = to.M / from.M;
   convert.noverlap = to.noverlap;
   convert.prepare (sums->get_ndat());
 
@@ -812,9 +826,10 @@ void dsp::SpectralKurtosis::tscrunch_sums (Resolution& from, Resolution& to)
   const uint64_t npart = convert.npart;
   const unsigned offset = convert.overlap_offset;
 
-  cerr << "dsp::SpectralKurtosis::tscrunch_sums convert "
-          "nsum=" << convert.M << " offset=" << offset << " "
-          "npart=" << npart << endl;
+  if (verbose)
+    cerr << "dsp::SpectralKurtosis::tscrunch_sums convert "
+            "nsum=" << convert.M << " offset=" << offset << " "
+            "npart=" << npart << endl;
 
   unsigned sum_ndim = sums->get_ndim();
   assert (sum_ndim == 2);
@@ -942,6 +957,8 @@ void dsp::SpectralKurtosis::detect_skfb (unsigned ires)
   unsigned M = resolution[ires].M;
   unsigned npart = resolution[ires].npart;
   vector<float>& thresholds = resolution[ires].thresholds;
+
+  assert (thresholds.size() == 2);
 
   if (engine)
   {
