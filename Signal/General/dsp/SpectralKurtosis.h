@@ -211,8 +211,8 @@ namespace dsp {
 
     unsigned ndim;
 
-    //! SK Estimates
-    Reference::To<TimeSeries> estimates;
+    //! S1 and S2 sums
+    Reference::To<TimeSeries> sums;
 
     //! Tscrunched SK Estimate for block
     Reference::To<TimeSeries> estimates_tscr;
@@ -220,7 +220,7 @@ namespace dsp {
     //! Zap mask
     Reference::To<BitSeries> zapmask;
 
-    //! accumulation arrays for S1 and S2 in t scrunch
+    //! accumulation arrays for S1 and S2 in tscrunch
     std::vector <float> S1_tscr;
     std::vector <float> S2_tscr;
     uint64_t tscr_count;

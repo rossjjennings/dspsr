@@ -27,7 +27,7 @@ dsp::SpectralKurtosis::SpectralKurtosis()
 
   debugd = 1;
 
-  estimates = new TimeSeries;
+  sums = new TimeSeries;
   estimates_tscr = new TimeSeries;
   zapmask = new BitSeries;
 
@@ -78,7 +78,7 @@ dsp::SpectralKurtosis::~SpectralKurtosis ()
        << " tscr=" << percent_tscr << "\%" << " fscr=" << percent_fscr << "\%"
        << endl;
 
-  delete estimates;
+  delete sums;
   delete estimates_tscr;
   delete zapmask;
 }
@@ -171,7 +171,7 @@ void dsp::SpectralKurtosis::prepare ()
   ndim = input->get_ndim();
 
   Memory * memory = const_cast<Memory *>(input->get_memory());
-  estimates->set_memory (memory);
+  sums->set_memory (memory);
   estimates_tscr->set_memory (memory);
   zapmask->set_memory (memory);
 
@@ -216,31 +216,33 @@ void dsp::SpectralKurtosis::prepare_output ()
 
   double mask_rate = input->get_rate() / min_offset;
 
-  estimates->copy_configuration (get_input());
-  estimates->set_ndim (2);                      // S1_sum and S2_sum
-  estimates->set_order (TimeSeries::OrderTFP);  // stored in TFP order
-  estimates->set_scale (1.0);                   // no scaling
-  estimates->set_rate (mask_rate);              // rate is *= noverlap/M
+  sums->copy_configuration (get_input());
+  sums->set_ndim (2);                      // S1_sum and S2_sum
+  sums->set_order (TimeSeries::OrderTFP);  // stored in TFP order
+  sums->set_scale (1.0);                   // no scaling
+  sums->set_rate (mask_rate);              // rate is *= noverlap/M
 
   if (input->get_npol() == 2)
-    estimates->set_state (Signal::PPQQ);
+    sums->set_state (Signal::PPQQ);
   else
-    estimates->set_state (Signal::Intensity);
+    sums->set_state (Signal::Intensity);
 
   double tscrunch_mask_rate = mask_rate;
 
   if (max_npart > 0)
     tscrunch_mask_rate /= max_npart;
 
-  // tscrunched estimates have same configuration, except number of samples
-  estimates_tscr->copy_configuration (estimates);
+  // tscrunched estimates have same configuration as sums with following changes
+  estimates_tscr->copy_configuration (sums);
   estimates_tscr->set_order (TimeSeries::OrderTFP);  // stored in TFP order
   estimates_tscr->set_rate (tscrunch_mask_rate);
+  estimates_tscr->set_ndim (1);
 
-  // zap mask has same configuration as estimates with following changes
-  zapmask->copy_configuration (estimates);
+  // zap mask has same configuration as sums with following changes
+  zapmask->copy_configuration (sums);
   zapmask->set_nbit (8);
   zapmask->set_npol (1);
+  zapmask->set_ndim (1);
 
   // configure output timeseries (out-of-place) to match input
   output->copy_configuration (get_input());
@@ -282,7 +284,7 @@ void dsp::SpectralKurtosis::reserve ()
          << " output_ndat=" << max_output_ndat << endl;
 
   // use resize since out of place operation
-  estimates->resize (max_npart);
+  sums->resize (max_npart);
   estimates_tscr->resize (max_npart > 0); // 1 if npart != 0
   zapmask->resize (max_npart);
   output->resize (max_output_ndat);
@@ -372,12 +374,12 @@ void dsp::SpectralKurtosis::transformation ()
       input->get_ndim());
 
     float_reporter.emit(
-      "estimates",
-      estimates->get_dattfp(),
-      estimates->get_nchan(),
-      estimates->get_npol(),
-      estimates->get_ndat(),
-      estimates->get_ndim());
+      "sums",
+      sums->get_dattfp(),
+      sums->get_nchan(),
+      sums->get_npol(),
+      sums->get_ndat(),
+      sums->get_ndim());
 
     float_reporter.emit(
       "estimates_tscr",
@@ -447,7 +449,7 @@ void dsp::SpectralKurtosis::compute ()
 
   if (engine)
   {
-    engine->compute (compute_input, estimates, estimates_tscr, M);
+    engine->compute (compute_input, sums, estimates_tscr, M);
   }
   else
   {
@@ -460,9 +462,9 @@ void dsp::SpectralKurtosis::compute ()
     }
 
     float S1_sum, S2_sum;
-    float * outdat = estimates->get_dattfp();
+    float * outdat = sums->get_dattfp();
 
-    const unsigned int out_ndim = estimates->get_ndim();
+    const unsigned int out_ndim = sums->get_ndim();
     assert (out_ndim == 2);
 
     switch (compute_input->get_order())
@@ -509,7 +511,7 @@ void dsp::SpectralKurtosis::compute ()
                 S2_tscr [out_index] += S2_sum;
               }
 
-              // store the S1 and S2 estimates for later SK calculation
+              // store the S1 and S2 sums for later SK calculation
               if (S1_sum == 0)
                 outdat[out_index*2] = outdat[out_index*2+1] = 0;
               else
@@ -572,7 +574,7 @@ void dsp::SpectralKurtosis::compute ()
                 S2_tscr [out_index] += S2_sum;
               }
 
-              // store the S1 and S2 estimates for later SK calculation
+              // store the S1 and S2 sums for later SK calculation
               if (S1_sum == 0)
                 outdat[out_index*2] = outdat[out_index*2+1] = 0;
               else
@@ -806,7 +808,7 @@ void dsp::SpectralKurtosis::detect_tscr ()
 
   if (engine)
   {
-    engine->detect_tscr (estimates, estimates_tscr, zapmask, upper, lower);
+    engine->detect_tscr (sums, estimates_tscr, zapmask, upper, lower);
     return;
   }
 
@@ -849,14 +851,18 @@ void dsp::SpectralKurtosis::detect_skfb (unsigned ires)
 
   if (engine)
   {
-    engine->detect_ft (estimates, zapmask, thresholds[1], thresholds[0]);
+    engine->detect_ft (sums, zapmask, thresholds[1], thresholds[0]);
     return;
   }
 
-  const float * indat    = estimates->get_dattfp();
+  const float * indat    = sums->get_dattfp();
   unsigned char * outdat = zapmask->get_datptr();
-  float V = 0;
+  const unsigned sum_ndim = sums->get_ndim();
+  assert (sum_ndim == 2);
+
   char zap;
+
+  const float M_fac = (float)(M+1) / (M-1);
 
   // compare SK estimator for each pol to expected values
   for (uint64_t ipart=0; ipart < npart; ipart++)
@@ -867,7 +873,12 @@ void dsp::SpectralKurtosis::detect_skfb (unsigned ires)
       zap = 0;
       for (unsigned ipol=0; ipol < npol; ipol++)
       {
-        V = indat[npol*ichan + ipol];
+        unsigned index = (npol*ichan + ipol) * sum_ndim;
+        float S1_sum = indat[index];
+        float S2_sum = indat[index+1];
+
+        float V = M_fac * (M * (S2_sum / (S1_sum * S1_sum)) - 1);
+
         if (V > thresholds[1] || V < thresholds[0])
         {
           zap = 1;
@@ -883,7 +894,7 @@ void dsp::SpectralKurtosis::detect_skfb (unsigned ires)
       }
     }
 
-    indat += nchan * npol;
+    indat += nchan * npol * sum_ndim;
     outdat += nchan;
   }
 }
@@ -923,15 +934,18 @@ void dsp::SpectralKurtosis::count_zapped ()
   if (engine)
   {
     int zapped = engine->count_mask (zapmask);
-    indat = engine->get_estimates (estimates);
+    indat = engine->get_estimates (sums);
     outdat = engine->get_zapmask(zapmask);
     zap_counts[ZAP_ALL] += zapped;
   }
   else
   {
-    indat    = estimates->get_dattfp();
+    indat  = sums->get_dattfp();
     outdat = zapmask->get_datptr();
   }
+
+  const unsigned sum_ndim = sums->get_ndim();
+  assert (sum_ndim == 2);
 
   unsigned ires = 0;
   unsigned M = resolution[ires].M;
@@ -940,7 +954,9 @@ void dsp::SpectralKurtosis::count_zapped ()
   unsigned overlap_offset = resolution[ires].overlap_offset;
   vector<float>& thresholds = resolution[ires].thresholds;
 
-  assert (npart == estimates->get_ndat());
+  const float M_fac = (float)(M+1) / (M-1);
+
+  assert (npart == sums->get_ndat());
   if (unfiltered_hits == 0)
   {
     filtered_sum.resize (npol * nchan);
@@ -959,22 +975,26 @@ void dsp::SpectralKurtosis::count_zapped ()
 
     for (unsigned ichan=channels[0]; ichan < channels[1]; ichan++)
     {
-      uint64_t index = (ipart*nchan + ichan) * npol;
-      unsigned outdex = ichan * npol;
-
-      unfiltered_sum[outdex] += indat[index];
-      if (npol == 2)
-        unfiltered_sum[outdex+1] += indat[index+1];
-
-      if (outdat[(ipart*nchan) + ichan] == 1)
+      for (unsigned ipol=0; ipol < npol; ipol++)
       {
-        zap_counts[ZAP_ALL] ++;
-        continue;
-      }
+        uint64_t index = ((ipart*nchan + ichan) * npol + ipol) * sum_ndim; 
+        unsigned outdex = ichan * npol + ipol;
 
-      filtered_sum[outdex] += indat[index];
-      if (npol == 2)
-        filtered_sum[outdex+1] += indat[index+1];
+        float S1_sum = indat[index];
+        float S2_sum = indat[index+1];
+
+        float V = M_fac * (M * (S2_sum / (S1_sum * S1_sum)) - 1);
+
+        unfiltered_sum[outdex] += V;
+
+        if (outdat[(ipart*nchan) + ichan] == 1)
+        {
+          zap_counts[ZAP_ALL] ++;
+          continue;
+        }
+
+        filtered_sum[outdex] += V;
+      }
 
       filtered_hits[ichan] ++;
     }
@@ -1004,15 +1024,20 @@ void dsp::SpectralKurtosis::detect_fscr (unsigned ires)
     // cerr << "dsp::SpectralKurtosis::detect_fscr:" <<
     //   " upper=" << upper <<
     //   " lower=" << lower << endl;
-    // engine->detect_fscr (estimates, zapmask, lower, upper, channels[0], channels[1]);
+    // engine->detect_fscr (sums, zapmask, lower, upper, channels[0], channels[1]);
 
-    engine->detect_fscr (estimates, zapmask, mu2, std_devs, channels[0], channels[1]);
+    engine->detect_fscr (sums, zapmask, mu2, std_devs, channels[0], channels[1]);
 
     return;
   }
 
-  const float * indat  = estimates->get_dattfp();
+  const float * indat  = sums->get_dattfp();
   unsigned char * outdat = zapmask->get_datptr();
+
+  const unsigned sum_ndim = sums->get_ndim();
+  assert (sum_ndim == 2);
+
+  const float M_fac = (float)(M+1) / (M-1);
 
   float sk_avg;
   unsigned sk_avg_cnt = 0;
@@ -1033,7 +1058,13 @@ void dsp::SpectralKurtosis::detect_fscr (unsigned ires)
       {
         if (outdat[ichan] == 0)
         {
-          sk_avg += indat[ichan*npol + ipol];
+          unsigned index = (npol*ichan + ipol) * sum_ndim;
+          float S1_sum = indat[index];
+          float S2_sum = indat[index+1];
+
+          float V = M_fac * (M * (S2_sum / (S1_sum * S1_sum)) - 1);
+
+          sk_avg += V;
           sk_avg_cnt++;
         }
       }
@@ -1142,6 +1173,6 @@ void dsp::SpectralKurtosis::mask ()
 void dsp::SpectralKurtosis::insertsk ()
 {
   if (engine)
-    engine->insertsk (estimates, output, resolution.front().M);
+    engine->insertsk (sums, output, resolution.front().M);
 }
 
