@@ -169,6 +169,14 @@ namespace dsp {
       //! frequency channels to be zapped
       mutable std::vector<bool> channels;
 
+      //! lower and upper thresholds of excision limits
+      std::vector<float> thresholds;
+
+      //! number of samples used in each SK estimate
+      unsigned M;
+
+      bool built;
+
     public:
 
       Resolution ()
@@ -176,6 +184,7 @@ namespace dsp {
         M = overlap_offset = 128; noverlap = 1;
         npart = output_ndat = 0;
         std_devs = 3.0;
+        built = false;
       }
 
       //! Add a range of frequency channels to be zapped
@@ -190,7 +199,8 @@ namespace dsp {
       const std::vector<bool>& get_channels (unsigned nchan) const;
       
       //! number of samples used in each SK estimate
-      unsigned M;
+      unsigned get_M () const { return M; }
+      void set_M (unsigned);
 
       //! oversampling factor
       /* NZAPP-206 WvS: I called this "noverlap" instead of oversampling_factor

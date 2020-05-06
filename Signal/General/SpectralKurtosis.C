@@ -138,6 +138,9 @@ void dsp::SpectralKurtosis::load_configuration (const std::string& filename)
   if (node.IsSequence())
     nres = node.size();
 
+  cerr << "dsp::SpectralKurtosis::load_configuration " << filename << endl;
+  cerr << "dsp::SpectralKurtosis::load_configuration nodes=" << nres << endl;
+
   resolution.resize( nres );
 
   for (unsigned ires=0; ires<nres; ires++)
@@ -817,7 +820,8 @@ void dsp::SpectralKurtosis::set_thresholds (float _std_devs)
     resolution[ires].set_thresholds (_std_devs, verbose);
 }
 
-void dsp::SpectralKurtosis::Resolution::set_thresholds (float _std_devs, bool verbose)
+void dsp::SpectralKurtosis::Resolution::set_thresholds (float _std_devs,
+                                                        bool verbose)
 {
   std_devs = _std_devs;
 
@@ -1076,10 +1080,10 @@ void dsp::SpectralKurtosis::detect_skfb (unsigned ires)
   if (verbose)
     cerr << "dsp::SpectralKurtosis::detect_skfb(" << ires << ")" << endl;
 
-  unsigned M = resolution[ires].M;
+  unsigned M = resolution[ires].get_M ();
   unsigned npart = resolution[ires].npart;
 
-  vector<float>& thresholds = resolution[ires].thresholds;
+  vector<float>& thresholds = resolution[ires].get_thresholds ();
   assert (thresholds.size() == 2);
 
   unsigned nflag = 1;
