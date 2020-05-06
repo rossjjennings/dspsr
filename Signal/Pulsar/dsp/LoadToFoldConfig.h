@@ -111,6 +111,9 @@ namespace dsp {
     // apply spectral kurtosis filterbank
     bool sk_zap;
 
+    // load spectral kurtosis configuration from YAML file
+    std::string sk_config;
+
     // also produce the non-zapped version of the output
     bool nosk_too;
 

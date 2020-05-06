@@ -37,6 +37,9 @@ namespace dsp {
 
     bool get_order_supported (TimeSeries::Order order) const;
 
+    //! Load configuration from YAML filename
+    void load_configuration (const std::string& filename);
+
     void set_M (unsigned _M) { resolution[0].M = _M; }
     void set_M (const std::vector<unsigned>&);
 

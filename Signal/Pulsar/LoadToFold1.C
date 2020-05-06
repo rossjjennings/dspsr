@@ -399,7 +399,7 @@ void dsp::LoadToFold::construct () try
       }
 
       // Get order of operations correct
-      if (!convolve_when == Filterbank::Config::Before){
+      if (convolve_when != Filterbank::Config::Before){
         operations.push_back (filterbank.get());
       }
     }

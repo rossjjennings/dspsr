@@ -5,9 +5,17 @@
  *
  ***************************************************************************/
 
+#if HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 #include "dsp/SpectralKurtosis.h"
 #include "dsp/InputBuffering.h"
 #include "dsp/SKLimits.h"
+
+#if HAVE_YAMLCPP
+#include <yaml-cpp/yaml.h>
+#endif
 
 #include <errno.h>
 #include <assert.h>
@@ -95,6 +103,18 @@ void dsp::SpectralKurtosis::set_engine (Engine* _engine)
   if (verbose)
     cerr << "dsp::SpectralKurtosis::set_engine()" << endl;
   engine = _engine;
+}
+
+//! Load configuration from YAML filename
+void dsp::SpectralKurtosis::load_configuration (const std::string& filename)
+{
+#if HAVE_YAMLCPP
+  YAML::Node node = YAML::LoadFile(filename);
+
+#else
+  throw Error (InvalidState, "dsp::SpectralKurtosis::load_configuration",
+               "not implemented - requires yaml-cpp");
+#endif 
 }
 
 void dsp::SpectralKurtosis::set_zero_DM_input (TimeSeries* _zero_DM_input)

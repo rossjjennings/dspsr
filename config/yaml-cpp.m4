@@ -23,25 +23,28 @@ AC_DEFUN([SWIN_LIB_YAMLCPP],
       with_yamlcpp_dir=
     fi
 
+    YAMLCPP_CFLAGS="`pkg-config --cflags yaml-cpp`"
+    YAMLCPP_LIBS="`pkg-config --libs yaml-cpp`"
+
     have_yamlcpp="not found"
 
     ac_save_CPPFLAGS="$CPPFLAGS"
     ac_save_LIBS="$LIBS"
 
-    CPPFLAGS="`pkg-config --cflags yaml-cpp` $CPPFLAGS"
-    LIBS="`pkg-config --libs yaml-cpp` $LIBS"
+    CPPFLAGS="$YAMLCPP_CFLAGS $CPPFLAGS"
+    LIBS="$YAMLCPP_LIBS $LIBS"
 
     AC_LANG_PUSH(C++)
 
     AC_TRY_LINK([#include <yaml-cpp/yaml.h>], 
                 [YAML::Node primes = YAML::Load("");],
-                have_yamlcpp=yes, have_mark5access=no)
+                have_yamlcpp=yes, have_yamlcpp=no)
 
     AC_LANG_POP(C++)
 
-    if test $have_yamlcpp = yes; then
-      YAMLCPP_CFLAGS="`pkg-config --cflags yamlcpp`"
-      YAMLCPP_LIBS="`pkg-config --libs yamlcpp`"
+    if test "$have_yamlcpp" != "yes"; then
+      YAMLCPP_CFLAGS=""
+      YAMLCPP_LIBS=""
     fi
 
     LIBS="$ac_save_LIBS"
