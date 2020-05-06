@@ -105,7 +105,10 @@ namespace dsp
   {
     public:
 
-      //! Offset to conver unsigned integers to signed integers
+      //! Default contructor
+      Extension () { zero_off = 0.0; }
+
+      //! Offset to convert unsigned integers to signed integers
       float zero_off;
 
       //! Store reference spectrum
