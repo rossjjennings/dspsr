@@ -161,6 +161,17 @@ namespace dsp {
 
     class Resolution
     {
+    private:
+      
+      //! frequency channels to be zapped
+      mutable std::vector<bool> channels;
+
+      //! ranges of frequency channels to be zapped
+      std::vector< std::pair<unsigned,unsigned> > include;
+
+      //! ranges of frequency channels not to be zapped
+      std::vector< std::pair<unsigned,unsigned> > exclude;
+      
     public:
 
       Resolution ()
@@ -170,6 +181,17 @@ namespace dsp {
         std_devs = 3.0;
       }
 
+      //! Add a range of frequency channels to be zapped
+      /*! from first to second inclusive; e.g. (0,1023) = 1024 channels */
+      void add_include (const std::pair<unsigned, unsigned>&);
+
+      //! Add a range of frequency channels not to be zapped
+      /*! from first to second inclusive; e.g. (0,1023) = 1024 channels */
+      void add_exclude (const std::pair<unsigned, unsigned>&);
+
+      //! Get the channels to be zapped
+      const std::vector<bool>& get_channels (unsigned nchan) const;
+      
       //! number of samples used in each SK estimate
       unsigned M;
 
@@ -252,9 +274,6 @@ namespace dsp {
     std::vector<uint64_t> thresholds_tscr_m;
     std::vector<float> thresholds_tscr_lower;
     std::vector<float> thresholds_tscr_upper;
-
-    //! channel range to compute and apply SK excisions
-    std::vector<unsigned> channels;
 
     //! samples zapped by type [0:all, 1:sk, 2:fscr, 3:tscr]
     std::vector<uint64_t> zap_counts;

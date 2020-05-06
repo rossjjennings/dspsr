@@ -32,7 +32,6 @@ dsp::SpectralKurtosis::SpectralKurtosis()
   zapmask = new BitSeries;
 
   // SK Detector
-  channels.resize(2);
   npart_total = 0;
   thresholds_tscr_m.resize(1);
   thresholds_tscr_upper.resize(1);
@@ -208,6 +207,53 @@ void dsp::SpectralKurtosis::Resolution::compatible (Resolution& smaller)
                  overlap_offset, smaller.M);
 }
 
+
+void dsp::SpectralKurtosis::Resolution::add_include
+(const std::pair<unsigned, unsigned>& range)
+{
+  include.push_back(range);
+}
+
+void dsp::SpectralKurtosis::Resolution::add_exclude
+(const std::pair<unsigned, unsigned>& range)
+{
+  exclude.push_back(range);
+}
+
+void set_mask (vector<bool>& mask,
+	       const vector< pair<unsigned,unsigned> >& ranges, bool value)
+{
+  for (unsigned irange=0; irange<ranges.size(); irange++)
+  {
+    unsigned first = ranges[irange].first;
+    unsigned last = ranges[irange].second;
+
+    assert (last < mask.size());
+    
+    for (unsigned imask=first; imask <= last; imask++)
+      mask[imask] = value;
+  }
+}
+    
+//! Get the channels to be zapped
+const std::vector<bool>&
+dsp::SpectralKurtosis::Resolution::get_channels (unsigned nchan) const
+{
+  if (nchan == channels.size())
+    return channels;
+
+  channels.resize (nchan);
+
+  if (include.size() == 0)
+    std::fill (channels.begin(), channels.end(), true);
+  else
+    std::fill (channels.begin(), channels.end(), true);
+
+  set_mask (channels, include, true);
+  set_mask (channels, exclude, false);
+  
+  return channels;
+}
 
 /*
  * These are preparations that could be performed once at the start of
@@ -718,8 +764,7 @@ void dsp::SpectralKurtosis::Resolution::set_thresholds (float _std_devs, bool ve
 
 void dsp::SpectralKurtosis::set_channel_range (unsigned start, unsigned end)
 {
-  channels[0] = start;
-  channels[1] = end;
+  resolution[0].add_include( pair<unsigned,unsigned> (start, end-1) );
 }
 
 void dsp::SpectralKurtosis::set_options (bool _disable_fscr,
@@ -734,10 +779,6 @@ void dsp::SpectralKurtosis::detect ()
 {
   if (verbose)
     cerr << "dsp::SpectralKurtosis::detect" << endl;
-
-  // if no end channel was specified, do them all
-  if (channels[1] == 0)
-    channels[1] = nchan;
 
   if (verbose || debugd < 1)
   {
@@ -924,8 +965,13 @@ void dsp::SpectralKurtosis::detect_tscr ()
     return;
   }
 
-  for (uint64_t ichan=channels[0]; ichan < channels[1]; ichan++)
+  const vector<bool>& channels = resolution.front().get_channels(nchan);
+  
+  for (uint64_t ichan=0; ichan < nchan; ichan++)
   {
+    if (!channels[ichan])
+      continue;
+    
     zap_chan = 0;
     for (unsigned ipol=0; ipol < npol; ipol++)
     {
@@ -991,6 +1037,8 @@ void dsp::SpectralKurtosis::detect_skfb (unsigned ires)
 
   const float M_fac = (float)(M+1) / (M-1);
 
+  const vector<bool>& channels = resolution[ires].get_channels(nchan);
+
   // compare SK estimator for each pol to expected values
   for (uint64_t ipart=0; ipart < npart; ipart++)
   {
@@ -1000,8 +1048,7 @@ void dsp::SpectralKurtosis::detect_skfb (unsigned ires)
       zap = 0;
 
       // only count skfb zapped channels in the in-band region
-      bool count_zapped = 
-        (ires == 0) && (ichan > channels[0]) && (ichan < channels[1]);
+      bool count_zapped = (ires == 0) && channels[ichan];
  
       for (unsigned ipol=0; ipol < npol; ipol++)
       {
@@ -1088,12 +1135,17 @@ void dsp::SpectralKurtosis::count_zapped ()
     std::fill (unfiltered_sum.begin(), unfiltered_sum.end(), 0);
   }
 
+  const vector<bool>& channels = resolution[ires].get_channels(nchan);
+
   for (uint64_t ipart=0; ipart < npart; ipart++)
   {
     unfiltered_hits ++;
 
-    for (unsigned ichan=channels[0]; ichan < channels[1]; ichan++)
+    for (unsigned ichan=0; ichan < nchan; ichan++)
     {
+      if (!channels[ichan])
+	continue;
+      
       for (unsigned ipol=0; ipol < npol; ipol++)
       {
         uint64_t index = ((ipart*nchan + ichan) * npol + ipol) * sum_ndim; 
@@ -1142,8 +1194,15 @@ void dsp::SpectralKurtosis::detect_fscr (unsigned ires)
     //   " lower=" << lower << endl;
     // engine->detect_fscr (sums, zapmask, lower, upper, channels[0], channels[1]);
 
-    engine->detect_fscr (sums, zapmask, mu2, std_devs, channels[0], channels[1]);
-
+    /*
+      NZAPP-207: WvS 2020-05-06 GPU interface needs to be updated to receive
+      a mask of bool for each channel, instead of a single start/end range
+    */
+    unsigned ichan_start = 0;
+    unsigned ichan_end = nchan;
+    
+    engine->detect_fscr (sums, zapmask, mu2, std_devs, ichan_start, ichan_end);
+    
     return;
   }
 
@@ -1172,6 +1231,8 @@ void dsp::SpectralKurtosis::detect_fscr (unsigned ires)
     flag_offset = nflag * flag_step / resolution[ires].noverlap;
   }
 
+  const vector<bool>& channels = resolution[ires].get_channels(nchan);
+    
   // foreach SK integration
   for (uint64_t ipart=0; ipart < npart; ipart++)
   {
@@ -1181,9 +1242,9 @@ void dsp::SpectralKurtosis::detect_fscr (unsigned ires)
       sk_avg = 0;
       sk_avg_cnt = 0;
 
-      for (unsigned ichan=channels[0]; ichan < channels[1]; ichan++)
+      for (unsigned ichan=0; ichan < nchan; ichan++)
       {
-        if (outdat[ichan] == 0)
+        if (channels[ichan] && outdat[ichan] == 0)
         {
           unsigned index = (npol*ichan + ipol) * sum_ndim;
           float S1_sum = indat[index];
