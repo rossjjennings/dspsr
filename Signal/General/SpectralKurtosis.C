@@ -138,8 +138,10 @@ void dsp::SpectralKurtosis::load_configuration (const std::string& filename)
   if (node.IsSequence())
     nres = node.size();
 
+#if _DEBUG
   cerr << "dsp::SpectralKurtosis::load_configuration " << filename << endl;
   cerr << "dsp::SpectralKurtosis::load_configuration nodes=" << nres << endl;
+#endif
 
   resolution.resize( nres );
 
@@ -346,7 +348,7 @@ dsp::SpectralKurtosis::Resolution::get_channels (unsigned nchan) const
   if (include.size() == 0)
     std::fill (channels.begin(), channels.end(), true);
   else
-    std::fill (channels.begin(), channels.end(), true);
+    std::fill (channels.begin(), channels.end(), false);
 
   set_mask (channels, include, true);
   set_mask (channels, exclude, false);
