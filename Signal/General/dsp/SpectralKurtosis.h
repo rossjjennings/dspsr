@@ -40,7 +40,7 @@ namespace dsp {
     //! Load configuration from YAML filename
     void load_configuration (const std::string& filename);
 
-    void set_M (unsigned _M) { resolution[0].M = _M; }
+    void set_M (unsigned _M) { resolution[0].set_M( _M ); }
     void set_M (const std::vector<unsigned>&);
 
     //! Set the number of overlapping regions per time sample
@@ -64,14 +64,16 @@ namespace dsp {
     void prepare_output ();
 
     //! The number of time samples used to calculate the SK statistic
-    unsigned get_M () const { return resolution[0].M; }
+    unsigned get_M () const
+    { return resolution[0].get_M(); }
 
     //! The excision threshold in number of standard deviations
-    unsigned get_excision_threshold () const { return resolution[0].std_devs; }
+    unsigned get_excision_threshold () const
+    { return resolution[0].get_std_devs(); }
 
     //! Total SK statistic for each poln/channel, post filtering
     void get_filtered_sum (std::vector<float>& sum) const
-    {  sum = filtered_sum; }
+    { sum = filtered_sum; }
 
     //! Hits on filtered average for each channel
     void get_filtered_hits (std::vector<uint64_t>& hits) const
@@ -170,12 +172,17 @@ namespace dsp {
       mutable std::vector<bool> channels;
 
       //! lower and upper thresholds of excision limits
-      std::vector<float> thresholds;
+      mutable std::vector<float> thresholds;
 
       //! number of samples used in each SK estimate
       unsigned M;
 
-      bool built;
+      //! Standard deviation used to compute thresholds
+      float std_devs;
+      
+      //! compute the min and max SK thresholds
+      void set_thresholds (float _std_devs, bool verbose = false) const;
+
 
     public:
 
@@ -184,7 +191,6 @@ namespace dsp {
         M = overlap_offset = 128; noverlap = 1;
         npart = output_ndat = 0;
         std_devs = 3.0;
-        built = false;
       }
 
       //! Add a range of frequency channels to be zapped
@@ -222,15 +228,13 @@ namespace dsp {
       //! ensure that this shares boundaries with that
       void compatible (Resolution& that);
 
-      //! compute the min and max SK thresholds
-      void set_thresholds (float _std_devs, bool verbose = false);
-
       //! number of std devs used to calculate excision limits
-      float std_devs;
+      float get_std_devs () const { return std_devs; }
+      void set_std_devs (float);
 
       //! lower and upper thresholds of excision limits
-      std::vector<float> thresholds;
-
+      const std::vector<float>& get_thresholds () const;
+      
       //! ranges of frequency channels to be zapped
       std::vector< std::pair<unsigned,unsigned> > include;
 
