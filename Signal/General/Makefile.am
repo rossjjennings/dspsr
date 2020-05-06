@@ -113,7 +113,7 @@ check_PROGRAMS = test_PolnCalibration test_OptimalFFT
 test_PolnCalibration_SOURCES = test_PolnCalibration.C
 test_OptimalFFT_SOURCES = test_OptimalFFT.C
 
-libdspdsp_la_LIBADD =
+libdspdsp_la_LIBADD = @YAMLCPP_LIBS@
 
 if HAVE_PGPLOT
 
@@ -198,7 +198,7 @@ include $(top_srcdir)/config/Makefile.cuda
 LDADD = libdspdsp.la \
 	$(top_builddir)/Kernel/libdspbase.la \
 	$(top_builddir)/Signal/Statistics/libdspstats.la \
-	@PGPLOT_LIBS@ @CUDA_LIBS@
+	@PGPLOT_LIBS@ @CUDA_LIBS@ @YAMLCPP_LIBS@
 
 AM_CPPFLAGS += @PGPLOT_CFLAGS@ @CUFFT_CFLAGS@ @CFITSIO_CFLAGS@
 AM_CXXFLAGS = @OPENMP_CFLAGS@
@@ -210,3 +210,5 @@ else
 LDADD += @CUFFT_LIBS@
 endif
 endif
+
+

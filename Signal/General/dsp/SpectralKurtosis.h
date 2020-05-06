@@ -37,6 +37,9 @@ namespace dsp {
 
     bool get_order_supported (TimeSeries::Order order) const;
 
+    //! Load configuration from YAML filename
+    void load_configuration (const std::string& filename);
+
     void set_M (unsigned _M) { resolution[0].M = _M; }
     void set_M (const std::vector<unsigned>&);
 
@@ -166,12 +169,6 @@ namespace dsp {
       //! frequency channels to be zapped
       mutable std::vector<bool> channels;
 
-      //! ranges of frequency channels to be zapped
-      std::vector< std::pair<unsigned,unsigned> > include;
-
-      //! ranges of frequency channels not to be zapped
-      std::vector< std::pair<unsigned,unsigned> > exclude;
-      
     public:
 
       Resolution ()
@@ -223,6 +220,12 @@ namespace dsp {
 
       //! lower and upper thresholds of excision limits
       std::vector<float> thresholds;
+
+      //! ranges of frequency channels to be zapped
+      std::vector< std::pair<unsigned,unsigned> > include;
+
+      //! ranges of frequency channels not to be zapped
+      std::vector< std::pair<unsigned,unsigned> > exclude;
     };
 
     std::vector<Resolution> resolution;

@@ -310,6 +310,11 @@ void parse_options (int argc, char** argv) try
   arg = menu.add (config->sk_chan_end, "skz_end", "chan");
   arg->set_help ("last channel where signal is expected");
 
+#if HAVE_YAMLCPP
+  arg = menu.add (config->sk_config, "skz_config", "sk.yaml");
+  arg->set_help ("load SK configuration from YAML file");
+#endif
+
   arg = menu.add (config->sk_no_fscr, "skz_no_fscr");
   arg->set_help ("do not use SKDetector Fscrunch feature");
 
