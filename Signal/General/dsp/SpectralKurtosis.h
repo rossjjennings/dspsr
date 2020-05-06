@@ -169,12 +169,6 @@ namespace dsp {
       //! frequency channels to be zapped
       mutable std::vector<bool> channels;
 
-      //! ranges of frequency channels to be zapped
-      std::vector< std::pair<unsigned,unsigned> > include;
-
-      //! ranges of frequency channels not to be zapped
-      std::vector< std::pair<unsigned,unsigned> > exclude;
-      
     public:
 
       Resolution ()
@@ -226,6 +220,12 @@ namespace dsp {
 
       //! lower and upper thresholds of excision limits
       std::vector<float> thresholds;
+
+      //! ranges of frequency channels to be zapped
+      std::vector< std::pair<unsigned,unsigned> > include;
+
+      //! ranges of frequency channels not to be zapped
+      std::vector< std::pair<unsigned,unsigned> > exclude;
     };
 
     std::vector<Resolution> resolution;

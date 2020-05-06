@@ -1,6 +1,6 @@
 /***************************************************************************
  *
- *   Copyright (C) 2016 by Andrew Jameson
+ *   Copyright (C) 2020 by Andrew Jameson and Willem van Straten
  *   Licensed under the Academic Free License version 2.1
  *
  ***************************************************************************/
@@ -105,11 +105,66 @@ void dsp::SpectralKurtosis::set_engine (Engine* _engine)
   engine = _engine;
 }
 
+#if HAVE_YAMLCPP
+void parse_ranges (YAML::Node node,
+		   vector< pair<unsigned,unsigned> >& ranges)
+{
+  if (!node.IsSequence())
+    throw Error (InvalidState, "parse_ranges",
+		 "YAML::Node is not a sequence");
+
+  if (node[0].IsSequence())
+  {
+    for (unsigned i=0; i < node.size(); i++)
+      parse_ranges (node[i], ranges);
+    return;
+  }
+
+  std::pair<unsigned,unsigned> range;
+  range = node.as< std::pair<unsigned,unsigned> >();
+  ranges.push_back(range);
+}
+#endif
+
 //! Load configuration from YAML filename
 void dsp::SpectralKurtosis::load_configuration (const std::string& filename)
 {
 #if HAVE_YAMLCPP
   YAML::Node node = YAML::LoadFile(filename);
+
+  unsigned nres = 1;
+
+  // different resolutions are specified in a sequence
+  if (node.IsSequence())
+    nres = node.size();
+
+  resolution.resize( nres );
+
+  for (unsigned ires=0; ires<nres; ires++)
+  {
+    YAML::Node one;
+    if (node.IsSequence())
+      one = node[ires];
+    else
+      one = node;
+
+    if ( !one["M"] )
+      throw Error (InvalidState, "SpectralKurtosis::load_configuration",
+		   "M not specified for resolution[%u]", ires);
+
+    resolution[ires].M = one["M"].as<unsigned>();
+
+    // the rest are optional
+    
+    if ( one["overlap"] )
+      resolution[ires].noverlap = one["overlap"].as<unsigned>();
+
+    if ( one["exclude"] )
+      parse_ranges( one["exclude"], resolution[ires].exclude );
+
+    if ( one["include"] )
+      parse_ranges( one["include"], resolution[ires].include );
+  }
 
 #else
   throw Error (InvalidState, "dsp::SpectralKurtosis::load_configuration",
