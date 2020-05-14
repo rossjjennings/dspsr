@@ -54,6 +54,9 @@ namespace dsp {
     //! Get the Input from which data are read
     Input* get_input ();
 
+    //! Initialize resources required by signal procesing pipline
+    void initialize ();
+
     //! Build the signal processing pipeline
     void construct ();
 

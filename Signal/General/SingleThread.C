@@ -69,6 +69,7 @@ dsp::SingleThread::~SingleThread ()
 void dsp::SingleThread::set_configuration (Config* configuration)
 {
   config = configuration;
+  initialize ();
 }
 
 void dsp::SingleThread::take_ostream (std::ostream* newlog)
@@ -80,6 +81,53 @@ void dsp::SingleThread::take_ostream (std::ostream* newlog)
     delete log;
 
   log = newlog;
+}
+
+template<typename T>
+unsigned count (const std::vector<T>& data, T element)
+{
+  unsigned c = 0;
+  for (unsigned i=0; i<data.size(); i++)
+    if (data[i] == element)
+      c ++;
+  return c;
+}
+
+void dsp::SingleThread::initialize ()
+{
+  if (Operation::verbose)
+    cerr << "dsp::SingleThread::initialize" << endl;
+
+#if HAVE_CUDA
+  bool run_on_gpu = thread_id < config->get_cuda_ndevice();
+  cudaStream_t stream = 0;
+  if (run_on_gpu)
+  { 
+    gpu_device = config->cuda_device[thread_id];
+    cerr << "dspsr: thread " << thread_id
+         << " using CUDA device " << gpu_device << endl;
+
+    int ndevice = 0;
+    cudaError err = cudaGetDeviceCount(&ndevice);
+    
+    if (err != cudaSuccess || gpu_device >= ndevice)
+      throw Error (InvalidParam, "dsp::SingleThread::set_input",
+                   "device=%d >= ndevice=%d cudaError=%s", gpu_device, ndevice, cudaGetErrorString(err));
+ 
+    err = cudaSetDevice (gpu_device);
+    if (err != cudaSuccess)
+      throw Error (InvalidState, "dsp::SingleThread::set_input",
+                   "cudaMalloc failed: %s", cudaGetErrorString(err));
+    
+    unsigned nstream = count (config->cuda_device, (unsigned) gpu_device);
+    
+    // always create a stream, even for 1 thread
+    cudaStreamCreate( &stream );
+    cerr << "dspsr: thread " << thread_id << " on stream " << stream << endl;
+
+    gpu_stream = stream;
+  }
+#endif
 }
 
 //! Set the Input from which data will be read
@@ -175,16 +223,6 @@ dsp::TimeSeries* dsp::SingleThread::new_time_series ()
   }
 }
 
-template<typename T>
-unsigned count (const std::vector<T>& data, T element)
-{
-  unsigned c = 0;
-  for (unsigned i=0; i<data.size(); i++)
-    if (data[i] == element)
-      c ++;
-  return c;
-}
-
 void dsp::SingleThread::construct () try
 {
   TimeSeries::auto_delete = false;
@@ -214,33 +252,9 @@ void dsp::SingleThread::construct () try
 
   bool run_on_gpu = thread_id < config->get_cuda_ndevice();
 
-  cudaStream_t stream = 0;
-
   if (run_on_gpu)
   {
-    gpu_device = config->cuda_device[thread_id];
-    cerr << "dspsr: thread " << thread_id
-         << " using CUDA device " << gpu_device << endl;
-
-    int ndevice = 0;
-    cudaError err = cudaGetDeviceCount(&ndevice);
-
-    if (err != cudaSuccess || gpu_device >= ndevice)
-      throw Error (InvalidParam, "dsp::SingleThread::initialize",
-                   "device=%d >= ndevice=%d cudaError=%s", gpu_device, ndevice, cudaGetErrorString(err));
-
-    err = cudaSetDevice (gpu_device);
-    if (err != cudaSuccess)
-      throw Error (InvalidState, "dsp::SingleThread::initialize",
-                   "cudaMalloc failed: %s", cudaGetErrorString(err));
-
-    unsigned nstream = count (config->cuda_device, (unsigned) gpu_device);
-
-    // always create a stream, even for 1 thread
-    cudaStreamCreate( &stream );
-    cerr << "dspsr: thread " << thread_id << " on stream " << stream << endl;
-
-    gpu_stream = stream;
+    cudaStream_t stream = (cudaStream_t) gpu_stream;
     device_memory = new CUDA::DeviceMemory (stream, gpu_device);
     if (config->input_buffering)
       cerr << "dspsr: input_buffering enabled" << endl;
