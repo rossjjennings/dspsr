@@ -131,13 +131,14 @@ void dsp::FITSFile::open_file(const char* filename)
   Reference::To<Pulsar::FITSSUBHdrExtension> ext =
     archive->get<Pulsar::FITSSUBHdrExtension>();
 
-  if (ext) {
+  if (ext)
+  {
     nbits = ext->get_nbits();
     samples_in_row = ext->get_nsblk(); // Samples per row.
-  } else {
-    throw Error(InvalidState, "FITSFile::open_file",
-        "Could not access FITSSUBHdrExtension");
   }
+  else
+    throw Error (InvalidState, "FITSFile::open_file",
+                 "Could not access FITSSUBHdrExtension");
 
   const unsigned npol  = archive->get_npol();
   const unsigned nchan = archive->get_nchan();
@@ -291,6 +292,7 @@ int64_t dsp::FITSFile::load_bytes(unsigned char* buffer, uint64_t bytes)
   // Make sure buffer big enough for DAT_SCL/DAT_OFFS
   ext->dat_scl.resize(npol*nchan,1);
   ext->dat_offs.resize(npol*nchan,0);
+  ext->zero_off = zero_off;
 
   while (bytes_remaining > 0 && current_row <= nrow)
   {
