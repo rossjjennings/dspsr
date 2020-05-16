@@ -61,6 +61,8 @@ static dsp::Unpacker::Register::Enter<dsp::CASPSRUnpacker> caspsr;
 #endif
 
 #if HAVE_ska1
+#include "dsp/AAVS2Unpacker.h"
+static dsp::Unpacker::Register::Enter<dsp::AAVS2Unpacker> aavs2;
 #include "dsp/SKA1Unpacker.h"
 static dsp::Unpacker::Register::Enter<dsp::SKA1Unpacker> ska1;
 #include "dsp/LFAASPEADUnpacker.h"

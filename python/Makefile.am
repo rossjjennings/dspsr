@@ -18,11 +18,8 @@ _dspsr_la_LIBADD = \
 
 SWIG_FLAGS = -Wall -python -I$(top_builddir)/local_include @PSRCHIVE_INCLUDE@
 
-$(builddir)/dspsr_wrap.cxx: $(srcdir)/dspsr.i
-	$(SWIG) $(SWIG_FLAGS) -o $@ $<
-
-# ./dspsr_wrap.cxx: $(srcdir)/dspsr.i
-# 	$(SWIG) $(SWIG_FLAGS) -outdir $(builddir) $(srcdir)/dspsr.i
+./dspsr_wrap.cxx: $(srcdir)/dspsr.i
+	$(SWIG) $(SWIG_FLAGS) -outcurrentdir $(srcdir)/dspsr.i
 
 CLEANFILES = dspsr.py dspsr.pyc dspsr_wrap.cxx
 
