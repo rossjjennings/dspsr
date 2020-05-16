@@ -333,7 +333,10 @@ void dsp::UnloaderShare::nonblocking_unload (unsigned istore, Submit* submit)
       submit->cerr << "dsp::UnloaderShare::nonblocking_unload division="
                    << division << endl;
     
-    submit->unloader->unload( store->get_profiles() );
+    if (!submit->own_unloader)
+      submit->own_unloader = submit->shared_unloader->clone();
+
+    submit->own_unloader->unload( store->get_profiles() );
   }
   catch (Error& error)
   {
@@ -360,16 +363,16 @@ dsp::UnloaderShare::Submit* dsp::UnloaderShare::Submit::clone () const
 void dsp::UnloaderShare::Submit::set_cerr (std::ostream& os) const
 {
   PhaseSeriesUnloader::set_cerr (os);
-  if (unloader)
-    unloader->set_cerr (os);
+  if (shared_unloader)
+    shared_unloader->set_cerr (os);
 }
 
 //! Set the file unloader
 void dsp::UnloaderShare::Submit::set_unloader (dsp::PhaseSeriesUnloader* psu)
 {
-  unloader = psu;
-  if (unloader)
-    unloader->set_cerr (cerr);
+  shared_unloader = psu;
+  if (shared_unloader)
+    shared_unloader->set_cerr (cerr);
 }
 
 //! Unload the PhaseSeries data
@@ -379,8 +382,8 @@ void dsp::UnloaderShare::Submit::unload (const PhaseSeries* profiles) try
     cerr << "dsp::UnloaderShare::Submit::unload"
       " profiles=" << profiles << " contributor=" << contributor << endl;
 
-  if (unloader)
-    unloader->unload (profiles);
+  if (shared_unloader)
+    shared_unloader->unload (profiles);
   else
     parent->unload( profiles, this );
 }
