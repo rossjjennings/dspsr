@@ -14,15 +14,19 @@
 // #include "json.hpp"
 #include "toml.h"
 
+#include "config.h"
 #include "dsp/Apodization.h"
 #include "dsp/Response.h"
-#include "dsp/MemoryCUDA.h"
-#include "dsp/TransferCUDA.h"
 #include "dsp/Scratch.h"
 #include "dsp/IOManager.h"
 #include "dsp/Input.h"
 #include "dsp/TimeSeries.h"
 #include "Rational.h"
+
+#if HAVE_CUDA
+#include "dsp/MemoryCUDA.h"
+#include "dsp/TransferCUDA.h"
+#endif
 
 // using json = nlohmann::json;
 
