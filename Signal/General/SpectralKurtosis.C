@@ -282,6 +282,7 @@ void dsp::SpectralKurtosis::Resolution::prepare (uint64_t ndat)
     throw Error (InvalidState, "dsp::SpectralKurtosis::Resolution::prepare",
                  "noverlap=%u does not divide M=%u", noverlap, M);
 
+  // overlap_offset = idat_off in SpectralKurtosisInputBuffering.pptx
   overlap_offset = M / noverlap;
 
   if (ndat < M)
@@ -291,8 +292,17 @@ void dsp::SpectralKurtosis::Resolution::prepare (uint64_t ndat)
   }
   else
   {
+    // npart = N_block in SpectralKurtosisInputBuffering.pptx
     npart = (ndat-M) / overlap_offset + 1;
-    output_ndat = M + (npart-1) * overlap_offset;
+
+    /* with reference to diagram in SpectralKurtosisInputBuffering.pptx
+       where idat_off = overlap_offset     :NZAPP-208: WvS - 2020-05-19 */
+
+    uint64_t idat_last = M + (npart-1) * overlap_offset;
+    uint64_t idat_end = idat_last - overlap_offset;
+    unsigned idat_start = M - overlap_offset;
+
+    output_ndat = idat_end - idat_start;
   }
 }
 
@@ -455,7 +465,13 @@ void dsp::SpectralKurtosis::prepare_output ()
 
   // configure output timeseries (out-of-place) to match input
   output->copy_configuration (get_input());
-  output->set_input_sample (input->get_input_sample ());
+
+  /* NZAPP-208 - see SpectralKurtosisInputBuffering.pptx */
+  unsigned idat_off = resolution.back().overlap_offset;
+  unsigned idat_start = resolution.back().get_M() - idat_off;
+
+  output->set_input_sample (input->get_input_sample () + idat_start);
+  output->change_start_time (idat_start);
 
   if (zero_DM)
   {
@@ -485,18 +501,21 @@ void dsp::SpectralKurtosis::reserve ()
   }
 
   unsigned max_npart = resolution.front().npart;
-  unsigned max_output_ndat = resolution.front().output_ndat;
+  unsigned min_output_ndat = resolution.back().output_ndat;
+  unsigned max_M = resolution.back().get_M();
 
   if (verbose)
     cerr << "dsp::SpectralKurtosis::reserve input_ndat=" << ndat
          << " max npart=" << max_npart 
-         << " output_ndat=" << max_output_ndat << endl;
+         << " output_ndat=" << min_output_ndat << endl;
 
   // use resize since out of place operation
   sums->resize (max_npart);
   estimates_tscr->resize (max_npart > 0); // 1 if npart != 0
   zapmask->resize (max_npart);
-  output->resize (max_output_ndat);
+
+  // reserve space to hold one more than current
+  output->resize (min_output_ndat);
 }
 
 /* call set of transformations */
@@ -526,21 +545,20 @@ void dsp::SpectralKurtosis::transformation ()
   }
 
   unsigned max_npart = resolution.front().npart;
-  unsigned max_output_ndat = resolution.front().output_ndat;
+  unsigned min_output_ndat = resolution.back().output_ndat;
 
   if (verbose || debugd < 1)
     cerr << "dsp::SpectralKurtosis::transformation input max"
          << " npart=" << max_npart
-         << " output_ndat=" << max_output_ndat << endl;
+         << " output_ndat=" << min_output_ndat << endl;
 
   if (has_buffering_policy())
   {
     if (verbose || debugd < 1)
       cerr << "dsp::SpectralKurtosis::transformation setting next_start_sample="
-           << max_output_ndat << endl;
+           << min_output_ndat << endl;
 
-    // NZAPP-209 TO DO
-    get_buffering_policy()->set_next_start (max_output_ndat);
+    get_buffering_policy()->set_next_start (min_output_ndat);
 
     if (verbose)
       cerr << "dsp::SpectralKurtosis::transformation set_next_start done" << endl;
@@ -551,7 +569,7 @@ void dsp::SpectralKurtosis::transformation ()
     if (verbose)
       cerr << "dsp::SpectralKurtosis::transformation zero_DM_buffering_policy set_next_start " << endl;
  
-    get_zero_DM_buffering_policy()->set_next_start(max_output_ndat);
+    get_zero_DM_buffering_policy()->set_next_start(min_output_ndat);
   }
 
   prepare_output ();
@@ -1413,7 +1431,7 @@ void dsp::SpectralKurtosis::mask ()
   if (engine)
   {
     if (verbose)
-      cerr << "dsp::SpectralKurtosis::transformation: output->resize(" << output->get_ndat() << ")" << endl;
+      cerr << "dsp::SpectralKurtosis::mask output->resize(" << output->get_ndat() << ")" << endl;
     output->resize (output->get_ndat());
   }
 
@@ -1421,8 +1439,36 @@ void dsp::SpectralKurtosis::mask ()
   unsigned char * mask = zapmask->get_datptr ();
 
   unsigned M = resolution.front().get_M();
-  unsigned npart = resolution.front().npart;
+  // unsigned overlap = resolution.front().noverlap;
   unsigned overlap_offset = resolution.front().overlap_offset;
+
+  // NZAPP-208 WvS: the most samples are lost at the most coarse resolution
+  unsigned max_M = resolution.back().get_M();
+  unsigned max_overlap_offset = resolution.back().overlap_offset;
+  unsigned idat_start = max_M - max_overlap_offset;
+
+#if _DEBUG
+  cerr << "front.ndat=" << resolution.front().output_ndat << endl;
+  cerr << "back.ndat=" << resolution.back().output_ndat << endl;
+#endif
+
+  // the number of fine blocks to skip
+  unsigned nskip = idat_start / overlap_offset;
+  // the number of fine blocks to process
+  unsigned npart = (resolution.back().output_ndat - M) / overlap_offset + 1;
+
+#if _DEBUG
+  cerr << "front.npart=" << resolution.front().npart << endl;
+  cerr << "back.npart=" << resolution.back().npart << endl;
+  cerr << "npart=" << npart << " nskip=" << nskip << endl;
+#endif
+
+  assert ( idat_start % overlap_offset == 0 );
+  assert ( (resolution.back().output_ndat - M) % overlap_offset == 0 );
+  assert ( npart+nskip <= resolution.front().npart );
+
+  assert ( idat_start + resolution.back().output_ndat < input->get_ndat() );
+  assert ( resolution.back().output_ndat == output->get_ndat() );
 
   if (engine)
   {
@@ -1440,11 +1486,11 @@ void dsp::SpectralKurtosis::mask ()
     {
       for (unsigned ipol=0; ipol < npol; ipol++)
       {
-        const float * indat  = input->get_datptr(ichan, ipol);
+        const float * indat  = input->get_datptr(ichan, ipol) + idat_start;
         float * outdat = output->get_datptr(ichan, ipol);
         for (uint64_t ipart=0; ipart < npart; ipart++)
         {
-          if (mask[ipart*nchan+ichan])
+          if (mask[(ipart+nskip)*nchan+ichan])
           {
             for (unsigned j=0; j<nfloat; j++)
               outdat[j] = 0;
