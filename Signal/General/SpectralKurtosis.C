@@ -502,10 +502,12 @@ void dsp::SpectralKurtosis::reserve ()
 /* call set of transformations */
 void dsp::SpectralKurtosis::transformation ()
 {
-  if (zero_DM && has_zero_DM_buffering_policy())  {
-    if (verbose) {
-      cerr << "dsp::SpectralKurtosis::transformation zero_DM_buffering_policy pre_transformation" << endl;
-    }
+  if (zero_DM && has_zero_DM_buffering_policy())
+  {
+    if (verbose)
+      cerr << "dsp::SpectralKurtosis::transformation"
+              " zero_DM_buffering_policy pre_transformation" << endl;
+
     get_zero_DM_buffering_policy()->pre_transformation();
   }
 
@@ -543,6 +545,7 @@ void dsp::SpectralKurtosis::transformation ()
     if (verbose)
       cerr << "dsp::SpectralKurtosis::transformation set_next_start done" << endl;
   }
+
   if (zero_DM && has_zero_DM_buffering_policy())
   {
     if (verbose)
@@ -560,7 +563,8 @@ void dsp::SpectralKurtosis::transformation ()
     return;
 
   // perform SK functions
-  if (verbose) {
+  if (verbose)
+  {
     cerr << "dsp::SpectralKurtosis::transformation: calling compute" << endl;
     cerr << "dsp::SpectralKurtosis::transformation:: detection_flags=["
       << detection_flags[0] << ", "
@@ -569,11 +573,12 @@ void dsp::SpectralKurtosis::transformation ()
   }
 
   compute ();
-  if (verbose) {
-    cerr << "dsp::SpectralKurtosis::transformation: calling detect" << endl;
-  }
 
-  if (report) {
+  if (verbose)
+    cerr << "dsp::SpectralKurtosis::transformation: calling detect" << endl;
+
+  if (report)
+  {
     float_reporter.emit(
       "input",
       (float*) input->get_datptr(),
@@ -599,12 +604,13 @@ void dsp::SpectralKurtosis::transformation ()
       estimates_tscr->get_ndim());
   }
 
-
   detect ();
-  if (verbose) {
+
+  if (verbose)
     cerr << "dsp::SpectralKurtosis::transformation: calling mask" << endl;
-  }
-  if (report) {
+
+  if (report)
+  {
     char_reporter.emit(
       "zapmask",
       zapmask->get_datptr(),
@@ -615,11 +621,12 @@ void dsp::SpectralKurtosis::transformation ()
   }
 
   mask ();
-  if (verbose) {
-    cerr << "dsp::SpectralKurtosis::transformation: done" << endl;
-  }
 
-  if (report) {
+  if (verbose)
+    cerr << "dsp::SpectralKurtosis::transformation: done" << endl;
+
+  if (report)
+  {
     float_reporter.emit(
       "output",
       output->get_datptr(),
