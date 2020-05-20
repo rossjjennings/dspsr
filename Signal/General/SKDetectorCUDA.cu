@@ -230,7 +230,7 @@ __device__ float3 warp_reduce_sum (float3 val) {
 
 __global__ void reduce_sum_fscr_1pol (
   const float * input, unsigned char * out,
-  const unsigned nchan, const float mu2, const unsigned std_devs,
+  const unsigned nchan, const float mu2, const float std_devs,
   const unsigned schan, const unsigned echan
 )
 {
@@ -314,7 +314,7 @@ __global__ void reduce_sum_fscr_1pol (
 //!   analysis region
 __global__ void reduce_sum_fscr_2pol (
   const float2 * input, unsigned char * out,
-  const unsigned nchan, const float mu2, const unsigned std_devs,
+  const unsigned nchan, const float mu2, const float std_devs,
   const unsigned schan, const unsigned echan
 )
 {
@@ -393,7 +393,7 @@ __global__ void reduce_sum_fscr_2pol (
 // Here, npart is the original TimeSeries input ndat divided by ``M``
 void CUDA::SKDetectorEngine::detect_fscr (
   const dsp::TimeSeries* input, dsp::BitSeries* output,
-  const float mu2, const unsigned std_devs,
+  const float mu2, const float std_devs,
   unsigned schan, unsigned echan)
 {
   if (dsp::Operation::verbose) {
