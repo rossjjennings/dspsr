@@ -393,7 +393,7 @@ __global__ void reduce_sum_fscr_2pol (
 // Here, npart is the original TimeSeries input ndat divided by ``M``
 void CUDA::SKDetectorEngine::detect_fscr (
   const dsp::TimeSeries* input, dsp::BitSeries* output,
-  const float mu2, const unsigned std_devs,
+  const float mu2, const float std_devs,
   unsigned schan, unsigned echan)
 {
   if (dsp::Operation::verbose) {
