@@ -104,8 +104,18 @@ void dsp::SubFold::prepare ()
     divider.set_start_time (input->get_start_time());
   }
 
-  if (has_folding_predictor() && divider.get_turns())
-    divider.set_predictor (get_folding_predictor());
+  if (divider.get_turns())
+  {
+    if (has_folding_predictor())
+    {
+      divider.set_predictor (get_folding_predictor());
+    }
+    else 
+    {
+      cerr << "dsp::SubFold::prepare folding period=" << get_folding_period() << endl;
+      divider.set_period (get_folding_period());
+    }
+  }
 
   built = true;
 }

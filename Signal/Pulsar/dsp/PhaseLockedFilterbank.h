@@ -58,6 +58,9 @@ namespace dsp {
     const Pulsar::Predictor* get_folding_predictor() const
       { return bin_divider.get_predictor(); }
 
+    //! Get the folding period
+    double get_folding_period () const { return bin_divider.get_period(); }
+
     //! The phase divider
     TimeDivide bin_divider;
 
