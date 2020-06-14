@@ -187,6 +187,9 @@ namespace dsp {
     // number of sub-integrations written to a single file
     unsigned subints_per_archive;
 
+    // file naming convention
+    std::string filename_convention;
+
     void single_pulse()
     {
       integration_turns = 1;
@@ -206,6 +209,12 @@ namespace dsp {
     bool concurrent_archives ()
     {
       return integration_turns && !single_archiver_required();
+    }
+
+    // there may be more than one file per UTC second
+    bool may_be_more_than_one_archive_per_second ()
+    {
+      return integration_turns;
     }
 
     std::string reference_epoch;

@@ -520,6 +520,9 @@ void parse_options (int argc, char** argv) try
   arg = menu.add (config->archive_filename, 'O', "name");
   arg->set_help ("output filename");
 
+  arg = menu.add (config->filename_convention, "fname", "convention");
+  arg->set_help ("multiple output filename convention");
+
   arg = menu.add (config->pdmp_output, 'Y');
   arg->set_help ("output pdmp extras");
 

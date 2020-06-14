@@ -1395,7 +1395,9 @@ void dsp::LoadToFold::prepare_archiver( Archiver* archiver )
   FilenameEpoch* epoch_convention = 0;
   FilenameSequential* index_convention = 0;
 
-  if (config->concurrent_archives())
+  if (config->filename_convention == "mjd")
+    archiver->set_convention( new FilenameMJD(13) );
+  else if (config->concurrent_archives())
     archiver->set_convention( new FilenamePulse );
   else
   {
