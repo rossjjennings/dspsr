@@ -31,9 +31,9 @@ namespace dsp {
 
     void set_pfb_nchan (unsigned _pfb_nchan)  { pfb_nchan = _pfb_nchan; }
 
-    const unsigned get_pfb_nchan () const { return pfb_nchan; }
+    unsigned get_pfb_nchan () const { return pfb_nchan; }
 
-    const unsigned get_ntaps () const { return coeff.size(); }
+    unsigned get_ntaps () const { return coeff.size(); }
 
     void set_ntaps (unsigned ntaps);
 
@@ -57,7 +57,7 @@ namespace dsp {
     //   }
     // }
     // Deref operator[] (int i);
-    const float operator[](int i) const;
+    float operator[](int i) const;
     float& operator[](int i);
 
 

@@ -225,11 +225,6 @@ int64_t dsp::File::load_bytes_device (unsigned char* buffer, uint64_t bytes, voi
   {
     if (host_buffer)
     {
-      if (result != cudaSuccess)
-        throw Error (InvalidState, "dsp::File::load_bytes_device",
-                     "failed to synchronize cuda stream prior to buffer enlargement: %s",
-                     cudaGetErrorString (result));
-
       result = cudaFreeHost (host_buffer);
       if (result != cudaSuccess)
         throw Error (InvalidState, "dsp::File::load_bytes_device",

@@ -23,7 +23,7 @@ void dsp::FIRFilter::set_ntaps (unsigned ntaps) {
   coeff.resize(ntaps);
 }
 
-const float dsp::FIRFilter::operator[] (int i) const {
+float dsp::FIRFilter::operator[] (int i) const {
   return coeff[i];
 }
 
