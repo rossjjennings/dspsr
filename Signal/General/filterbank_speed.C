@@ -12,7 +12,7 @@
 #include "dsp/FilterbankConfig.h"
 #include "dsp/Memory.h"
 
-#if HAVE_CUDA
+#if HAVE_CUFFT
 #include "dsp/MemoryCUDA.h"
 #include <cuda_runtime.h>
 #endif
