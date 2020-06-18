@@ -35,13 +35,25 @@ void dsp::PhaseSeries::init ()
   hits_size = 0;
 }
 
+static int instance_count = 0;
+
 dsp::PhaseSeries::PhaseSeries () : TimeSeries()
 {
+  if (verbose)
+    cerr << "PhaseSeries ctor this=" << this 
+         << " instances=" << instance_count << endl;
+
+  instance_count ++;
   init ();
 }
 
 dsp::PhaseSeries::PhaseSeries (const PhaseSeries& profile) : TimeSeries ()
 {
+  if (verbose)
+    cerr << "PhaseSeries ctor this=" << this 
+         << " instances=" << instance_count << endl;
+
+  instance_count ++;
   init ();
   operator= (profile);
 }
@@ -49,7 +61,10 @@ dsp::PhaseSeries::PhaseSeries (const PhaseSeries& profile) : TimeSeries ()
 dsp::PhaseSeries::~PhaseSeries ()
 {
   if (verbose)
-    cerr << "dsp::PhaseSeries::~PhaseSeries this=" << this << " hits=" << hits << endl;
+    cerr << "PhaseSeries dtor this=" << this << " hits=" << hits 
+         << " instances=" << instance_count << endl;
+
+  instance_count --;
   if (hits)
     hits_memory->do_free(hits);
   hits = 0;
@@ -118,7 +133,7 @@ void dsp::PhaseSeries::set_folding_period (double _folding_period)
 }
 
 //! Get the average folding period
-double dsp::PhaseSeries::get_folding_period () const
+double dsp::PhaseSeries::get_folding_period () const try
 {
   if (!folding_predictor)
     return folding_period;
@@ -134,6 +149,10 @@ double dsp::PhaseSeries::get_folding_period () const
     cerr << "dsp::PhaseSeries::get_folding_period frequency=" << freq << endl;
   }
   return 1.0 / freq;
+}
+catch (Error& error)
+{
+  throw error += "dsp::PhaseSeries::get_folding_period";
 }
 
 void dsp::PhaseSeries::set_pulsar_ephemeris (const Pulsar::Parameters* eph)

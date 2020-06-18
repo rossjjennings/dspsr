@@ -18,7 +18,7 @@
 template<typename T>
 void Neville (T* xa, T* ya, unsigned n, T x, T& y, T& dy)
 {
-  unsigned i,m,ns=0;
+  unsigned ns=0;
 
   std::vector<T> c (n);
   std::vector<T> d (n);

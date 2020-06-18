@@ -5,13 +5,14 @@
  *
  ***************************************************************************/
 
+#include "dsp/on_host.h"
+
 #include "dsp/Archiver.h"
 #include "dsp/PhaseSeries.h"
 #include "dsp/Response.h"
 #include "dsp/Operation.h"
 #include "dsp/TwoBitCorrection.h"
 #include "dsp/OutputArchive.h"
-#include "dsp/on_host.h"
 
 #include "Pulsar/Interpreter.h"
 #include "Pulsar/Integration.h"
@@ -122,6 +123,11 @@ Pulsar::Archive* dsp::Archiver::get_archive ()
   return single_archive;
 }
 
+bool dsp::Archiver::has_archive () const
+{
+  return single_archive;
+}
+
 //! Set the post-processing script
 void dsp::Archiver::set_script (const std::vector<std::string>& jobs)
 { 
@@ -144,7 +150,14 @@ Pulsar::Archive* dsp::Archiver::new_Archive() const
     {
       if (verbose > 2)
         cerr << "dsp::Archiver::new_Archive using OutputArchive policy" << endl;
-      return out->new_Archive();
+
+      Pulsar::Archive* output = out->new_Archive();
+
+      if (verbose > 2)
+        cerr << "dsp::Archiver::new_Archive output=" << output 
+             << " nsubint=" << output->get_nsubint() << endl;
+
+      return output;
     }
   }
   catch (Error& error)
@@ -156,6 +169,7 @@ Pulsar::Archive* dsp::Archiver::new_Archive() const
 
   if (verbose > 2)
     cerr << "dsp::Archiver::new_Archive new " << archive_class_name << endl;
+
   return Pulsar::Archive::new_Archive (archive_class_name);
 }
 
@@ -249,25 +263,7 @@ void dsp::Archiver::unload (const PhaseSeries* _profiles) try
 
   set (archive, profiles);
 
-  if (script.size()) try
-  {
-    if (verbose > 2)
-      cerr << "dsp::Archiver::unload post-processing" << endl;
-
-    if (!interpreter)
-      interpreter = standard_shell();
-
-    interpreter->set( archive );
-    interpreter->script( script );
-  }
-  catch (Error& error)
-  {
-    if (verbose)
-      cerr << "dsp::Archiver::unload post-processing "
-           << archive->get_filename() << " failed:\n"
-           << error.get_message() << endl;
-    return;
-  }
+  postprocess (archive);
 
   if (verbose > 2)
     cerr << "dsp::Archiver::unload archive '"
@@ -276,7 +272,10 @@ void dsp::Archiver::unload (const PhaseSeries* _profiles) try
   RealTimer timer;
   if (dsp::Operation::record_time)
     timer.start();
-    
+
+  if (verbose > 2)
+    cerr << "dsp::Archiver::unload archive=" << archive.get() << endl;
+
   archive -> unload();
   
   if (dsp::Operation::record_time)
@@ -304,25 +303,10 @@ void dsp::Archiver::finish () try
        << single_archive->get_filename() << "' with "
        << single_archive->get_nsubint () << " integrations" << endl;
 
-  if (script.size()) try
-  {
-    if (verbose > 2)
-      cerr << "dsp::Archiver::finish post-processing" << endl;
+  postprocess ( single_archive );
 
-    if (!interpreter)
-      interpreter = standard_shell();
-
-    interpreter->set( single_archive );
-    interpreter->script( script );
-  }
-  catch (Error& error)
-  {
-    if (verbose)
-      cerr << "dsp::Archiver::finish post-processing "
-           << single_archive->get_filename() << " failed:\n"
-           << error.get_message() << endl;
-    return;
-  }
+  if (verbose > 2)
+    cerr << "dsp::Archiver::finish archive=" << single_archive.get() << endl;
 
   if (single_archive->get_nsubint ())
     single_archive->unload ();
@@ -330,6 +314,32 @@ void dsp::Archiver::finish () try
 catch (Error& error)
 {
   throw error += "dsp::Archiver::finish";
+}
+
+void dsp::Archiver::postprocess (Pulsar::Archive* data) try
+{
+  if (script.size() == 0)
+    return;
+
+  // if (verbose > 2)
+    cerr << "dsp::Archiver::postprocess data=" << data << endl;
+
+  if (!interpreter)
+    interpreter = standard_shell();
+
+  interpreter->set( data );
+  interpreter->script( script );
+
+  Pulsar::Archive* processed = interpreter->get ();
+  if ( processed != data )
+    cerr << "BADDA BOOM!" << endl;
+}
+catch (Error& error)
+{
+  if (verbose)
+    cerr << "dsp::Archiver::postprocess "
+         << single_archive->get_filename() << " failed:\n"
+         << error.get_message() << endl;
 }
 
 void dsp::Archiver::add (Pulsar::Archive* archive, const PhaseSeries* phase)
@@ -605,6 +615,8 @@ try
 
   if (verbose > 2) cerr << "dsp::Archiver set archive filename to '"
         	    << archive->get_filename() << "'" << endl;
+
+
 }
 catch (Error& error)
 {

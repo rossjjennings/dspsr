@@ -69,11 +69,16 @@ namespace dsp
     //! Set the Pulsar::Archive instance to which data will be added
     void set_archive (Pulsar::Archive* archive);
 
+    //! Execute any post-processing steps
+    void postprocess (Pulsar::Archive* archive);
+
     //! Set the minimum integration length required to unload data
     void set_minimum_integration_length (double seconds);
 
     //! Get the Pulsar::Archive instance to which all data were added
     Pulsar::Archive* get_archive ();
+
+    bool has_archive() const;
 
     //! Add a Pulsar::Archive::Extension to those added to the output archive
     void add_extension (Pulsar::Archive::Extension* extension);

@@ -118,7 +118,7 @@ dsp::FITSOutputFile::~FITSOutputFile ()
   finalize_fits ();
 }
 
-unsigned char* dsp::FITSOutputFile::write_bytes (int colnum, int isub, int offset, unsigned bytes_to_write, unsigned char** buffer) {
+void dsp::FITSOutputFile::write_bytes (int colnum, int isub, int offset, unsigned bytes_to_write, unsigned char** buffer) {
   int status = 0;
   fits_write_col_byt (fptr, colnum, isub, offset, bytes_to_write, *buffer, &status);
   if (status)

@@ -110,6 +110,12 @@ void dsp::TimeDivide::set_predictor (const Pulsar::Predictor* _poly)
   division_seconds = 0;
 }
 
+void dsp::TimeDivide::set_period (double P)
+{
+  poly = 0;
+  period = P;
+  division_seconds = 0;
+}
 
 //! Set the reference phase (phase of bin zero)
 void dsp::TimeDivide::set_reference_phase (double phase)
@@ -438,13 +444,17 @@ void dsp::TimeDivide::set_boundaries (const MJD& input_start)
 
   MJD divide_start = std::max (start_time, input_start);
 
-  if (division_seconds > 0)
+  if (division_seconds > 0 || ( division_turns && period > 0.0 ) )
   {
     // division length specified in seconds
     double seconds = (divide_start - start_time).in_seconds();
 
+    double seconds_per_interval = division_seconds;
+    if (division_turns)
+      seconds_per_interval = period * division_turns;
+
     // assumption: integer cast truncates
-    division = uint64_t (seconds/division_seconds);
+    division = uint64_t (seconds/seconds_per_interval);
 
 #ifdef _DEBUG
     cerr << " divide_start=" << divide_start.printdays(13)
@@ -453,8 +463,8 @@ void dsp::TimeDivide::set_boundaries (const MJD& input_start)
 	 << " division=" << division << endl;
 #endif
 
-    set_boundaries( start_time + double(division) * division_seconds,
-		    start_time + double(division+1) * division_seconds );
+    set_boundaries( start_time + double(division) * seconds_per_interval,
+		    start_time + double(division+1) * seconds_per_interval );
 
     return;
   }
@@ -465,7 +475,7 @@ void dsp::TimeDivide::set_boundaries (const MJD& input_start)
 
   // division length specified in turns
 
-  if (!poly && period == 0.0)
+  if (!poly)
     throw Error (InvalidState, "dsp::TimeDivide::set_boundaries",
 		 "division length specified in turns "
 		 "but no folding predictor or period");

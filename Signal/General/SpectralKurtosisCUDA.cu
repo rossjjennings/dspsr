@@ -2,7 +2,7 @@
 
 /***************************************************************************
  *
- *   Copyright (C) 2016 by Andre Jameson
+ *   Copyright (C) 2016 by Andrew Jameson
  *   Licensed under the Academic Free License version 2.1
  *
  ***************************************************************************/
@@ -57,7 +57,7 @@ void CUDA::SpectralKurtosisEngine::detect_ft (const dsp::TimeSeries* input,
 void CUDA::SpectralKurtosisEngine::detect_fscr (
   const dsp::TimeSeries* input,
   dsp::BitSeries* output,
-  const float mu2, const unsigned std_devs,
+  const float mu2, const float std_devs,
   unsigned schan, unsigned echan)
 
 {
@@ -102,3 +102,4 @@ void CUDA::SpectralKurtosisEngine::insertsk (const dsp::TimeSeries* input, dsp::
 {
   computer->insertsk (input, out, M);
 }
+

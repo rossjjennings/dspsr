@@ -58,6 +58,9 @@ namespace dsp {
     //! Return pointer to the raw data buffer
     virtual const unsigned char* get_rawptr () const { return data; }
 
+    //! Set all bytes to zero
+    virtual void zero ();
+
     //! Offset (owing to resolution) to the requested time sample
     unsigned get_request_offset () const { return request_offset; }
 

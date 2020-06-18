@@ -111,14 +111,23 @@ namespace dsp {
     // apply spectral kurtosis filterbank
     bool sk_zap;
 
+    // load spectral kurtosis configuration from YAML file
+    std::string sk_config;
+
     // also produce the non-zapped version of the output
     bool nosk_too;
 
-    // spectral kurtoscis integration factor
-    unsigned sk_m;
+    // spectral kurtosis integration factor
+    std::vector<unsigned> sk_m;
+    void set_sk_m (std::string txt);
+
+    // spectral kurtosis overlap factor
+    std::vector<unsigned> sk_noverlap;
+    void set_sk_noverlap (std::string txt);
 
     // number of stddevs to use for spectral kurtosis excision
-    unsigned sk_std_devs;
+    std::vector<float> sk_std_devs;
+    void set_sk_std_devs (std::string txt);
 
     // first channel to begin SK Detection
     unsigned sk_chan_start;
@@ -178,6 +187,9 @@ namespace dsp {
     // number of sub-integrations written to a single file
     unsigned subints_per_archive;
 
+    // file naming convention
+    std::string filename_convention;
+
     void single_pulse()
     {
       integration_turns = 1;
@@ -197,6 +209,12 @@ namespace dsp {
     bool concurrent_archives ()
     {
       return integration_turns && !single_archiver_required();
+    }
+
+    // there may be more than one file per UTC second
+    bool may_be_more_than_one_archive_per_second ()
+    {
+      return integration_turns;
     }
 
     std::string reference_epoch;

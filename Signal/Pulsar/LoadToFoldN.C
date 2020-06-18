@@ -117,14 +117,22 @@ bool dsp::LoadToFoldN::prepare_subint_archival ()
     unloader[ifold]->copy( subfold->get_divider() );
     unloader[ifold]->set_context( new ThreadContext );
 
-    PhaseSeriesUnloader* primary_unloader = at(0)->unloader[ifold];
+    Reference::To<PhaseSeriesUnloader> primary_unloader = at(0)->unloader[ifold];
 
     if (configuration->concurrent_archives()){
       unloader[ifold]->set_wait_all (false);
+
       // MJK 2017. When using single pulses the below line
       // prevents segfault when running submit->set_unloader
       // in the below loop. I am not sure why this fixed it!
-      primary_unloader = primary_unloader->clone();
+      // WvS 2020: the following line:
+      //     at(i)->unloader[ifold] = submit;
+      // resulted in destruction of the object to which
+      // primary_unloader pointed because it was only a
+      // pointer and not a Reference::To PhaseSeriesUnloader
+      // ... it's now a Reference:To, so the following line
+      // is no longer necessary
+      // primary_unloader = primary_unloader->clone();
     }
     else {
         unloader[ifold]->set_unloader( primary_unloader );

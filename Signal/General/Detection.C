@@ -311,7 +311,7 @@ void dsp::Detection::square_law ()
         for (uint64_t idat=0; idat<ndat; idat++)
         {
           *out_ptr = *out_ptr * *out_ptr;
-          *out_ptr++;
+          out_ptr++;
         }
       }
     }
@@ -459,7 +459,7 @@ void dsp::Detection::square_law ()
       while (pout!=pend)
         {
           *pout = *p0 + *p1;
-          *pout ++;
+          pout ++;
           p0 += 2;
           p1 += 2;
         }

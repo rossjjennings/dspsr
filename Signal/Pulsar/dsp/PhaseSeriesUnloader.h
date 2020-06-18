@@ -137,6 +137,17 @@ namespace dsp {
     unsigned current_index;
   };
 
+  class FilenameMJD : public FilenameConvention
+  {
+  public:
+    FilenameMJD (unsigned digits);
+    void set_base_filename (const std::string& s) { filename_base = s; }
+    std::string get_filename (const PhaseSeries* data);
+  protected:
+    std::string filename_base;
+    unsigned digits;
+  };
+
 }
 
 #endif // !defined(__PhaseSeriesUnloader_h)
