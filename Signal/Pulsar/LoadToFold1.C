@@ -88,12 +88,17 @@ using namespace std;
 
 static void* const undefined_stream = (void *) -1;
 
-dsp::LoadToFold::LoadToFold (Config* configuration)
+dsp::LoadToFold::LoadToFold (Config* configuration) try
 {
   manage_archiver = true;
   fold_prepared = false;
 
-  set_configuration (configuration);
+  if (configuration)
+    set_configuration (configuration);
+}
+catch (Error& error)
+{
+  throw error += "LoadToFold ctor";
 }
 
 dsp::LoadToFold::~LoadToFold ()
@@ -101,10 +106,14 @@ dsp::LoadToFold::~LoadToFold ()
 }
 
 //! Run through the data
-void dsp::LoadToFold::set_configuration (Config* configuration)
+void dsp::LoadToFold::set_configuration (Config* configuration) try
 {
   SingleThread::set_configuration (configuration);
   config = configuration;
+}
+catch (Error& error)
+{
+  throw error += "LoadToFold::set_configuration";
 }
 
 
