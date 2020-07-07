@@ -66,10 +66,14 @@ dsp::SingleThread::~SingleThread ()
 {
 }
 
-void dsp::SingleThread::set_configuration (Config* configuration)
+void dsp::SingleThread::set_configuration (Config* configuration) try
 {
   config = configuration;
   initialize ();
+}
+catch (Error& error)
+{
+  throw error += "SingleThread::set_configuration";
 }
 
 void dsp::SingleThread::take_ostream (std::ostream* newlog)
@@ -93,7 +97,7 @@ unsigned count (const std::vector<T>& data, T element)
   return c;
 }
 
-void dsp::SingleThread::initialize ()
+void dsp::SingleThread::initialize () try
 {
   if (Operation::verbose)
     cerr << "dsp::SingleThread::initialize" << endl;
@@ -128,6 +132,10 @@ void dsp::SingleThread::initialize ()
     gpu_stream = stream;
   }
 #endif
+}
+catch (Error& error)
+{
+  throw error += "SingleThread::initialize";
 }
 
 //! Set the Input from which data will be read
