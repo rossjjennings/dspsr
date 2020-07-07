@@ -27,6 +27,10 @@ dsp::Observation::Interface::Interface( Observation *c )
        &Observation::set_source,
        "name", "Source name" );
 
+  add( &Observation::get_start_time,
+       &Observation::set_start_time,
+       "time", "Start time" );
+
   add( &Observation::get_coordinates,
        &Observation::set_coordinates,
        "coord", "Source coordinates" );
