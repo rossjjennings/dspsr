@@ -20,7 +20,6 @@ test_main_SOURCES = toml.h catch.hpp test_main.cpp \
                     InverseFilterbank/InverseFilterbankTestConfig.cpp \
                     SpectralKurtosis/test_SpectralKurtosis.cpp
 
-
 if HAVE_CUFFT
   test_main_SOURCES += Filterbank/test_FilterbankEngineCUDA.cpp
 
@@ -43,7 +42,8 @@ endif
 include $(top_srcdir)/config/Makefile.local
 include $(top_srcdir)/config/Makefile.cuda
 
-AM_CPPFLAGS = -I$(top_builddir)/local_include @PSRCHIVE_CPPFLAGS@ @PSRCHIVE_CFLAGS@
+AM_CPPFLAGS = -I$(top_builddir)/local_include @PSRCHIVE_CPPFLAGS@ @PSRCHIVE_CFLAGS@ \
+  @CUDA_CFLAGS@
 LDADD = $(top_builddir)/Signal/Pulsar/libdspsr.la \
         $(top_builddir)/Signal/General/libdspdsp.la \
         $(top_builddir)/Signal/Statistics/libdspstats.la \

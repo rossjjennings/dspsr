@@ -76,7 +76,7 @@ namespace dsp {
     //! Unpack interface for engines from the input BitSeries to the output TimeSeries
     virtual void unpack(float scale, const BitSeries * input, TimeSeries * output) = 0;
 
-    //! Called to perform enginre configuration
+    //! Called to perform engine configuration
     virtual void setup () = 0;
   };
 

@@ -15,10 +15,12 @@ if HAVE_CUDA
 
 nobase_include_HEADERS += \
   dsp/AAVS2UnpackerCUDA.h \
+  dsp/LFAASPEADUnpackerCUDA.h \
   dsp/SKA1UnpackerCUDA.h
 
 libska1_la_SOURCES += \
   AAVS2UnpackerCUDA.cu \
+  LFAASPEADUnpackerCUDA.cu \
   SKA1UnpackerCUDA.cu
 
 endif

@@ -30,10 +30,11 @@ __global__ void aavs2_unpack_fpt (uint64_t ndat, float scale,
   int32_t in32 = from[idat];
   int8_t * in8 = (int8_t *) &in32;
 
-  if (in8[0] == -128) in8[0] = 0;
-  if (in8[1] == -128) in8[1] = 0;
-  if (in8[2] == -128) in8[2] = 0;
-  if (in8[3] == -128) in8[3] = 0;
+  for (unsigned i=0; i<4; i++)
+  {
+    if ((in8[i] == -128) || (in8[i] == -127))
+      in8[i] = 0;
+  }
 
   into_p0[idat].x = scale * float(in8[0]);
   into_p0[idat].y = scale * float(in8[1]);

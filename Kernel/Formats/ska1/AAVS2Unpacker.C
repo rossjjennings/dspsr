@@ -28,8 +28,12 @@ static void* const undefined_stream = (void *) -1;
 
 dsp::AAVS2Unpacker::AAVS2Unpacker (const char* _name) : HistUnpacker (_name)
 {
-  table = new BitTable (8, BitTable::TwosComplement);
+  if (verbose)
+    cerr << "dsp::AASVS2Unpacker ctor" << endl;
+
   set_nstate (256);
+  table = new BitTable (8, BitTable::TwosComplement);
+
   set_ndig (2);
   npol = 2;
   ndim = 2;

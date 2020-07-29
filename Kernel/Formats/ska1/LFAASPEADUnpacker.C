@@ -15,7 +15,12 @@
 
 #include "Error.h"
 
-#include <errno.h>
+#if HAVE_CUDA
+#include "dsp/MemoryCUDA.h"
+#include "dsp/LFAASPEADUnpackerCUDA.h"
+#endif
+
+//#include <errno.h>
 
 using namespace std;
 
@@ -25,10 +30,12 @@ dsp::LFAASPEADUnpacker::LFAASPEADUnpacker (const char* _name) : HistUnpacker (_n
     cerr << "dsp::LFAASPEADUnpacker ctor" << endl;
 
   set_nstate (256);
+  set_ndig (2);
   table = new BitTable (8, BitTable::TwosComplement);
- 
+
   npol = 2;
   ndim = 2;
+  engine = NULL;
 }
 
 dsp::LFAASPEADUnpacker::~LFAASPEADUnpacker ()
@@ -40,6 +47,48 @@ dsp::LFAASPEADUnpacker * dsp::LFAASPEADUnpacker::clone () const
   return new LFAASPEADUnpacker (*this);
 }
 
+void dsp::LFAASPEADUnpacker::set_engine (Engine* _engine)
+{
+  cerr << "dsp::LFAASPEADUnpacker::set_engine" << endl;
+  engine = _engine;
+}
+
+//! Return true if the unpacker can operate on the specified device
+bool dsp::LFAASPEADUnpacker::get_device_supported (Memory* memory) const
+{
+  if (verbose)
+    cerr << "dsp::LFAASPEADUnpacker::get_device_supported memory=" << (void *) memory << endl;
+  bool supported = false;
+#ifdef HAVE_CUDA
+  supported = dynamic_cast< CUDA::DeviceMemory*> ( memory );
+#endif
+  if (verbose)
+    cerr << "dsp::LFAASPEADUnpacker::get_device_supported supported=" << supported << endl;
+  return supported;
+}
+
+//! Set the device on which the unpacker will operate
+void dsp::LFAASPEADUnpacker::set_device (Memory* memory)
+{
+  if (verbose)
+    cerr << "dsp::LFAASPEADUnpacker::set_device()" << endl;
+#if HAVE_CUDA
+  CUDA::DeviceMemory * gpu_mem = dynamic_cast< CUDA::DeviceMemory*>( memory );
+  if (gpu_mem)
+  {
+    cudaStream_t stream = gpu_mem->get_stream();
+    set_engine (new CUDA::LFAASPEADUnpackerEngine(stream));
+  }
+#endif
+
+  if (engine)
+    engine->setup ();
+  else
+    Unpacker::set_device (memory);
+
+  device_prepared = true;
+}
+
 bool dsp::LFAASPEADUnpacker::matches (const Observation* observation)
 {
   return observation->get_machine() == "LFAASP"
@@ -48,19 +97,16 @@ bool dsp::LFAASPEADUnpacker::matches (const Observation* observation)
     && observation->get_nbit() == 8;
 }
 
-/*! The quadrature components are offset by one */
 unsigned dsp::LFAASPEADUnpacker::get_output_offset (unsigned idig) const
 {
   return idig % 2;
 }
 
-/*! The first two digitizer channels are poln0, the last two are poln1 */
 unsigned dsp::LFAASPEADUnpacker::get_output_ipol (unsigned idig) const
 {
   return (idig % 4) / 2;
 }
 
-/*! Each chan has 4 values (quadrature, dual pol) */
 unsigned dsp::LFAASPEADUnpacker::get_output_ichan (unsigned idig) const
 {
   return idig / 4;
@@ -68,8 +114,33 @@ unsigned dsp::LFAASPEADUnpacker::get_output_ichan (unsigned idig) const
 
 void dsp::LFAASPEADUnpacker::unpack ()
 {
+  // there are 4 digitisers per channel
+  set_ndig (4 * input->get_nchan());
+
+  // ensure the histograms are initialized
+  unsigned long * digs[4];
+  digs[0] = get_histogram (0);
+  digs[1] = get_histogram (1);
+  digs[2] = get_histogram (2);
+  digs[3] = get_histogram (3);
+
+  if (engine)
+  {
+    if (verbose)
+      cerr << "dsp::LFAASPEADUnpacker::unpack using Engine" << endl;
+    engine->unpack(table->get_scale(), input, output);
+    return;
+  }
   if (verbose)
-    cerr << "dsp::LFAASPEADUnpacker::unpack()" << endl;
+    cerr << "dsp::LFAASPEADUnpacker::unpack using CPU" << endl;
+
+  // some programs (digifil) do not call set_device
+  if (! device_prepared )
+    set_device ( Memory::get_manager ());
+
+  if (output->get_order() != TimeSeries::OrderFPT)
+    throw Error (InvalidState, "dsp::LFAASPEADUnpacker::unpack",
+                 "cannot unpack into FPT order");
 
   int32_t * from = (int32_t *) input->get_rawptr();
   int32_t from32;
@@ -85,7 +156,6 @@ void dsp::LFAASPEADUnpacker::unpack ()
   const unsigned ndim  = 2;
   const unsigned nsamp_per_heap = 2048;
   const unsigned nheap = ndat / nsamp_per_heap;
-  const float* lookup = table->get_values ();
 
   // data is stored as sample blocks of FPT ordered data
   const uint64_t nval = nsamp_per_heap * ndim;
@@ -93,8 +163,6 @@ void dsp::LFAASPEADUnpacker::unpack ()
   if (verbose)
     cerr << "dsp::LFAASPEADUnpacker::unpack nheap=" << nheap << " ndat=" << ndat << " nchan=" << nchan
          << " npol=" << npol << " nval=" << nval << endl;
-
-  unsigned long * digs[4];
 
   switch ( output->get_order() )
   {
