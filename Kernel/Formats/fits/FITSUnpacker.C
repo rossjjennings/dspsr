@@ -9,6 +9,8 @@
 #include "dsp/FITSFile.h"
 #include "Error.h"
 
+#include <assert.h>
+
 #define ONEBIT_MASK 0x1
 #define TWOBIT_MASK 0x3
 #define FOURBIT_MASK 0xf
@@ -84,16 +86,15 @@ void dsp::FITSUnpacker::unpack()
   const unsigned char* from = input->get_rawptr();
   const int16_t* from16 = (int16_t *)input->get_rawptr();
 
-  const FITSFile::Extension* ext = dynamic_cast<const FITSFile::Extension*>( get_input()->get_extension() );
+  const FITSFile::Extension* ext = dynamic_cast<const FITSFile::Extension*>( input->get_extension() );
+  if (!ext)
+    throw Error (InvalidState, "dsp::FITSUnpacker::unpack", "input has no FITSFile::Extension");
 
   zero_off = ext->zero_off;
 
   // more optimal 8-bit unpacker
   if (nbit == 8)
   {
-    const float* scl = &(ext->dat_scl[0]);
-    const float* off = &(ext->dat_offs[0]);
-
     const unsigned nchanpol = nchan * npol;
     for (unsigned ipol = 0; ipol < npol; ++ipol)
     {
@@ -108,9 +109,24 @@ void dsp::FITSUnpacker::unpack()
         float* into = output->get_datptr(ichan, ipol);
         const unsigned char * from_ptr = from + ipolchan;
 
+        const float* scl = 0;
+        const float* off = 0;
+        unsigned nsamp = 0;
+        unsigned irow = 0;
+
         // samples stored in TPF order
         for (unsigned idat = 0; idat < ndat; ++idat)
         {
+          if (idat == nsamp)
+          {
+            if (verbose) cerr << "idat=" << idat << " nsamp=" << nsamp << " irow=" << irow << endl;
+            assert (irow < ext->rows.size());
+            scl = &(ext->rows.at(irow).dat_scl[0]);
+            off = &(ext->rows.at(irow).dat_offs[0]);
+            nsamp += ext->rows.at(irow).nsamp;
+            irow ++;
+          }
+
           into[idat] = ((*this.*p)(*from_ptr)) * scl[ipolchan] + off[ipolchan];
           from_ptr += nchanpol;
         }
@@ -125,9 +141,26 @@ void dsp::FITSUnpacker::unpack()
     // as pol-chan-dat.
     //
     // TODO: Use a lookup table???
-    for (unsigned idat = 0; idat < ndat; ++idat) {
-      const float* scl = &(ext->dat_scl[0]);
-      const float* off = &(ext->dat_offs[0]);
+    const float* scl = 0;
+    const float* off = 0;
+    unsigned nsamp = 0;
+    unsigned irow = 0;
+
+    for (unsigned idat = 0; idat < ndat; ++idat)
+    {
+      if (idat == nsamp)
+      {
+        if (verbose) cerr << "idat=" << idat << " nsamp=" << nsamp << " irow=" << irow << endl;
+
+        assert (irow < ext->rows.size());
+        scl = &(ext->rows.at(irow).dat_scl[0]);
+        off = &(ext->rows.at(irow).dat_offs[0]);
+        nsamp += ext->rows.at(irow).nsamp;
+        irow ++;
+      }
+
+      unsigned iscloff = 0;
+
       for (unsigned ipol = 0; ipol < npol; ++ipol) {
         for (unsigned ichan = 0; ichan < nchan;) {
 
@@ -141,8 +174,8 @@ void dsp::FITSUnpacker::unpack()
                << " scl=" << *scl << " off=" << *off << endl;
 #endif
    
-          *into = (*this.*p)(shifted_number) * (*scl) + (*off);
-          ++scl; ++off;
+          *into = (*this.*p)(shifted_number) * scl[iscloff] + off[iscloff];
+          ++iscloff;
 
           // Move to next byte when the entire byte has been split.
           if ((++ichan) % (samples_per_byte) == 0) {
@@ -154,14 +187,32 @@ void dsp::FITSUnpacker::unpack()
   }
 
   else if (nbit==16) {
-    for (unsigned idat=0; idat<ndat; idat++) {
-      const float* scl = &(ext->dat_scl[0]);
-      const float* off = &(ext->dat_offs[0]);
+
+    const float* scl = 0;
+    const float* off = 0;
+    unsigned nsamp = 0;
+    unsigned irow = 0;
+
+    unsigned iscloff = 0;
+
+    for (unsigned idat=0; idat<ndat; idat++)
+    {
+      if (idat == nsamp)
+      {
+        if (verbose) cerr << "idat=" << idat << " nsamp=" << nsamp << " irow=" << irow << endl;
+
+        assert (irow < ext->rows.size());
+        scl = &(ext->rows.at(irow).dat_scl[0]);
+        off = &(ext->rows.at(irow).dat_offs[0]);
+        nsamp += ext->rows.at(irow).nsamp;
+        irow ++;
+      }
+
       for (unsigned ipol=0; ipol<npol; ipol++) {
         for (unsigned ichan=0; ichan<nchan; ichan++) {
           float* into = output->get_datptr(ichan, ipol) + idat;
-          *into = (float)(*from16) * (*scl) + (*off);
-          ++scl; ++off;
+          *into = (float)(*from16) * scl[iscloff] + off[iscloff];
+          ++iscloff;
           ++from16;
         }
       }
