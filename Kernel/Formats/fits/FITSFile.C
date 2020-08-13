@@ -241,9 +241,6 @@ int64_t dsp::FITSFile::seek_bytes (uint64_t bytes)
 
 int64_t dsp::FITSFile::load_bytes(unsigned char* buffer, uint64_t bytes)
 {
-  // Column number of the DATA column in the SUBINT table.
-  const unsigned nsamp         = get_samples_in_row();
-
   // Bytes in a row, within the SUBINT table.
   const unsigned bytes_per_row = get_bytes_per_row();
 
@@ -255,27 +252,9 @@ int64_t dsp::FITSFile::load_bytes(unsigned char* buffer, uint64_t bytes)
   const unsigned nbit  = get_info()->get_nbit();
   const unsigned bytes_per_sample = (nchan*npol*nbit) / 8;
 
-  const uint64_t sample = current_byte / bytes_per_sample;
+  uint64_t bytes_read = 0;
 
-  if (verbose)
-    cerr << "dsp::FITSFile::load_bytes load_sample=" << sample
-         << " total_samples=" << nsamp * nrow << endl;
-
-  // Calculate the row within the SUBINT table of the target sample to be read.
-  unsigned required_row = (int)(sample/nsamp) + 1;
-
-  assert (required_row > 0 && required_row <= nrow);
-
-  unsigned char nval = '0';
-  int initflag       = 0;
-  int status         = 0;
-
-  unsigned byte_offset = (sample % nsamp) * bytes_per_sample;
-  unsigned bytes_remaining = bytes;
-  unsigned bytes_read = 0;
-
-  // WvS 2020-04-04 The following assertions were added because 
-  // this code assumes that the block size is exactly one row
+  const unsigned char nval = '0';
 
   BitSeries* bs = get_output();
   Extension* ext = 0;
@@ -294,20 +273,40 @@ int64_t dsp::FITSFile::load_bytes(unsigned char* buffer, uint64_t bytes)
 
   unsigned irow = 0;
 
-  while (bytes_remaining > 0 && required_row <= nrow)
+  while (bytes_read < bytes)
   {
+    if (verbose)
+      cerr << "dsp::FITSFile::load_bytes irow=" << irow 
+           << " current_byte=" << current_byte << endl;
+
+    // Calculate the SUBINT table row of the first byte to be read.
     // required_row = [1:nrow]
+    unsigned required_row = (current_byte /  bytes_per_row) + 1;
+
+    if (required_row > nrow)
+    {
+      set_eod(true);
+      return bytes_read;
+    }
+
+    unsigned byte_offset = current_byte % bytes_per_row;
 
     // Read from byte_offset to end of the row.
     unsigned this_read = bytes_per_row - byte_offset;
 
+    {
+    unsigned bytes_remaining = bytes - bytes_read;
     // Ensure we don't read more than expected.
     if (this_read > bytes_remaining)
       this_read = bytes_remaining;
+    }
 
     if (verbose)
       cerr << "FITSFile::load_bytes row=" << required_row
            << " offset=" << byte_offset << " read=" << this_read << endl;
+
+    int initflag = 0;
+    int status = 0;
 
     // Read the samples
     fits_read_col_byt (fp, data_colnum, required_row, byte_offset+1, 
@@ -351,21 +350,7 @@ int64_t dsp::FITSFile::load_bytes(unsigned char* buffer, uint64_t bytes)
 
     irow ++;
 
-    buffer      += this_read;
-    byte_offset += this_read;
-
-    // Toggle the 'end of data' flag after the last byte has been read.
-    if (required_row == nrow && byte_offset >= bytes_per_row)
-      set_eod(true);
-
-    // Adjust byte offset when entire row is read.
-    if (byte_offset >= bytes_per_row)
-    {
-      ++required_row;
-      byte_offset = byte_offset % bytes_per_row;
-    }
-
-    bytes_remaining -= this_read;
+    buffer += this_read;
     bytes_read += this_read;
     current_byte += this_read;
   }
