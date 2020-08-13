@@ -96,11 +96,9 @@ void dsp::FITSUnpacker::unpack()
   if (nbit == 8)
   {
     const unsigned nchanpol = nchan * npol;
+
     for (unsigned ipol = 0; ipol < npol; ++ipol)
     {
-#ifdef HAVE_OPENMP
-      #pragma omp parallel for
-#endif
       for (unsigned ichan = 0; ichan < nchan; ++ichan)
       {
         const unsigned ipolchan = ipol * nchan + ichan;

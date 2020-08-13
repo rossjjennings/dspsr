@@ -539,7 +539,6 @@ void dsp::FITSDigitizer::rescale_pack ()
     // with F in inner loop
     case TimeSeries::OrderTFP:
     {
-  //#pragma omp parallel for
       for (uint64_t idat=0; idat < ndat; idat++)
       {
         unsigned char* outptr = output->get_rawptr() + (idat*nchan*npol)/samp_per_byte;
@@ -604,9 +603,6 @@ void dsp::FITSDigitizer::rescale_pack ()
       int bit_counter=0;
       unsigned inner_stride = nchan * npol;
       unsigned idx = 0, bit_shift = 0; // make gcc happy
-  #if HAVE_OPENMP
-  //#pragma omp parallel for
-  #endif
       for (unsigned ichan=0; ichan < nchan; ichan++)
       {
         unsigned mapped_chan = channel (ichan);
