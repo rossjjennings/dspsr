@@ -138,6 +138,17 @@ void dsp::LoadToFold::construct () try
   const bool run_on_gpu = false;
 #endif
 
+#if HAVE_CFITSIO && HAVE_fits
+
+  if (config->apply_FITS_scale_and_offset &&
+      manager->get_info()->get_machine() == "FITS")
+  {
+    FITSUnpacker* fun = dynamic_cast<FITSUnpacker*> (manager->get_unpacker());
+    fun->apply_scale_and_offset (true);
+  }
+
+#endif
+
   if (manager->get_info()->get_detected())
   {
     Unpacker* unpacker = manager->get_unpacker();
