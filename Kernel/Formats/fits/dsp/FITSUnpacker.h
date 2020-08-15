@@ -22,7 +22,11 @@ namespace dsp
   class FITSUnpacker : public Unpacker
   {
     public:
-      FITSUnpacker(const char* name = "FITSUnpacker");
+
+      FITSUnpacker (const char* name = "FITSUnpacker");
+
+      //! apply scales and offsets when unpacking data
+      void apply_scale_and_offset (bool);
 
     protected:
 
@@ -38,8 +42,12 @@ namespace dsp
 
       float eightBitNumber(const int num);
 
-
       float zero_off;
+      bool scale_and_offset;
+
+      std::vector<float> no_scale;
+      std::vector<float> no_offset;
+
   };
 }
 

@@ -34,6 +34,13 @@ const int BYTE_SIZE = 8;
 
 dsp::FITSUnpacker::FITSUnpacker(const char* name) : Unpacker(name)
 {
+  scale_and_offset = false;
+  zero_off = 0.0;
+}
+
+void dsp::FITSUnpacker::apply_scale_and_offset (bool flag)
+{
+  scale_and_offset = flag;
 }
 
 /**
@@ -76,24 +83,45 @@ void dsp::FITSUnpacker::unpack()
   const unsigned npol  = input->get_npol();
   const unsigned nchan = input->get_nchan();
   const unsigned ndat  = input->get_ndat();
+  const unsigned nchanpol = nchan * npol;
 
   // Number of samples in one byte.
   const int samples_per_byte = BYTE_SIZE / nbit;
   const int mod_offset = samples_per_byte - 1;
 
   const unsigned char* from = input->get_rawptr();
-  const int16_t* from16 = (int16_t *)input->get_rawptr();
 
-  const FITSFile::Extension* ext = dynamic_cast<const FITSFile::Extension*>( get_input()->get_extension() );
+  const FITSFile::Extension* ext = 0;
 
-  zero_off = ext->zero_off;
+  const float* scl = 0;
+  const float* off = 0;
+
+  if (scale_and_offset)
+  {
+    ext=dynamic_cast<const FITSFile::Extension*>(get_input()->get_extension());
+    if (!ext)
+      throw Error (InvalidState, "FITSUnpacker::unpack",
+                   "input does not have a FITSFile::Extension");
+
+    zero_off = ext->zero_off;
+
+    scl = &(ext->dat_scl[0]);
+    off = &(ext->dat_offs[0]);
+  }
+  else
+  {
+    no_scale.resize (nchanpol, 1.0);
+    no_offset.resize (nchanpol, 0.0);
+
+    zero_off = 0.0;
+
+    scl = &(no_scale[0]);
+    off = &(no_offset[0]);
+  }
 
   // more optimal 8-bit unpacker
   if (nbit == 8)
   {
-    const float* scl = &(ext->dat_scl[0]);
-    const float* off = &(ext->dat_offs[0]);
-
     const unsigned nchanpol = nchan * npol;
     for (unsigned ipol = 0; ipol < npol; ++ipol)
     {
@@ -126,8 +154,6 @@ void dsp::FITSUnpacker::unpack()
     //
     // TODO: Use a lookup table???
     for (unsigned idat = 0; idat < ndat; ++idat) {
-      const float* scl = &(ext->dat_scl[0]);
-      const float* off = &(ext->dat_offs[0]);
       for (unsigned ipol = 0; ipol < npol; ++ipol) {
         for (unsigned ichan = 0; ichan < nchan;) {
 
@@ -136,13 +162,14 @@ void dsp::FITSUnpacker::unpack()
 
           float* into = output->get_datptr(ichan, ipol) + idat;
 
+          const unsigned ipolchan = ipol * nchan + ichan;
+
 #if 0
           cerr << "ipol=" << ipol << " ichan=" << ichan 
                << " scl=" << *scl << " off=" << *off << endl;
 #endif
    
-          *into = (*this.*p)(shifted_number) * (*scl) + (*off);
-          ++scl; ++off;
+          *into = (*this.*p)(shifted_number) * scl[ipolchan] + off[ipolchan];
 
           // Move to next byte when the entire byte has been split.
           if ((++ichan) % (samples_per_byte) == 0) {
@@ -153,15 +180,16 @@ void dsp::FITSUnpacker::unpack()
     }
   }
 
-  else if (nbit==16) {
+  else if (nbit==16)
+  {
+    const int16_t* from16 = (int16_t *)input->get_rawptr();
+
     for (unsigned idat=0; idat<ndat; idat++) {
-      const float* scl = &(ext->dat_scl[0]);
-      const float* off = &(ext->dat_offs[0]);
       for (unsigned ipol=0; ipol<npol; ipol++) {
         for (unsigned ichan=0; ichan<nchan; ichan++) {
           float* into = output->get_datptr(ichan, ipol) + idat;
-          *into = (float)(*from16) * (*scl) + (*off);
-          ++scl; ++off;
+          const unsigned ipolchan = ipol * nchan + ichan;
+          *into = (float)(*from16) * scl[ipolchan] + off[ipolchan];
           ++from16;
         }
       }
