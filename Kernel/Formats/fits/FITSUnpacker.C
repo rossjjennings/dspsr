@@ -9,6 +9,8 @@
 #include "dsp/FITSFile.h"
 #include "Error.h"
 
+#include <assert.h>
+
 #define ONEBIT_MASK 0x1
 #define TWOBIT_MASK 0x3
 #define FOURBIT_MASK 0xf
@@ -101,12 +103,9 @@ void dsp::FITSUnpacker::unpack()
     ext=dynamic_cast<const FITSFile::Extension*>(get_input()->get_extension());
     if (!ext)
       throw Error (InvalidState, "FITSUnpacker::unpack",
-                   "input does not have a FITSFile::Extension");
+                   "input has no FITSFile::Extension");
 
     zero_off = ext->zero_off;
-
-    scl = &(ext->dat_scl[0]);
-    off = &(ext->dat_offs[0]);
   }
   else
   {
@@ -123,11 +122,9 @@ void dsp::FITSUnpacker::unpack()
   if (nbit == 8)
   {
     const unsigned nchanpol = nchan * npol;
+
     for (unsigned ipol = 0; ipol < npol; ++ipol)
     {
-#ifdef HAVE_OPENMP
-      #pragma omp parallel for
-#endif
       for (unsigned ichan = 0; ichan < nchan; ++ichan)
       {
         const unsigned ipolchan = ipol * nchan + ichan;
@@ -136,9 +133,28 @@ void dsp::FITSUnpacker::unpack()
         float* into = output->get_datptr(ichan, ipol);
         const unsigned char * from_ptr = from + ipolchan;
 
+        unsigned nsamp = 0;
+        unsigned irow = 0;
+
         // samples stored in TPF order
         for (unsigned idat = 0; idat < ndat; ++idat)
         {
+          if (ext && (idat == nsamp))
+          {
+            if (irow >= ext->rows.size() || verbose)
+            {
+              cerr << "idat=" << idat << " nsamp=" << nsamp << " irow=" << irow << " nrow=" << ext->rows.size() << endl;
+              for (unsigned jrow=0; jrow < ext->rows.size(); jrow++)
+                cerr << " nsamp[" << jrow << "]=" << ext->rows.at(jrow).nsamp << endl;
+            }
+
+            assert (irow < ext->rows.size());
+            scl = &(ext->rows.at(irow).dat_scl[0]);
+            off = &(ext->rows.at(irow).dat_offs[0]);
+            nsamp += ext->rows.at(irow).nsamp;
+            irow ++;
+          }
+
           into[idat] = ((*this.*p)(*from_ptr)) * scl[ipolchan] + off[ipolchan];
           from_ptr += nchanpol;
         }
@@ -153,7 +169,22 @@ void dsp::FITSUnpacker::unpack()
     // as pol-chan-dat.
     //
     // TODO: Use a lookup table???
-    for (unsigned idat = 0; idat < ndat; ++idat) {
+    unsigned nsamp = 0;
+    unsigned irow = 0;
+
+    for (unsigned idat = 0; idat < ndat; ++idat)
+    {
+      if (ext && idat == nsamp)
+      {
+        if (verbose) cerr << "idat=" << idat << " nsamp=" << nsamp << " irow=" << irow << endl;
+
+        assert (irow < ext->rows.size());
+        scl = &(ext->rows.at(irow).dat_scl[0]);
+        off = &(ext->rows.at(irow).dat_offs[0]);
+        nsamp += ext->rows.at(irow).nsamp;
+        irow ++;
+      }
+
       for (unsigned ipol = 0; ipol < npol; ++ipol) {
         for (unsigned ichan = 0; ichan < nchan;) {
 
@@ -184,12 +215,28 @@ void dsp::FITSUnpacker::unpack()
   {
     const int16_t* from16 = (int16_t *)input->get_rawptr();
 
-    for (unsigned idat=0; idat<ndat; idat++) {
+    unsigned nsamp = 0;
+    unsigned irow = 0;
+
+    for (unsigned idat=0; idat<ndat; idat++)
+    {
+      if (ext && idat == nsamp)
+      {
+        if (verbose) cerr << "idat=" << idat << " nsamp=" << nsamp << " irow=" << irow << endl;
+
+        assert (irow < ext->rows.size());
+        scl = &(ext->rows.at(irow).dat_scl[0]);
+        off = &(ext->rows.at(irow).dat_offs[0]);
+        nsamp += ext->rows.at(irow).nsamp;
+        irow ++;
+      }
+
+      unsigned iscloff = 0;
       for (unsigned ipol=0; ipol<npol; ipol++) {
         for (unsigned ichan=0; ichan<nchan; ichan++) {
           float* into = output->get_datptr(ichan, ipol) + idat;
-          const unsigned ipolchan = ipol * nchan + ichan;
-          *into = (float)(*from16) * scl[ipolchan] + off[ipolchan];
+          *into = (float)(*from16) * scl[iscloff] + off[iscloff];
+          ++iscloff;
           ++from16;
         }
       }

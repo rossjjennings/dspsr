@@ -89,6 +89,15 @@ namespace dsp
       //! Current byte offset in the file
       uint64_t current_byte;
 
+      //! The last row of data read
+      unsigned current_row;
+
+      //! Store reference spectrum
+      std::vector<float> dat_scl;
+
+      //! Store reference offset
+      std::vector<float> dat_offs;
+
       //! Number of rows in the SUBINT table
       unsigned number_of_rows;
       void set_number_of_rows (unsigned N) { number_of_rows = N; }
@@ -105,17 +114,28 @@ namespace dsp
   {
     public:
 
+      class Row
+      {
+      public:
+
+        //! Scale factors
+        std::vector<float> dat_scl;
+
+        //! Offsets
+        std::vector<float> dat_offs;
+
+        //! Number of samples to unpack using these values
+        uint64_t nsamp;
+      };
+
       //! Default contructor
       Extension () { zero_off = 0.0; }
 
       //! Offset to convert unsigned integers to signed integers
       float zero_off;
 
-      //! Store reference spectrum
-      std::vector<float> dat_scl;
-
-      //! Store reference offset
-      std::vector<float> dat_offs;
+      //! Scales and offsets relevant to each row
+      std::vector<Row> rows;
   };
 
 }

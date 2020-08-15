@@ -905,41 +905,6 @@ void dsp::Fold::fold (uint64_t nweights,
   }
 }
 
-/* changes for omp
-  const float* timep;
-  float* phasep;
-  uint64_t idat;
-  float* phdimp;
-  unsigned ipol;
-  unsigned ichan;
-
-#pragma omp parallel for private(ichan,ipol,timep,phasep,idat,phdimp)   
-  for (unsigned ichan=0; ichan<nchan; ichan++)
-  {
- for (ipol=0; ipol<npol; ipol++)
-    {
-      timep = in->get_datptr(ichan,ipol) + idat_start * ndim;
-
-      phasep = result->get_datptr(ichan,ipol);
-
-      for (idat=0; idat < ndat_fold; idat++)
-      {
-        if (binplan[idat] != folding_nbin)
-        {
-          phdimp = phasep + binplan[idat] * ndim;
-          //for (unsigned idim=0; idim<ndim; idim++)
-          //  phdimp[idim] += timep[idim];
-
-          phdimp[0] += timep[0];
-          phdimp[1] += timep[1];        
-        }
-        timep += ndim;
-      } // for each idat
-    } // for each chan
-  } // for each pol
-}
-*/
-
 double dsp::Fold::get_phi (const MJD& start_time)
 {
   if ( folding_period > 0.0 )

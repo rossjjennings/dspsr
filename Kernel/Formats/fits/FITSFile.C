@@ -38,6 +38,7 @@ dsp::FITSFile::FITSFile (const char* filename)
 {
   zero_off = 0.0;
   current_byte = 0;
+  current_row = 0;
   fp = NULL;
 }
 
@@ -240,9 +241,6 @@ int64_t dsp::FITSFile::seek_bytes (uint64_t bytes)
 
 int64_t dsp::FITSFile::load_bytes(unsigned char* buffer, uint64_t bytes)
 {
-  // Column number of the DATA column in the SUBINT table.
-  const unsigned nsamp         = get_samples_in_row();
-
   // Bytes in a row, within the SUBINT table.
   const unsigned bytes_per_row = get_bytes_per_row();
 
@@ -254,34 +252,9 @@ int64_t dsp::FITSFile::load_bytes(unsigned char* buffer, uint64_t bytes)
   const unsigned nbit  = get_info()->get_nbit();
   const unsigned bytes_per_sample = (nchan*npol*nbit) / 8;
 
-  // Adjust current_row and byte_offset depending on next sample to read.
-  const uint64_t sample = current_byte / bytes_per_sample;
+  uint64_t bytes_read = 0;
 
-  if (verbose)
-    cerr << "dsp::FITSFile::load_bytes load_sample=" << sample
-         << " total_samples=" << nsamp * nrow << endl;
-
-  // Calculate the row within the SUBINT table of the target sample to be read.
-  unsigned current_row = (int)(sample/nsamp) + 1;
-
-  unsigned char nval = '0';
-  int initflag       = 0;
-  int status         = 0;
-
-  // TODO: Check for current_row >= && current_row <= nrow
-
-  unsigned byte_offset = (sample % nsamp) * bytes_per_sample;
-  unsigned bytes_remaining = bytes;
-  unsigned bytes_read = 0;
-
-  // WvS 2020-04-04 The following assertions were added because 
-  // this code assumes that the block size is exactly one row
-
-  if (byte_offset + bytes > bytes_per_row)
-  {
-    cerr << "FITSFile::load_bytes shortening first read" << endl;
-    bytes_remaining = bytes = bytes_per_row - byte_offset;
-  }
+  const unsigned char nval = '0';
 
   BitSeries* bs = get_output();
   Extension* ext = 0;
@@ -292,68 +265,92 @@ int64_t dsp::FITSFile::load_bytes(unsigned char* buffer, uint64_t bytes)
   if (!ext)
     bs->set_extension( ext = new Extension );
 
-  // Make sure buffer big enough for DAT_SCL/DAT_OFFS
-  ext->dat_scl.resize(npol*nchan,1);
-  ext->dat_offs.resize(npol*nchan,0);
   ext->zero_off = zero_off;
 
-  while (bytes_remaining > 0 && current_row <= nrow)
+  // Resize DAT_SCL and DAT_OFFS buffers
+  dat_scl.resize(npol*nchan,1);
+  dat_offs.resize(npol*nchan,0);
+
+  unsigned irow = 0;
+
+  while (bytes_read < bytes)
   {
-    // current_row = [1:nrow]
+    if (verbose)
+      cerr << "dsp::FITSFile::load_bytes irow=" << irow 
+           << " current_byte=" << current_byte << endl;
+
+    // Calculate the SUBINT table row of the first byte to be read.
+    // required_row = [1:nrow]
+    unsigned required_row = (current_byte /  bytes_per_row) + 1;
+
+    if (required_row > nrow)
+    {
+      set_eod(true);
+      return bytes_read;
+    }
+
+    unsigned byte_offset = current_byte % bytes_per_row;
 
     // Read from byte_offset to end of the row.
     unsigned this_read = bytes_per_row - byte_offset;
 
+    {
+    unsigned bytes_remaining = bytes - bytes_read;
     // Ensure we don't read more than expected.
     if (this_read > bytes_remaining)
       this_read = bytes_remaining;
+    }
 
     if (verbose)
-      cerr << "FITSFile::load_bytes row=" << current_row
+      cerr << "FITSFile::load_bytes row=" << required_row
            << " offset=" << byte_offset << " read=" << this_read << endl;
 
+    int initflag = 0;
+    int status = 0;
+
     // Read the samples
-    fits_read_col_byt(fp, data_colnum, current_row, byte_offset+1, 
-        this_read, nval, buffer, &initflag, &status);
+    fits_read_col_byt (fp, data_colnum, required_row, byte_offset+1, 
+                       this_read, nval, buffer, &initflag, &status);
+
     if (status) 
     {
       fits_report_error(stderr, status);
       throw FITSError(status, "FITSFile::load_bytes", "fits_read_col_byt");
     }
 
-    // Read the scales
-    fits_read_col(fp,TFLOAT,scl_colnum,current_row,1,nchan*npol,
-        NULL,&(ext->dat_scl[0]),NULL,&status);
-    if (status) 
+    if (required_row != current_row)
     {
-      fits_report_error(stderr, status);
-      throw FITSError(status, "FITSFile::load_bytes", "fits_read_col");
+      // Read the scales
+      fits_read_col(fp,TFLOAT,scl_colnum,required_row,1,nchan*npol,
+                    NULL,&(dat_scl[0]),NULL,&status);
+      if (status) 
+      {
+        fits_report_error(stderr, status);
+        throw FITSError(status, "FITSFile::load_bytes", "fits_read_col");
+      }
+
+      // Read the offsets
+      fits_read_col(fp,TFLOAT,offs_colnum,required_row,1,nchan*npol,
+                    NULL,&(dat_offs[0]),NULL,&status);
+      if (status) 
+      {
+        fits_report_error(stderr, status);
+        throw FITSError(status, "FITSFile::load_bytes", "fits_read_col");
+      }
+
+      current_row = required_row;
     }
 
-    // Read the offsets
-    fits_read_col(fp,TFLOAT,offs_colnum,current_row,1,nchan*npol,
-        NULL,&(ext->dat_offs[0]),NULL,&status);
-    if (status) 
-    {
-      fits_report_error(stderr, status);
-      throw FITSError(status, "FITSFile::load_bytes", "fits_read_col");
-    }
+    if (ext->rows.size() < irow+1)
+      ext->rows.resize( irow+1 );
 
-    buffer      += this_read;
-    byte_offset += this_read;
+    ext->rows[irow].dat_scl = dat_scl;
+    ext->rows[irow].dat_offs = dat_offs;
+    ext->rows[irow].nsamp = this_read / bytes_per_sample;
 
-    // Toggle the 'end of data' flag after the last byte has been read.
-    if (current_row == nrow && byte_offset >= bytes_per_row)
-      set_eod(true);
+    irow ++;
 
-    // Adjust byte offset when entire row is read.
-    if (byte_offset >= bytes_per_row)
-    {
-      ++current_row;
-      byte_offset = byte_offset % bytes_per_row;
-    }
-
-    bytes_remaining -= this_read;
+    buffer += this_read;
     bytes_read += this_read;
     current_byte += this_read;
   }
