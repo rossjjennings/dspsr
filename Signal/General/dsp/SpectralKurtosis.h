@@ -37,10 +37,19 @@ namespace dsp {
 
     bool get_order_supported (TimeSeries::Order order) const;
 
-    void set_M (unsigned _M) { M = _M; }
+    //! Load configuration from YAML filename
+    void load_configuration (const std::string& filename);
+
+    void set_M (unsigned _M) { resolution[0].set_M( _M ); }
+    void set_M (const std::vector<unsigned>&);
+
+    //! Set the number of overlapping regions per time sample
+    void set_noverlap (unsigned _nover) { resolution[0].noverlap = _nover; }
+    void set_noverlap (const std::vector<unsigned>&);
 
     //! Set the RFI thresholds with the specified factor
-    void set_thresholds (unsigned _M, unsigned _std_devs);
+    void set_thresholds (float _std_devs);
+    void set_thresholds (const std::vector<float>&);
 
     //! Set the channel range to conduct detection
     void set_channel_range (unsigned start, unsigned end);
@@ -55,14 +64,16 @@ namespace dsp {
     void prepare_output ();
 
     //! The number of time samples used to calculate the SK statistic
-    unsigned get_M () const { return M; }
+    unsigned get_M () const
+    { return resolution[0].get_M(); }
 
     //! The excision threshold in number of standard deviations
-    unsigned get_excision_threshold () const { return std_devs; }
+    unsigned get_excision_threshold () const
+    { return resolution[0].get_std_devs(); }
 
     //! Total SK statistic for each poln/channel, post filtering
     void get_filtered_sum (std::vector<float>& sum) const
-    {  sum = filtered_sum; }
+    { sum = filtered_sum; }
 
     //! Hits on filtered average for each channel
     void get_filtered_hits (std::vector<uint64_t>& hits) const
@@ -79,7 +90,7 @@ namespace dsp {
     void reset_count () { unfiltered_hits = 0; }
 
 
-    //! Engine used to perform discrete convolution step
+    //! Engine used to perform computations on device other than CPU
     class Engine;
 
     void set_engine (Engine*);
@@ -136,15 +147,14 @@ namespace dsp {
     Reference::To<Engine> engine;
 
 
-
   private:
 
     void compute ();
 
     void detect ();
     void detect_tscr ();
-    void detect_skfb ();
-    void detect_fscr ();
+    void detect_skfb (unsigned ires);
+    void detect_fscr (unsigned ires);
     void count_zapped ();
 
     void mask ();
@@ -154,8 +164,93 @@ namespace dsp {
 
     unsigned debugd;
 
-    //! number of samples used in each SK estimate
-    unsigned M;
+    class Resolution
+    {
+    private:
+      
+      //! frequency channels to be zapped
+      mutable std::vector<bool> channels;
+
+      //! lower and upper thresholds of excision limits
+      mutable std::vector<float> thresholds;
+
+      //! number of samples used in each SK estimate
+      unsigned M;
+
+      //! Standard deviation used to compute thresholds
+      float std_devs;
+      
+      //! compute the min and max SK thresholds
+      void set_thresholds (float _std_devs, bool verbose = false) const;
+
+
+    public:
+
+      Resolution ()
+      { 
+        M = overlap_offset = 128; noverlap = 1;
+        npart = output_ndat = 0;
+        std_devs = 3.0;
+      }
+
+      //! Add a range of frequency channels to be zapped
+      /*! from first to second inclusive; e.g. (0,1023) = 1024 channels */
+      void add_include (const std::pair<unsigned, unsigned>&);
+
+      //! Add a range of frequency channels not to be zapped
+      /*! from first to second inclusive; e.g. (0,1023) = 1024 channels */
+      void add_exclude (const std::pair<unsigned, unsigned>&);
+
+      //! Get the channels to be zapped
+      const std::vector<bool>& get_channels (unsigned nchan) const;
+      
+      //! number of samples used in each SK estimate
+      unsigned get_M () const { return M; }
+      void set_M (unsigned);
+
+      //! oversampling factor
+      /* NZAPP-206 WvS: I called this "noverlap" instead of oversampling_factor
+         to avoid confusion with polyphase filterbank oversampling */
+      unsigned noverlap;
+
+      //! sample offset to start of next overlapping M-sample block
+      unsigned overlap_offset;
+
+      //! number of SK estimates produced
+      uint64_t npart;
+
+      //! number of output time samples flagged
+      uint64_t output_ndat;
+
+      //! ensure that noverlap divides M and compute overlap_offset
+      void prepare (uint64_t ndat = 0);
+
+      //! ensure that this shares boundaries with that
+      void compatible (Resolution& that);
+
+      //! number of std devs used to calculate excision limits
+      float get_std_devs () const { return std_devs; }
+      void set_std_devs (float);
+
+      //! lower and upper thresholds of excision limits
+      const std::vector<float>& get_thresholds () const;
+      
+      //! ranges of frequency channels to be zapped
+      std::vector< std::pair<unsigned,unsigned> > include;
+
+      //! ranges of frequency channels not to be zapped
+      std::vector< std::pair<unsigned,unsigned> > exclude;
+    };
+
+    std::vector<Resolution> resolution;
+
+    void resize_resolution (unsigned);
+
+    //! integrate the S1 and S2 sum to new M and noverlap
+    void tscrunch_sums (Resolution& from, Resolution& to);
+
+    // for sorting by M
+    static bool by_M (const Resolution& A, const Resolution& B);
 
     unsigned nchan;
 
@@ -163,12 +258,8 @@ namespace dsp {
 
     unsigned ndim;
 
-    uint64_t npart;
-
-    uint64_t output_ndat;
-
-    //! SK Estimates
-    Reference::To<TimeSeries> estimates;
+    //! S1 and S2 sums
+    Reference::To<TimeSeries> sums;
 
     //! Tscrunched SK Estimate for block
     Reference::To<TimeSeries> estimates_tscr;
@@ -176,9 +267,10 @@ namespace dsp {
     //! Zap mask
     Reference::To<BitSeries> zapmask;
 
-    //! accumulation arrays for S1 and S2 in t scrunch
+    //! accumulation arrays for S1 and S2 in tscrunch
     std::vector <float> S1_tscr;
     std::vector <float> S2_tscr;
+    uint64_t tscr_count;
 
     //! Total SK statistic for each poln/channel, post filtering
     std::vector<float> filtered_sum;
@@ -192,14 +284,6 @@ namespace dsp {
     //! Hits on unfiltered SK statistic, same for each channel
     uint64_t unfiltered_hits;
 
-    //! number of std devs used to calculate excision limits
-    unsigned std_devs;
-
-    //! lower and upper thresholds of excision limits
-    std::vector<float> thresholds;
-
-    float one_sigma;
-
     //! Number of samples integrated into tscr
     unsigned M_tscr;
 
@@ -207,9 +291,6 @@ namespace dsp {
     std::vector<uint64_t> thresholds_tscr_m;
     std::vector<float> thresholds_tscr_lower;
     std::vector<float> thresholds_tscr_upper;
-
-    //! channel range to compute and apply SK excisions
-    std::vector<unsigned> channels;
 
     //! samples zapped by type [0:all, 1:sk, 2:fscr, 3:tscr]
     std::vector<uint64_t> zap_counts;
@@ -253,7 +334,7 @@ namespace dsp {
                               float upper_thresh, float lower_thresh) = 0;
 
       virtual void detect_fscr (const TimeSeries* input, BitSeries* output,
-                                const float mu2, const unsigned std_devs,
+                                const float mu2, const float std_devs,
                                 unsigned schan, unsigned echan) = 0;
 
       virtual void detect_tscr (const TimeSeries* input,

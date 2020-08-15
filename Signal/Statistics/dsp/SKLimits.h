@@ -18,7 +18,7 @@ namespace dsp {
 
   public:
 
-    SKLimits ( unsigned _M, unsigned _std_devs );
+    SKLimits ( unsigned _M, float _std_devs );
 
     ~SKLimits ();
 
@@ -30,7 +30,7 @@ namespace dsp {
 
     void set_M ( unsigned _M) { M = _M; }
 
-    void set_std_devs ( unsigned _std_devs ) { std_devs = _std_devs; }
+    void set_std_devs ( float _std_devs ) { std_devs = _std_devs; }
 
   private:
 
@@ -45,7 +45,7 @@ namespace dsp {
     unsigned M;
 
     //! Numer of standard deviations to form limits
-    unsigned std_devs;
+    float std_devs;
 
     unsigned verbose;
   };

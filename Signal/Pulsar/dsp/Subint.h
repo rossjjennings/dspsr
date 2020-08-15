@@ -202,7 +202,7 @@ void dsp::Subint<Op>::set_unloader (dsp::PhaseSeriesUnloader* _unloader)
 }
 
 template <class Op>
-void dsp::Subint<Op>::prepare ()
+void dsp::Subint<Op>::prepare () try
 {
   if (Op::verbose)
     std::cerr << "dsp::Subint::prepare call Op::prepare" << std::endl;
@@ -224,10 +224,25 @@ void dsp::Subint<Op>::prepare ()
     divider.set_start_time (Op::input->get_start_time());
   }
 
-  if (Op::has_folding_predictor() && divider.get_turns())
-    divider.set_predictor (Op::get_folding_predictor());
+  if (divider.get_turns())
+  {
+    if (Op::has_folding_predictor())
+    {
+      divider.set_predictor (Op::get_folding_predictor());
+    }
+    else
+    {
+      // if (Op::verbose)
+        std::cerr << "dsp::Subint::prepare folding period=" << Op::get_folding_period() << std::endl;
+      divider.set_period (Op::get_folding_period());
+    }
+  }
 
   built = true;
+}
+catch (Error& error)
+{
+  throw error += "dsp::Subint::prepare";
 }
 
 

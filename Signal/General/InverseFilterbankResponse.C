@@ -48,10 +48,9 @@ dsp::InverseFilterbankResponse::InverseFilterbankResponse (const dsp::InverseFil
 
 const dsp::InverseFilterbankResponse& dsp::InverseFilterbankResponse::operator= (const dsp::InverseFilterbankResponse& response)
 {
-
-  if (this == &response) {
+  if (this == &response)
     return *this;
-  }
+
   dsp::Response::operator= (response);
 
   fir_filter = response.fir_filter;
@@ -62,6 +61,7 @@ const dsp::InverseFilterbankResponse& dsp::InverseFilterbankResponse::operator= 
   oversampling_factor = response.oversampling_factor;
   input_overlap = response.input_overlap;
 
+  return *this;
 }
 
 

@@ -104,13 +104,6 @@ void dsp::UnloaderShare::unload (const PhaseSeries* data, Submit* submit) try
   if (Operation::verbose)
     verbose = &(submit->cerr);
 
-  // postponed copy
-  if (divider_copy)
-  {
-    divider = *divider_copy;
-    divider_copy = 0;
-  }
-
   unsigned contributor = submit->contributor;
 
   std::ostream& cerr = *verbose;
@@ -119,6 +112,13 @@ void dsp::UnloaderShare::unload (const PhaseSeries* data, Submit* submit) try
     cerr << "dsp::UnloaderShare::unload context=" << context << endl;
 
   ThreadContext::Lock lock (context);
+
+  // postponed copy
+  if (divider_copy)
+  { 
+    divider = *divider_copy;
+    divider_copy = 0;
+  }
 
   if (divider.get_turns() == 0 && divider.get_seconds() == 0.0)
     throw Error (InvalidState, "dsp::UnloaderShare::tranformation",

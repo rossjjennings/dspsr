@@ -225,11 +225,6 @@ int64_t dsp::File::load_bytes_device (unsigned char* buffer, uint64_t bytes, voi
   {
     if (host_buffer)
     {
-      if (result != cudaSuccess)
-        throw Error (InvalidState, "dsp::File::load_bytes_device",
-                     "failed to synchronize cuda stream prior to buffer enlargement: %s",
-                     cudaGetErrorString (result));
-
       result = cudaFreeHost (host_buffer);
       if (result != cudaSuccess)
         throw Error (InvalidState, "dsp::File::load_bytes_device",
@@ -243,7 +238,7 @@ int64_t dsp::File::load_bytes_device (unsigned char* buffer, uint64_t bytes, voi
     result = cudaMallocHost (&host_buffer, bytes);
     if (result != cudaSuccess)
       throw Error (InvalidState, "dsp::File::load_bytes_device",
-                   "cudaMallocHost (host_buffer, %"PRIu64") failed: %s",
+                   "cudaMallocHost (host_buffer, %" PRIu64 ") failed: %s",
                   bytes, cudaGetErrorString (result));
     host_buffer_size = bytes;
   }
@@ -265,7 +260,7 @@ int64_t dsp::File::load_bytes_device (unsigned char* buffer, uint64_t bytes, voi
     result = cudaMemcpyAsync (buffer, host_buffer, bytes, cudaMemcpyHostToDevice, stream);
     if (result != cudaSuccess)
       throw Error (InvalidState, "dsp::File::load_bytes_device",
-                   "cudaMemcpyAsync (%p, %p, %"PRIu64") failed: %s",
+                   "cudaMemcpyAsync (%p, %p, %" PRIu64 ") failed: %s",
                    (void *) buffer, host_buffer, bytes, cudaGetErrorString (result));
     cudaStreamSynchronize(stream);
   }

@@ -34,6 +34,12 @@ dsp::BitSeries::~BitSeries ()
   data_size = 0;
 }
 
+void dsp::BitSeries::zero ()
+{
+  if (data) 
+    memory->do_zero (data, data_size);
+}
+
 void dsp::BitSeries::set_memory (Memory* m)
 {
   memory = m;

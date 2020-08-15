@@ -180,21 +180,28 @@ std::string dsp::FilenameEpoch::get_filename (const PhaseSeries* data)
 
 std::string dsp::FilenamePulse::get_filename (const PhaseSeries* data)
 {
-  const Pulsar::Predictor* poly = data->get_folding_predictor();
-  if (!poly)
-    throw Error (InvalidState, "dsp::FilenamePulse::get_filename",
-		 "PhaseSeries does not contain a polyco");
+  if (data->has_folding_predictor())
+  {
+    const Pulsar::Predictor* poly = data->get_folding_predictor();
+    if (!poly)
+      throw Error (InvalidState, "dsp::FilenamePulse::get_filename",
+		   "PhaseSeries does not contain a polyco");
 
-  // add pulse number to the output archive
-  Pulsar::Phase phase = poly->phase ( data->get_start_time() );
-
-  if (Observation::verbose)
-    cerr << "dsp::FilenamePulse::get_filename phase=" << phase 
-	 << " ref=" << data->get_reference_phase() << endl;
-
-  phase = (phase + 0.5 - data->get_reference_phase()).Floor();
-
-  return "pulse_" + tostring(phase.intturns());
+    // add pulse number to the output archive
+    Pulsar::Phase phase = poly->phase ( data->get_start_time() );
+  
+    if (Observation::verbose)
+      cerr << "dsp::FilenamePulse::get_filename phase=" << phase 
+	   << " ref=" << data->get_reference_phase() << endl;
+  
+    phase = (phase + 0.5 - data->get_reference_phase()).Floor();
+  
+    return "pulse_" + tostring(phase.intturns());
+  }
+  else
+  {
+    return "start_" + data->get_start_time().printdays(13);
+  }  
 }
 
 dsp::FilenameSequential::FilenameSequential()
@@ -209,3 +216,16 @@ std::string dsp::FilenameSequential::get_filename (const PhaseSeries* data)
   current_index++;
   return out;
 }
+
+dsp::FilenameMJD::FilenameMJD (unsigned _digits)
+{
+  filename_base = "mjd";
+  digits = _digits;
+}
+
+std::string dsp::FilenameMJD::get_filename (const PhaseSeries* data)
+{
+  string out = filename_base + "_" + data->get_start_time().printdays(digits);
+  return out;
+}
+

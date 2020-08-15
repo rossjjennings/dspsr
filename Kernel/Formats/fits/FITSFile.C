@@ -277,8 +277,11 @@ int64_t dsp::FITSFile::load_bytes(unsigned char* buffer, uint64_t bytes)
   // WvS 2020-04-04 The following assertions were added because 
   // this code assumes that the block size is exactly one row
 
-  assert (byte_offset == 0);
-  assert (bytes <= bytes_per_row);
+  if (byte_offset + bytes > bytes_per_row)
+  {
+    cerr << "FITSFile::load_bytes shortening first read" << endl;
+    bytes_remaining = bytes = bytes_per_row - byte_offset;
+  }
 
   BitSeries* bs = get_output();
   Extension* ext = 0;
@@ -302,9 +305,8 @@ int64_t dsp::FITSFile::load_bytes(unsigned char* buffer, uint64_t bytes)
     unsigned this_read = bytes_per_row - byte_offset;
 
     // Ensure we don't read more than expected.
-    if (this_read > bytes_remaining) {
+    if (this_read > bytes_remaining)
       this_read = bytes_remaining;
-    }
 
     if (verbose)
       cerr << "FITSFile::load_bytes row=" << current_row

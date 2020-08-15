@@ -40,6 +40,9 @@ unsigned dsp::SMROTwoBitCorrection::get_ndig () const
 #ifdef CHAN2
   return 2;   // TWO CHANNELS
 #endif
+
+  throw Error (InvalidState, "dsp::SMROTwoBitCorrection::get_ndig",
+               "CHAN not #defined");
 }
 
 /*! Each 2-bit sample from each digitizer is packed into one byte */
@@ -54,5 +57,8 @@ unsigned dsp::SMROTwoBitCorrection::get_ndig_per_byte () const
 #ifdef CHAN2
   return 2;   // TWO CHANNELS
 #endif
+
+  throw Error (InvalidState, "dsp::SMROTwoBitCorrection::get_ndig_per_byte",
+               "CHAN not #defined");
 }
 

@@ -127,27 +127,27 @@ int main(int argc, char ** argv) try
 
   if (quiet)
   {
-    cerr << " " << smear_us * 1e-6 << endl;
+    cout << " " << smear_us * 1e-6 << endl;
     return 0;
   }
 
-  cerr << "\nInput Parameters:\n"
+  cout << "\nInput Parameters:\n"
     "Centre Frequency:   " << kernel.get_centre_frequency() << " MHz\n"
     "Bandwidth:          " << kernel.get_bandwidth() << " MHz\n"
     "Dispersion Measure: " << kernel.get_dispersion_measure() << " pc/cm^3\n";
 
   if (nchan > 1)
-    cerr <<
+    cout <<
       "Sub-bands:          " << kernel.get_nchan() << endl;
   
-  cerr << "\nOutput parameters:\n"
+  cout << "\nOutput parameters:\n"
     "Dispersion delay:   " << kernel.delay_time() << " s (wrt lambda=0)\n"
     "Smearing time:      " << smear_us << " us (across band)\n";
 
   if (nchan > 1)
   {
     smear_us = kernel.get_effective_smearing_time () * 1e6;
-    cerr << "Effective Smearing: " << smear_us << " us\n";
+    cout << "Effective Smearing: " << smear_us << " us\n";
   }
 
   kernel.prepare();
@@ -155,7 +155,7 @@ int main(int argc, char ** argv) try
   unsigned nfilt = kernel.get_impulse_pos() + kernel.get_impulse_neg();
   unsigned nfft = kernel.get_minimum_ndat ();
 
-  cerr <<
+  cout <<
     "\n"
     "Wrap-Around: " << nfilt << " samples \n"
     "Minimum Kernel Length " << nfft
@@ -167,11 +167,11 @@ int main(int argc, char ** argv) try
   nfft = kernel.get_ndat ();
 
   if (set_nfft)
-    cerr << "Specified kernel length: " << nfft;
+    cout << "Specified kernel length: " << nfft;
   else
-    cerr << "Optimal kernel length: " << nfft;
+    cout << "Optimal kernel length: " << nfft;
 
-  cerr << " (" << float(nfilt)/float(nfft)*100.0 << "% wrap)" << endl;
+  cout << " (" << float(nfilt)/float(nfft)*100.0 << "% wrap)" << endl;
 
   // bw in MHz = number of complex samples per microsecond
   double max_realtime_us = (nfft-nfilt) / bw;
@@ -180,11 +180,11 @@ int main(int argc, char ** argv) try
   double min_ops = 2*5.0* nfft * (log2(nchan) + 2*log2(nfft));
   double min_Mflops = min_ops / max_realtime_us;
 
-  cerr <<
+  cout <<
     "\n"
     "Minimum Mflops = " << min_Mflops << " (two polarizations)" << endl;
 
-  cerr << endl;
+  cout << endl;
   return 0;
 
 }

@@ -106,7 +106,7 @@ namespace dsp {
 
     const unsigned* get_hits (unsigned ichan=0) const;
 
-    const uint64_t get_hits_size() const { return hits_size; }
+    uint64_t get_hits_size() const { return hits_size; }
 
     //! Set the hits in all bins and channels
     void set_hits (unsigned value);

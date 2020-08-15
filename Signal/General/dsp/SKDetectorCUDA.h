@@ -32,7 +32,7 @@ namespace CUDA
                     float upper_thresh, float lower_thresh);
 
     void detect_fscr(const dsp::TimeSeries* input, dsp::BitSeries* output,
-                     const float mu2, const unsigned std_devs,
+                     const float mu2, const float std_devs,
                      unsigned schan, unsigned echan);
 
     void detect_tscr (const dsp::TimeSeries* input, const dsp::TimeSeries* input_tscr, dsp::BitSeries* output,

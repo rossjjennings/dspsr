@@ -62,7 +62,7 @@ void dsp::SKDetector::set_engine (Engine * _engine)
   engine->setup();
 }
 
-void dsp::SKDetector::set_thresholds (unsigned _M, unsigned _n_std_devs)
+void dsp::SKDetector::set_thresholds (unsigned _M, float _n_std_devs)
 {
   M = _M;
   n_std_devs = _n_std_devs;

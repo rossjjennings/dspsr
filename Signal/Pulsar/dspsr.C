@@ -295,10 +295,13 @@ void parse_options (int argc, char** argv) try
   arg = menu.add (config->nosk_too, "noskz_too");
   arg->set_help ("also produce un-zapped version of output");
 
-  arg = menu.add (config->sk_m, "skzm", "samples");
+  arg = menu.add (config.get(), &dsp::LoadToFold::Config::set_sk_m, "skzm", "samples");
   arg->set_help ("samples to integrate for spectral kurtosis statistics");
 
-  arg = menu.add (config->sk_std_devs, "skzs", "stddevs");
+  arg = menu.add (config.get(), &dsp::LoadToFold::Config::set_sk_noverlap, "skzover", "integer");
+  arg->set_help ("oversampling factor (skzover must evenly divide skzm)");
+
+  arg = menu.add (config.get(), &dsp::LoadToFold::Config::set_sk_std_devs, "skzs", "stddevs");
   arg->set_help ("number of std deviations to use for spectral kurtosis excisions");
 
   arg = menu.add (config->sk_chan_start, "skz_start", "chan");
@@ -306,6 +309,11 @@ void parse_options (int argc, char** argv) try
 
   arg = menu.add (config->sk_chan_end, "skz_end", "chan");
   arg->set_help ("last channel where signal is expected");
+
+#if HAVE_YAMLCPP
+  arg = menu.add (config->sk_config, "skz_config", "sk.yaml");
+  arg->set_help ("load SK configuration from YAML file");
+#endif
 
   arg = menu.add (config->sk_no_fscr, "skz_no_fscr");
   arg->set_help ("do not use SKDetector Fscrunch feature");
@@ -511,6 +519,9 @@ void parse_options (int argc, char** argv) try
 
   arg = menu.add (config->archive_filename, 'O', "name");
   arg->set_help ("output filename");
+
+  arg = menu.add (config->filename_convention, "fname", "convention");
+  arg->set_help ("multiple output filename convention");
 
   arg = menu.add (config->pdmp_output, 'Y');
   arg->set_help ("output pdmp extras");

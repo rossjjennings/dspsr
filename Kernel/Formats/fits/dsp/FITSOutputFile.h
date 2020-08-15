@@ -81,7 +81,7 @@ namespace dsp {
     virtual int64_t unload_bytes (const void* buffer, uint64_t bytes);
 
     //! Interface to CFITSIO with error checking and bookkeeping
-    unsigned char* write_bytes (int colnum, int isub, int offset, unsigned bytes_to_write, unsigned char** buffer);
+    void write_bytes (int colnum, int isub, int offset, unsigned bytes_to_write, unsigned char** buffer);
 
     //! samples per block (FITS row)
     unsigned nsblk;

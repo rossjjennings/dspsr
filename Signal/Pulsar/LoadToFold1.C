@@ -88,12 +88,17 @@ using namespace std;
 
 static void* const undefined_stream = (void *) -1;
 
-dsp::LoadToFold::LoadToFold (Config* configuration)
+dsp::LoadToFold::LoadToFold (Config* configuration) try
 {
   manage_archiver = true;
   fold_prepared = false;
 
-  set_configuration (configuration);
+  if (configuration)
+    set_configuration (configuration);
+}
+catch (Error& error)
+{
+  throw error += "LoadToFold ctor";
 }
 
 dsp::LoadToFold::~LoadToFold ()
@@ -101,10 +106,14 @@ dsp::LoadToFold::~LoadToFold ()
 }
 
 //! Run through the data
-void dsp::LoadToFold::set_configuration (Config* configuration)
+void dsp::LoadToFold::set_configuration (Config* configuration) try
 {
   SingleThread::set_configuration (configuration);
   config = configuration;
+}
+catch (Error& error)
+{
+  throw error += "LoadToFold::set_configuration";
 }
 
 
@@ -399,7 +408,7 @@ void dsp::LoadToFold::construct () try
       }
 
       // Get order of operations correct
-      if (!convolve_when == Filterbank::Config::Before){
+      if (convolve_when != Filterbank::Config::Before){
         operations.push_back (filterbank.get());
       }
     }
@@ -615,7 +624,6 @@ void dsp::LoadToFold::construct () try
 
     skestimator->set_input (convolved);
     skestimator->set_output (cleaned);
-    skestimator->set_M (config->sk_m);
 
 #if HAVE_CUDA
     if (run_on_gpu)
@@ -627,10 +635,22 @@ void dsp::LoadToFold::construct () try
     }
 #endif
 
-    skestimator->set_thresholds (config->sk_m, config->sk_std_devs);
-    if (config->sk_chan_start > 0 && config->sk_chan_end < filter_channels)
-      skestimator->set_channel_range (config->sk_chan_start, config->sk_chan_end);
     skestimator->set_options (config->sk_no_fscr, config->sk_no_tscr, config->sk_no_ft);
+
+    if (config->sk_config != "")
+      skestimator->load_configuration( config->sk_config );
+
+    // NZAPP-207: the configuration file over-rides all of these parameters
+    else
+    {
+      skestimator->set_M (config->sk_m);
+      skestimator->set_noverlap (config->sk_noverlap);
+
+      skestimator->set_thresholds (config->sk_std_devs);
+      if (config->sk_chan_start > 0 && config->sk_chan_end < filter_channels)
+        skestimator->set_channel_range (config->sk_chan_start,
+                                        config->sk_chan_end);
+    }
 
     operations.push_back (skestimator.get());
   }
@@ -1384,7 +1404,9 @@ void dsp::LoadToFold::prepare_archiver( Archiver* archiver )
   FilenameEpoch* epoch_convention = 0;
   FilenameSequential* index_convention = 0;
 
-  if (config->concurrent_archives())
+  if (config->filename_convention == "mjd")
+    archiver->set_convention( new FilenameMJD(13) );
+  else if (config->concurrent_archives())
     archiver->set_convention( new FilenamePulse );
   else
   {

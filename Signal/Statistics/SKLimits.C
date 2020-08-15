@@ -12,7 +12,7 @@
 
 using namespace std;
 
-dsp::SKLimits::SKLimits (unsigned _M, unsigned _std_devs)
+dsp::SKLimits::SKLimits (unsigned _M, float _std_devs)
 {
   M = _M;
   std_devs = _std_devs;
