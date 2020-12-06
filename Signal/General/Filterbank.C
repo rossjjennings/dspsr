@@ -277,9 +277,11 @@ void dsp::Filterbank::make_preparations ()
            << ((matrix_convolution)?"matrix":"complex") << " convolution"
            << endl;
 
+#if 0
     if (matrix_convolution && input->get_nchan() > 1)
       throw Error(InvalidState,"dsp::Filterbank::make_preparations",
                   "matrix convolution untested for > one input channel");
+#endif
 
     if (matrix_convolution && input->get_npol() != 2)
         throw Error (InvalidState, "dsp::Filterbank::make_preparations",
