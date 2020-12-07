@@ -24,6 +24,7 @@ namespace dsp {
   class Detection;
   class Fold;
   class Archiver;
+  class FoldManager;
 
   class Response;
   class RFIFilter;
@@ -89,6 +90,9 @@ namespace dsp {
 
     //! A folding algorithm for each pulsar to be folded
     std::vector< Reference::To<Fold> > fold;
+
+    //! Manages the execution of multiple Fold algorithms
+    Reference::To<FoldManager> fold_manager;
 
     //! Wrap each folder in a separate thread of execution
     std::vector< Reference::To<OperationThread> > asynch_fold;

@@ -64,6 +64,7 @@
 #include "dsp/FourthMoment.h"
 #include "dsp/Stats.h"
 
+#include "dsp/FoldManager.h"
 #include "dsp/Fold.h"
 #include "dsp/Subint.h"
 #include "dsp/PhaseSeries.h"
@@ -92,6 +93,7 @@ dsp::LoadToFold::LoadToFold (Config* configuration) try
 {
   manage_archiver = true;
   fold_prepared = false;
+  fold_manager = new FoldManager;
 
   if (configuration)
     set_configuration (configuration);
@@ -1103,6 +1105,10 @@ void dsp::LoadToFold::build_fold (TimeSeries* to_fold)
     /*
       path must be built before fold[ifold] is added to operations vector
       so that each path will contain only one Fold instance.
+
+      WvS - 2020-12-08 - Fold instances are no longer directly added
+      to the operations vecotor, but the fold manager is added last
+      so that the above intent is preserved.
     */
 
     path[ifold] = new SignalPath (operations);
@@ -1110,6 +1116,8 @@ void dsp::LoadToFold::build_fold (TimeSeries* to_fold)
 
     configure_fold (ifold, to_fold);
   }
+
+  operations.push_back( fold_manager.get() );
 }
 
 dsp::PhaseSeriesUnloader*
@@ -1371,7 +1379,7 @@ void dsp::LoadToFold::configure_fold (unsigned ifold, TimeSeries* to_fold)
   if (config->asynchronous_fold)
     asynch_fold[ifold] = new OperationThread( fold[ifold].get() );
   else
-    operations.push_back( fold[ifold].get() );
+    fold_manager->manage( fold[ifold] );
 
 #if HAVE_CUDA
   if (gpu_stream != undefined_stream)
@@ -1384,7 +1392,6 @@ void dsp::LoadToFold::configure_fold (unsigned ifold, TimeSeries* to_fold)
   }
 #endif
 }
-
 
 void dsp::LoadToFold::prepare_archiver( Archiver* archiver )
 {
