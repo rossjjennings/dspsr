@@ -165,8 +165,7 @@ namespace dsp {
     friend class UnloaderShare;
 
     Reference::To<UnloaderShare> parent;
-    Reference::To<PhaseSeriesUnloader> shared_unloader;
-    Reference::To<PhaseSeriesUnloader> own_unloader;
+    Reference::To<PhaseSeriesUnloader> unloader;
     unsigned contributor;
   };
 
