@@ -168,7 +168,6 @@ namespace dsp {
     void configure_detection (Detection*, unsigned);
 
     PhaseSeriesUnloader* get_unloader (unsigned ifold);
-    size_t get_nfold ();
 
     //! Prepare all fold instances
     void prepare_fold ();

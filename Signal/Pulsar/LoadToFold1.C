@@ -720,7 +720,7 @@ void dsp::LoadToFold::construct () try
 
   if (config->sk_fold)
   {
-    PhaseSeriesUnloader* unload = get_unloader( get_nfold() );
+    PhaseSeriesUnloader* unload = get_unloader( config->get_nfold() );
     unload->set_extension( ".sk" );
 
     Reference::To<Fold> skfold;
@@ -1060,16 +1060,6 @@ const char* multifold_error =
   "\t%s\n"
   "The multiple output archives would over-write each other.\n";
 
-size_t dsp::LoadToFold::get_nfold ()
-{
-  size_t nfold = 1 + config->additional_pulsars.size();
-
-  nfold = std::max( nfold, config->predictors.size() );
-  nfold = std::max( nfold, config->ephemerides.size() );
-
-  return nfold;
-}
-
 void dsp::LoadToFold::build_fold (TimeSeries* to_fold)
 {
   if (Operation::verbose)
@@ -1082,7 +1072,7 @@ void dsp::LoadToFold::build_fold (TimeSeries* to_fold)
     operations.push_back (stats);
   }
 
-  size_t nfold = get_nfold ();
+  size_t nfold = config->get_nfold ();
 
   if (nfold > 1 && !config->archive_filename.empty())
     throw Error (InvalidState, "dsp::LoadToFold::build_fold",

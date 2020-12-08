@@ -244,6 +244,9 @@ namespace dsp {
     // the predictors of multiple pulsars to be folded
     std::vector< Reference::To<Pulsar::Predictor> > predictors;
 
+    //! Return the number of folds to perform
+    unsigned get_nfold () const;
+
     // don't output dynamic extensions in the file
     bool no_dynamic_extensions;
 

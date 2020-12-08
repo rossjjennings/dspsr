@@ -6,6 +6,7 @@
  ***************************************************************************/
 
 #include "dsp/LoadToFoldConfig.h"
+#include <algorithm>
 
 using namespace std;
 
@@ -153,6 +154,16 @@ dsp::LoadToFold::Config::Config ()
 
   inverse_filterbank_fft_window = "tukey";
 
+}
+
+unsigned dsp::LoadToFold::Config::get_nfold () const
+{
+  size_t nfold = 1 + additional_pulsars.size();
+
+  nfold = std::max( nfold, predictors.size() );
+  nfold = std::max( nfold, ephemerides.size() );
+
+  return nfold;
 }
 
 // set the spectral kurtosis window lengths

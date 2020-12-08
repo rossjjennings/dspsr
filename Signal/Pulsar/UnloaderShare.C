@@ -320,6 +320,10 @@ void dsp::UnloaderShare::nonblocking_unload (unsigned istore, Submit* submit)
   if (Operation::verbose)
     submit->cerr << "dsp::UnloaderShare::nonblocking_unload" << endl;
 
+  if (! submit->unloader)
+    throw Error (InvalidState, "dsp::UnloaderShare::nonblocking_unload",
+                 "submit=%x has no unloader", submit);
+
   Reference::To<Storage> store = storage[istore];
   storage.erase (storage.begin() + istore);
 
