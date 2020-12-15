@@ -94,6 +94,8 @@ static std::string get_sigproc_telescope_name (int _id)
       return "LOFAR";
     case 12:
       return "VLA";
+    case 64:
+      return "MeerKAT";
     default:
       return "unknown";
       break;
@@ -130,6 +132,7 @@ static int get_sigproc_telescope_id (string name)
     else if (itoa == "SR") return 10;
     else if (itoa == "LF") return 11;
     else if (itoa == "VL") return 12;
+    else if (itoa == "MK") return 64;
     else return 0;
   }
   catch (Error &error)
