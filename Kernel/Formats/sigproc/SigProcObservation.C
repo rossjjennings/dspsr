@@ -9,6 +9,10 @@
 #include <config.h>
 #endif
 
+#include "Pulsar/Site.h"
+#include "Horizon.h"
+#include "Meridian.h"
+
 #include "dsp/SigProcObservation.h"
 #include "FilePtr.h"
 
@@ -276,7 +280,36 @@ void dsp::SigProcObservation::unload_global ()
 
   // cerr << "raj=" << src_raj << " dej=" << src_dej << endl;
 
-  az_start = za_start = 0.0;
+  const Pulsar::Site* location = 0;
+  Horizon horizon;
+  Directional* directional = &horizon;
+  try
+  {
+    // configure the observatory location
+    location = Pulsar::Site::location (get_telescope());
+    double lat, lon, rad;
+    location->get_sph (lat, lon, rad);
+    Angle latitude;
+    Angle longitude;
+    latitude.setRadians( lat );
+    longitude.setRadians( lon );
+    directional->set_observatory_latitude( latitude.getRadians() );
+    directional->set_observatory_longitude( longitude.getRadians() );
+
+    // configure the source coordinates
+    directional->set_source_coordinates( coordinates );
+
+    MJD mjd(tstart);
+    directional->set_epoch( mjd );
+
+    double rad2deg = 180.0/M_PI;
+    az_start = horizon.get_azimuth() * rad2deg;
+    za_start = horizon.get_zenith() * rad2deg;
+  }
+  catch (Error& error)
+  {
+    az_start = za_start = 0.0;
+  }
 
   for (unsigned ipol=0; ipol < get_npol(); ipol++)
     ::ifstream[ipol] = 'Y';
