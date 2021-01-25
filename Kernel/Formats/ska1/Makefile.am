@@ -3,11 +3,13 @@ noinst_LTLIBRARIES = libska1.la
 
 nobase_include_HEADERS = \
   dsp/AAVS2Unpacker.h \
+  dsp/CBFPSRUnpacker.h \
   dsp/LFAASPEADUnpacker.h \
   dsp/SKA1Unpacker.h
 
 libska1_la_SOURCES = \
   AAVS2Unpacker.C \
+  CBFPSRUnpacker.C \
   LFAASPEADUnpacker.C \
   SKA1Unpacker.C
 
