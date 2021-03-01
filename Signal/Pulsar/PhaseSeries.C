@@ -72,6 +72,7 @@ dsp::PhaseSeries::~PhaseSeries ()
 
 void dsp::PhaseSeries::set_hits_memory (Memory* m)
 {
+  cerr << "dsp::PhaseSeries::set_hits_memory Memory*=" << (void*) m << endl;
   if (hits_memory && hits)
     resize_hits (0);
 
@@ -108,6 +109,16 @@ void dsp::PhaseSeries::resize_hits (int64_t nbin)
     cerr << "dsp::PhaseSeries::resize_hits nchan=" << get_nchan()
          << " nbin=" << nbin << " hits_nchan=" << hits_nchan << endl;
 
+  unsigned required_hits_size = nbin * hits_nchan * sizeof (unsigned);
+  if (hits_size >= required_hits_size)
+  {
+    if (verbose)
+      cerr << "dsp::PhaseSeries::resize_hits hits_size=" << hits_size
+           << " >= required=" << required_hits_size << endl;
+
+    return;
+  }
+
   if (hits)
   {
     if (verbose)
@@ -115,13 +126,12 @@ void dsp::PhaseSeries::resize_hits (int64_t nbin)
     hits_memory->do_free (hits);
   }
 
-  hits_size = nbin * hits_nchan * sizeof (unsigned);
+  hits_size = required_hits_size;
 
   if (verbose)
     cerr << "dsp::PhaseSeries::resize_hits Memory::do_allocate (" 
          << hits_size << ")" << endl;
   hits = (unsigned *) hits_memory->do_allocate (hits_size);
-
 }
 
 //! Set the period at which to fold data (in seconds)
@@ -258,7 +268,7 @@ MJD dsp::PhaseSeries::get_mid_time (bool phased) const
 void dsp::PhaseSeries::zero () try
 {
   if (verbose)
-    cerr << "PhaseSeries::zero" << endl;
+    cerr << "PhaseSeries::zero this=" << (void*) this << endl;
 
   integration_length = 0.0;
   ndat_total = 0;
@@ -292,13 +302,13 @@ void dsp::PhaseSeries::copy_configuration (const Observation* copy)
 
 void dsp::PhaseSeries::copy_attributes (const PhaseSeries* copy)
 {
-  reference_phase    = copy->reference_phase;
   integration_length = copy->integration_length;
   ndat_total         = copy->ndat_total;
   ndat_expected      = copy->ndat_expected;
 
   end_time           = copy->end_time;
   folding_period     = copy->folding_period;
+  reference_phase    = copy->reference_phase;
 
   if (verbose)
     cerr << "dsp::PhaseSeries::copy_attributes hits_size=" << hits_size 
