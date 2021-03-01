@@ -116,6 +116,8 @@ void dsp::UnloaderShare::unload (const PhaseSeries* data, Submit* submit) try
   // postponed copy
   if (divider_copy)
   { 
+    if (verbose)
+      cerr << "dsp::UnloaderShare::unload postponed divider copy" << endl;
     divider = *divider_copy;
     divider_copy = 0;
   }
@@ -148,12 +150,18 @@ void dsp::UnloaderShare::unload (const PhaseSeries* data, Submit* submit) try
     Storage::division
   */
 
-  bool integrated = false;
+  unsigned integrated = 0;
 
   for (unsigned istore=0; istore < storage.size(); istore++)
     if (storage[istore]->integrate( contributor, division, data ))
-      integrated = true;
+    {
+      if (verbose)
+        cerr << "dsp::UnloaderShare::unload add to istore=" << istore << endl;
+      integrated ++;
+    }
 
+  if (verbose)
+    cerr << "dsp::UnloaderShare::unload integrated=" << integrated << endl;
 
   /*
     WvS - 5 Nov 2011
@@ -168,9 +176,16 @@ void dsp::UnloaderShare::unload (const PhaseSeries* data, Submit* submit) try
   {
     // wake up any threads waiting for completion
 
+    if (verbose)
+      cerr << "dsp::UnloaderShare::unload wait_all=true" << endl;
+
     for (unsigned istore=0; istore < storage.size(); istore++)
       if (storage[istore]->get_finished ())
       {
+        if (verbose)
+          cerr << "dsp::UnloaderShare::unload storage[" << istore << "]"
+                  " is finished" << endl;
+
 	context->broadcast ();
 	break;
       }
@@ -199,6 +214,9 @@ void dsp::UnloaderShare::unload (const PhaseSeries* data, Submit* submit) try
 
     if (wait_all)
     {
+      if (verbose)
+        cerr << "dsp::UnloaderShare::unload waiting for other threads" << endl;
+
       temp->wait_all( context );
       unload (temp);
     }
@@ -206,7 +224,11 @@ void dsp::UnloaderShare::unload (const PhaseSeries* data, Submit* submit) try
   }
 
   if (wait_all)
+  {
+    if (verbose)
+      cerr << "dsp::UnloaderShare::unload done (wait_all=true)" << endl;
     return;
+  }
 
   /*
     Clear any Storage elements that have been finished
@@ -279,7 +301,8 @@ void dsp::UnloaderShare::finish ()
   if (unloader)
   {
     if (Operation::verbose)
-      cerr << "dsp::UnloaderShare::finish call Unloader::finish" << endl;
+      cerr << "dsp::UnloaderShare::finish call Unloader::finish"
+              " unloader=" << (void*) unloader.get() << endl;
     
     unloader->finish ();
   }
@@ -295,8 +318,8 @@ void dsp::UnloaderShare::unload (Storage* store)
   if (unloader) try 
   {
     if (Operation::verbose)
-      cerr << "dsp::UnloaderShare::unload unload division=" << division
-	   << endl;
+      cerr << "dsp::UnloaderShare::unload division=" << division
+	   << " unloader=" << (void*) unloader.get() << endl;
     
     unloader->unload( store->get_profiles() );
   }
@@ -334,9 +357,10 @@ void dsp::UnloaderShare::nonblocking_unload (unsigned istore, Submit* submit)
   try {
 
     if (Operation::verbose)
-      submit->cerr << "dsp::UnloaderShare::nonblocking_unload division="
-                   << division << endl;
-    
+      submit->cerr << "dsp::UnloaderShare::nonblocking_unload"
+                      " division=" << division << 
+                      " unloader=" << (void*) submit->unloader.get() << endl;
+
     submit->unloader->unload( store->get_profiles() );
   }
   catch (Error& error)

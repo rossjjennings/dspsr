@@ -167,14 +167,14 @@ template <class Op>
 dsp::Subint<Op>::~Subint ()
 {
   if (Op::verbose)
-    std::cerr << "dsp::Subint::~Subint" << std::endl;
+    this->cerr << "dsp::Subint::~Subint" << std::endl;
 }
 
 template <class Op>
 Op* dsp::Subint<Op>::clone () const
 {
   if (Op::verbose)
-    std::cerr << "dsp::Subint<Op>::clone" << std::endl;
+    this->cerr << "dsp::Subint<Op>::clone" << std::endl;
   return new Subint<Op>(*this);
 }
 
@@ -193,19 +193,19 @@ template <class Op>
 void dsp::Subint<Op>::set_unloader (dsp::PhaseSeriesUnloader* _unloader)
 {
   if (Op::verbose)
-    std::cerr << "dsp::Subint::set_unloader this=" << this 
+    this->cerr << "dsp::Subint::set_unloader this=" << this 
          << " unloader=" << _unloader << std::endl;
 
   unloader = _unloader;
   if (unloader)
-    unloader->set_cerr (std::cerr);
+    unloader->set_cerr (this->cerr);
 }
 
 template <class Op>
 void dsp::Subint<Op>::prepare () try
 {
   if (Op::verbose)
-    std::cerr << "dsp::Subint::prepare call Op::prepare" << std::endl;
+    this->cerr << "dsp::Subint::prepare call Op::prepare" << std::endl;
 
   Op::prepare ();
 
@@ -214,7 +214,7 @@ void dsp::Subint<Op>::prepare () try
   if (divider.get_start_time() == MJD::zero)
   {
     if (Op::verbose)
-      std::cerr << "dsp::Subint::prepare set divider start time=" 
+      this->cerr << "dsp::Subint::prepare set divider start time=" 
 	   << Op::input->get_start_time() << std::endl;
 
     if (Op::input->get_start_time() == MJD::zero)
@@ -232,8 +232,8 @@ void dsp::Subint<Op>::prepare () try
     }
     else
     {
-      // if (Op::verbose)
-        std::cerr << "dsp::Subint::prepare folding period=" << Op::get_folding_period() << std::endl;
+      if (Op::verbose)
+        this->cerr << "dsp::Subint::prepare folding period=" << Op::get_folding_period() << std::endl;
       divider.set_period (Op::get_folding_period());
     }
   }
@@ -250,7 +250,7 @@ template <class Op>
 void dsp::Subint<Op>::transformation () try
 {
   if (Op::verbose)
-    std::cerr << "dsp::Subint::transformation" << std::endl;
+    this->cerr << "dsp::Subint::transformation" << std::endl;
 
   if (divider.get_turns() == 0 && divider.get_seconds() == 0.0)
     throw Error (InvalidState, "dsp::Subint::tranformation",
@@ -301,7 +301,7 @@ void dsp::Subint<Op>::transformation () try
     }
 
     if (Op::verbose)
-      std::cerr << "dsp::Subint::transformation sub-integration completed" << std::endl;
+      this->cerr << "dsp::Subint::transformation sub-integration completed" << std::endl;
 
     PhaseSeries* result = Op::get_result ();
 
@@ -310,7 +310,7 @@ void dsp::Subint<Op>::transformation () try
     if (unloader && keep(result))
     {
       if (Op::verbose)
-        std::cerr << "dsp::Subint::transformation this=" << this
+        this->cerr << "dsp::Subint::transformation this=" << this
              << " unloader=" << unloader.get() << std::endl;
 
       unloader->unload (result);
@@ -340,7 +340,7 @@ void dsp::Subint<Op>::finish () try
   if (Op::get_result()->get_integration_length() != 0)
   {
     if (Op::verbose)
-      std::cerr << "dsp::Subint::finish unload_partial" << std::endl;
+      this->cerr << "dsp::Subint::finish unload_partial" << std::endl;
 
     unload_partial ();
   }
@@ -348,7 +348,7 @@ void dsp::Subint<Op>::finish () try
   if (unloader)
   {
     if (Op::verbose)
-      std::cerr << "dsp::Subint::finish call unloader finish" << std::endl;
+      this->cerr << "dsp::Subint::finish call unloader finish" << std::endl;
 
     unloader->finish ();
   }
@@ -361,17 +361,18 @@ catch (Error& error)
 template <class Op>
 void dsp::Subint<Op>::unload_partial () try
 {
-  if (Op::verbose)
-    std::cerr << "dsp::Subint::unload_partial to callback" << std::endl;
-
   PhaseSeries* result = Op::get_result ();
+
+  if (Op::verbose)
+    this->cerr << "dsp::Subint::unload_partial this=" << (void*) this
+               << " result=" << (void*) result << std::endl;
 
   partial.send (result);
 
   if (unloader)
   {
     if (Op::verbose)
-      std::cerr << "dsp::Subint::unload_partial this=" << this
+      this->cerr << "dsp::Subint::unload_partial this=" << this
            << " unloader=" << unloader.get() << std::endl;
 
     unloader->partial (result);
@@ -400,7 +401,12 @@ void dsp::Subint<Op>::zero_output ()
   }
 
   if (path)
+  {
+    if (Op::verbose)
+      this->cerr << "dsp::Subint::zero_output calling SignalPath:reset" 
+                 << std::endl;
     path->reset();
+  }
   else
 #endif
     Op::reset();

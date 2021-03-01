@@ -121,10 +121,16 @@ bool dsp::LoadToFoldN::prepare_subint_archival ()
 
     if (configuration->concurrent_archives())
     {
+      if (Operation::verbose)
+        cerr << "dsp::LoadToFoldN::prepare_subint_archival ifold=" << ifold
+             << " set_wait_all (false)" << endl;
       unloader[ifold]->set_wait_all (false);
     }
     else
     {
+      if (Operation::verbose)
+        cerr << "dsp::LoadToFoldN::prepare_subint_archival ifold=" << ifold
+             << " set_unloader ptr=" << (void*) primary_unloader.get() << endl;
       unloader[ifold]->set_unloader( primary_unloader );
     }
 
@@ -133,9 +139,17 @@ bool dsp::LoadToFoldN::prepare_subint_archival ()
       UnloaderShare::Submit* submit = unloader[ifold]->new_Submit (i);
 
       if (configuration->concurrent_archives())
-        submit->set_unloader( primary_unloader->clone() );
+      {
+        PhaseSeriesUnloader* unique_unloader = primary_unloader->clone();
+        if (Operation::verbose)
+          cerr << "dsp::LoadToFoldN::prepare_subint_archival ifold=" << ifold
+               << " clone=" << (void*) unique_unloader << endl;
+        submit->set_unloader( unique_unloader );
+      }
       else
+      {
         submit->set_unloader( primary_unloader );
+      }
 
       if (Operation::verbose)
 	cerr << "dsp::LoadToFoldN::prepare_subint_archival submit ptr="
@@ -152,7 +166,14 @@ bool dsp::LoadToFoldN::prepare_subint_archival ()
     }
 
     if (configuration->get_nfold() > 1)
+    {
+      if (Operation::verbose)
+        cerr << "dsp::LoadToFoldN::prepare_subint_archival"
+                " nfold=" << configuration->get_nfold() <<
+                " set_wait_all (false)" << endl;
+
       unloader[ifold]->set_wait_all (false);
+    }
   }
 
   if (Operation::verbose)
@@ -163,12 +184,15 @@ bool dsp::LoadToFoldN::prepare_subint_archival ()
 
 void dsp::LoadToFoldN::finish ()
 {
+  if (Operation::verbose)
+    cerr << "dsp::LoadToFoldN::finish this=" << (void*) this << endl;
+
   MultiThread::finish ();
 
   for (unsigned i=0; i<unloader.size(); i++)
   {
     if (Operation::verbose)
-      cerr << "psr::LoadToFoldN::finish unloader[" << i << "]" << endl;
+      cerr << "dsp::LoadToFoldN::finish unloader[" << i << "]" << endl;
 
     unloader[i]->finish();
   }
