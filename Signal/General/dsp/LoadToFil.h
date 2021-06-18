@@ -79,6 +79,9 @@ namespace dsp {
     //! Filterbank config options
     Filterbank::Config filterbank;
 
+    //! when unpacking FITS data, denormalize using DAT_SCL and DAT_OFFS
+    bool apply_FITS_scale_and_offset;
+
     //! dispersion measure set in output file
     double dispersion_measure;
 

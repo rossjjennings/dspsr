@@ -169,6 +169,17 @@ void dsp::LoadToFITS::construct () try
 
   Unpacker* unpacker = manager->get_unpacker();
 
+#if HAVE_CFITSIO && HAVE_fits
+
+  if (config->apply_FITS_scale_and_offset &&
+      manager->get_info()->get_machine() == "FITS")
+  {
+    FITSUnpacker* fun = dynamic_cast<FITSUnpacker*> (manager->get_unpacker());
+    fun->apply_scale_and_offset (true);
+  }
+
+#endif
+
   if (!config->dedisperse && unpacker->get_order_supported (config->order))
     unpacker->set_output_order (config->order);
 

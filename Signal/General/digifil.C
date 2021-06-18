@@ -123,6 +123,9 @@ void parse_options (int argc, char** argv) try
   arg = menu.add (config->scale_fac, 's', "fac");
   arg->set_help ("data scale factor to apply");
 
+  arg = menu.add (config->apply_FITS_scale_and_offset, "scloffs");
+  arg->set_help ("denormalize using DAT_SCL and DAT_OFFS [PSRFITS]");
+
   arg = menu.add (config->output_filename, 'o', "file");
   arg->set_help ("output filename");
 

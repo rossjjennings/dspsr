@@ -33,6 +33,14 @@
 #include "dsp/SigProcDigitizer.h"
 #include "dsp/SigProcOutputFile.h"
 
+#if HAVE_CFITSIO
+#if HAVE_fits
+#include "dsp/FITSFile.h"
+#include "dsp/MultiFile.h"
+#include "dsp/FITSUnpacker.h"
+#endif
+#endif
+
 using namespace std;
 
 bool dsp::LoadToFil::verbose = false;
@@ -61,6 +69,9 @@ dsp::LoadToFil::Config::Config()
 
   order = dsp::TimeSeries::OrderTFP;
  
+  // by default, do not denormalize using DAT_SCL and DAT_OFFS
+  apply_FITS_scale_and_offset = false;
+
   filterbank.set_nchan(0);
   filterbank.set_freq_res(0);
   filterbank.set_convolve_when(Filterbank::Config::Never);
@@ -119,7 +130,18 @@ void dsp::LoadToFil::construct () try
   // set up for optimal memory usage pattern
 
   Unpacker* unpacker = manager->get_unpacker();
-  
+
+#if HAVE_CFITSIO && HAVE_fits
+
+  if (config->apply_FITS_scale_and_offset &&
+      manager->get_info()->get_machine() == "FITS")
+  {
+    FITSUnpacker* fun = dynamic_cast<FITSUnpacker*> (manager->get_unpacker());
+    fun->apply_scale_and_offset (true);
+  }
+
+#endif
+
   if (!config->dedisperse && unpacker->get_order_supported (config->order))
     unpacker->set_output_order (config->order);
 
