@@ -45,7 +45,6 @@ CUDA::SampleDelayEngine::SampleDelayEngine (cudaStream_t _stream)
   stream = _stream;
   delay_npol = 0;
   delay_nchan = 0;
-  zero_delay = 0;
   d_delays = NULL;
 }
 
@@ -63,10 +62,9 @@ CUDA::SampleDelayEngine::~SampleDelayEngine ()
 }
 
 void CUDA::SampleDelayEngine::set_delays (unsigned npol, unsigned nchan,
-                                          int64_t _zero_delay,
+                                          vector<int64_t> zero_delays,
                                           dsp::SampleDelayFunction * function)
 {
-  zero_delay = _zero_delay;
   delay_npol = npol;
   delay_nchan = nchan;
   delays_size = npol * nchan * sizeof(int64_t);
@@ -102,8 +100,8 @@ void CUDA::SampleDelayEngine::set_delays (unsigned npol, unsigned nchan,
     for (unsigned ipol=0; ipol<delay_npol; ipol++)
     {
       int64_t applied_delay = 0;
-      if (zero_delay)
-        applied_delay = zero_delay - function->get_delay(ichan, ipol);
+      if (zero_delays[ichan])
+        applied_delay = zero_delays[ichan] - function->get_delay(ichan, ipol);
       else
         applied_delay = function->get_delay(ichan, ipol);
       if (applied_delay < 0)

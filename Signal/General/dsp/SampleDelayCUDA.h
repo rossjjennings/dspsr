@@ -25,7 +25,7 @@ namespace CUDA
 
     ~SampleDelayEngine ();
 
-    void set_delays (unsigned npol, unsigned nchan, int64_t zero_delay,
+    void set_delays (unsigned npol, unsigned nchan, std::vector<int64_t> zero_delay,
                      dsp::SampleDelayFunction * function);
 
     void retard (const dsp::TimeSeries* in, dsp::TimeSeries* out, uint64_t output_ndat);
@@ -39,8 +39,6 @@ namespace CUDA
     unsigned delay_npol;
 
     size_t delays_size;
-
-    int64_t zero_delay;
 
     int64_t * d_delays;
 

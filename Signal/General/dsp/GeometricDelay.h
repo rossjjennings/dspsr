@@ -26,9 +26,12 @@ namespace dsp {
     //! Set up the dispersion delays
     bool match (const Observation* obs);
     
-    //! Return the dispersion delay for the given frequency channel
+    //! Return the geometric delay for the given frequency channel
     int64_t get_delay (unsigned ichan, unsigned ipol);
    
+    //! Return the geometric delay for the centre of a frequency channel range
+    int64_t get_delay_range (unsigned schan, unsigned echan, unsigned ipol);
+
     //! Return the fractional delay + fringe response function
     Response* get_response () { return &response; }
 

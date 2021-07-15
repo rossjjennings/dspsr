@@ -424,7 +424,7 @@ void dsp::LoadToFITS::construct () try
   }
 #endif
 
-  if ( config->dedisperse )
+  if ( config->dedisperse  || (config->coherent_dedisp && config->fscrunch_factor) )
   {
     if (verbose)
       cerr << "digifits: removing dispersion delays" << endl;
@@ -434,6 +434,10 @@ void dsp::LoadToFITS::construct () try
     delay->set_input (timeseries);
     delay->set_output (timeseries = new_TimeSeries());
     delay->set_function (new Dedispersion::SampleDelay);
+
+    // coherent dedispersion + fscrunching requires additional sample delays
+    if (config->coherent_dedisp && config->fscrunch_factor)
+      delay->set_delay_span(config->fscrunch_factor);
 
 #if HAVE_CUDA
     if (run_on_gpu)

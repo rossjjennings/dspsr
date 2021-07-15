@@ -70,3 +70,8 @@ int64_t dsp::GeometricDelay::get_delay (unsigned ichan, unsigned ipol)
   return delay[ipol];
 }
 
+//! Return the geometric delay for the given polarization
+int64_t dsp::GeometricDelay::get_delay_range (unsigned schan, unsigned echan, unsigned ipol)
+{
+  return delay[ipol];
+}

@@ -29,6 +29,9 @@ namespace dsp {
     //! Return the dispersion delay for the given frequency channel
     int64_t get_delay (unsigned ichan, unsigned ipol);
     
+    //! Return the deispersion delay for the centre of the frequency channel range
+    int64_t get_delay_range (unsigned schan, unsigned echan, unsigned ipol);
+
     //! Add to the history of operations performed on the observation
     void mark (Observation* observation);
     
@@ -49,6 +52,8 @@ namespace dsp {
     //! The dispersive delays
     std::vector<int64_t> delays;
     
+    //! The channel centre frequencies
+    std::vector<double> freqs;
   };
 
 }

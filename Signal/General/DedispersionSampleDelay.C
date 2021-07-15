@@ -52,21 +52,22 @@ bool dsp::Dedispersion::SampleDelay::match (const Observation* obs)
 		 "invalid input");
 
   delays.resize( obs->get_nchan() );
+  freqs.resize( obs->get_nchan() );
   
   // when divided by MHz, yields a dimensionless value
   double dispersion = dispersion_measure / dm_dispersion;
 
   for (unsigned ichan = 0; ichan < obs->get_nchan(); ichan++) {
 
-    double freq = obs->get_centre_frequency (ichan);
+    freqs[ichan] = obs->get_centre_frequency (ichan);
     
     // Compute the DM delay in seconds
-    double delay = dispersion * (1.0/SQR(centre_frequency) - 1.0/SQR(freq));
+    double delay = dispersion * (1.0/SQR(centre_frequency) - 1.0/SQR(freqs[ichan]));
 
     delays[ichan] = int64_t( floor(delay*sampling_rate + 0.5) );
 
     // cerr << "freq=" << freq << " delay=" << delay*1e3 << " ms = " 
-	 // << delays[ichan] << " samps" << endl;
+    //      << delays[ichan] << " samps" << endl;
 
   }
 
@@ -77,6 +78,20 @@ bool dsp::Dedispersion::SampleDelay::match (const Observation* obs)
 int64_t dsp::Dedispersion::SampleDelay::get_delay (unsigned ichan, unsigned ipol)
 {
   return delays[ichan];
+}
+
+//! Return the deispersion delay for the centre of the frequency channel range
+int64_t dsp::Dedispersion::SampleDelay::get_delay_range (unsigned schan, unsigned echan, unsigned ipol)
+{
+  if (schan > freqs.size() || echan > freqs.size())
+    throw Error (InvalidParam, "dsp::Dedispersion::SampleDelay::get_delay_range",
+                 "channel range invalid");
+
+  double dispersion = dispersion_measure / dm_dispersion;
+  double freq = (freqs[schan] + freqs[echan]) / 2;
+  double delay = dispersion * (1.0/SQR(centre_frequency) - 1.0/SQR(freq));
+
+  return int64_t( floor(delay*sampling_rate + 0.5) );
 }
 
 void dsp::Dedispersion::SampleDelay::mark (Observation* observation)

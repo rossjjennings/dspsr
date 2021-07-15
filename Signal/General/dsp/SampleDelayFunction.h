@@ -33,6 +33,9 @@ namespace dsp {
     //! Return the delay for the specified channel and polarization
     virtual int64_t get_delay (unsigned ichan=0, unsigned ipol=0) = 0;
 
+    //! Return the delay for the specified channel range and polarization
+    virtual int64_t get_delay_range (unsigned schan=0, unsigned echan=0, unsigned ipol=0) = 0;
+
     //! Add to the history of operations performed on the observation
     virtual void mark (Observation* observation) { }
 

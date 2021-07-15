@@ -20,6 +20,7 @@ dsp::SampleDelay::SampleDelay ()
 {
   zero_delay = 0;
   total_delay = 0;
+  delay_span = 0;
   built = false;
   engine = NULL;
 
@@ -55,6 +56,11 @@ void dsp::SampleDelay::set_function (SampleDelayFunction* f)
   built = false;
 }
 
+void dsp::SampleDelay::set_delay_span (unsigned _delay_span)
+{
+  delay_span = _delay_span;
+}
+
 void dsp::SampleDelay::build ()
 {
   if (verbose)
@@ -62,6 +68,9 @@ void dsp::SampleDelay::build ()
 
   unsigned input_npol  = input->get_npol();
   unsigned input_nchan = input->get_nchan();
+
+  zero_delays.resize(input_nchan);
+  fill(zero_delays.begin(), zero_delays.end(), 0);
 
   if (function->get_absolute())
   {
@@ -79,10 +88,31 @@ void dsp::SampleDelay::build ()
 
   zero_delay = function->get_delay (0, 0);
 
-  for (unsigned ipol=0; ipol < input_npol; ipol++)
-    for (unsigned ichan=0; ichan < input_nchan; ichan++)
-      if (function->get_delay (ichan, ipol) > zero_delay)
-        zero_delay = function->get_delay (ichan, ipol);
+  if (delay_span == 0)
+    delay_span = input_nchan;
+
+  for (unsigned ichan=0; ichan < input_nchan; ichan += delay_span)
+  {
+    // delay at the centre of the span
+    unsigned from_chan = ichan;
+    unsigned to_chan = ichan + (delay_span - 1);
+    int64_t span_centre_delay = function->get_delay_range (from_chan, to_chan, 0);
+
+    // compute the delay in each channel relative to the span_centre_delay
+    for (unsigned ipol=0; ipol < input_npol; ipol++)
+    {
+      for (unsigned i=0; i<delay_span; i++)
+      {
+        zero_delays[ichan + i] = span_centre_delay;
+        int64_t local_delay = span_centre_delay - function->get_delay (ichan + i, ipol);
+        if (local_delay > zero_delay)
+          zero_delay = local_delay;
+      }
+    }
+  }
+
+  for (unsigned ichan=0; ichan<input_nchan; ichan++)
+    zero_delays[ichan] += zero_delay;
 
   if (verbose)
     cerr << "dsp::SampleDelay::build zero delay = " << zero_delay
@@ -91,13 +121,15 @@ void dsp::SampleDelay::build ()
   total_delay = 0;
 
   for (unsigned ipol=0; ipol < input_npol; ipol++)
+  {
     for (unsigned ichan=0; ichan < input_nchan; ichan++)
     {
-      uint64_t relative_delay = zero_delay - function->get_delay(ichan, ipol);
-      // cerr << "relative_delay=" << relative_delay << endl;
+      uint64_t relative_delay = zero_delays[ichan] - function->get_delay(ichan, ipol);
+      //  cerr << "relative_delay[" << ichan << "]=" << relative_delay << endl;
       if (relative_delay > total_delay)
         total_delay = relative_delay;
     }
+  }
 
   if (verbose)
     cerr << "dsp::SampleDelay::build total delay = " << total_delay
@@ -107,8 +139,8 @@ void dsp::SampleDelay::build ()
   {
     if (verbose)
       cerr << "dsp::SampleDelay::build engine->set_delays(" << input_npol
-           << "," << input_nchan << "," << zero_delay << ", function)" << endl;
-    engine->set_delays(input_npol, input_nchan, zero_delay, function);
+           << "," << input_nchan << ", zero_delays, function)" << endl;
+    engine->set_delays(input_npol, input_nchan, zero_delays, function);
   }
 
   built = true;
@@ -207,7 +239,7 @@ void dsp::SampleDelay::transformation ()
 
         if (zero_delay)
           // delays are relative to maximum delay
-          applied_delay = zero_delay - function->get_delay(ichan, ipol);
+          applied_delay = zero_delays[ichan] - function->get_delay(ichan, ipol);
         else
           // delays are absolute and guaranteed positive
           applied_delay = function->get_delay(ichan, ipol);
