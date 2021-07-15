@@ -670,6 +670,7 @@ void dsp::FITSDigitizer::rescale_pack ()
 void dsp::FITSDigitizer::get_scales(
   std::vector<float>* dat_scl, std::vector<float>* dat_offs)
 {
+  double input_scale = input->get_scale ();
   unsigned nchan = input->get_nchan ();
   unsigned npol = input->get_npol ();
   dat_scl->resize(nchan*npol);
@@ -689,10 +690,10 @@ void dsp::FITSDigitizer::get_scales(
       // NB -- it is critical to remove the digitizer scale here, in order
       // to preserve the correct mean/variance relationship when the data
       // are decoded.
-      (*dat_scl)[offs + ichan] = scale[offs + chan_idx]/digi_scale;
+      (*dat_scl)[offs + ichan] = scale[offs + chan_idx]/digi_scale / input_scale;
       // On the other hand, the digitizer offset can be corrected
       // based on the ZERO_OFFS encoded in the FITS file.
-      (*dat_offs)[offs + ichan] = offset[offs + chan_idx];
+      (*dat_offs)[offs + ichan] = offset[offs + chan_idx] / input_scale;
     }
   }
 }
