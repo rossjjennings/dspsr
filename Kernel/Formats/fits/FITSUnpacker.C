@@ -22,15 +22,6 @@ using std::endl;
 using std::vector;
 using std::cout;
 
-// Default zero offset for one-bit data.
-const float ONEBIT_SCALE = 0.5;
-
-// Default zero offset for four-bit data.
-const float FOURBIT_SCALE = 7.5;
-
-// Default zero offset for eight-bit data.
-const float EIGHTBIT_SCALE = 31.5;
-
 // Number of bits per byte.
 const int BYTE_SIZE = 8;
 
@@ -260,8 +251,7 @@ bool dsp::FITSUnpacker::matches(const Observation* observation)
 float dsp::FITSUnpacker::oneBitNumber(const int num)
 {
   const int masked_number = num & ONEBIT_MASK;
-  //return masked_number - ONEBIT_SCALE;
-  return masked_number - zero_off;
+  return float(masked_number) - zero_off;
 }
 
 
@@ -273,8 +263,7 @@ float dsp::FITSUnpacker::oneBitNumber(const int num)
 
 float dsp::FITSUnpacker::eightBitNumber(const int num)
 {
-  //return num - EIGHTBIT_SCALE;
-  return num - zero_off;
+  return float(num) - zero_off;
 }
 
 
@@ -287,8 +276,7 @@ float dsp::FITSUnpacker::eightBitNumber(const int num)
 float dsp::FITSUnpacker::fourBitNumber(const int num)
 {
   const int masked_number = num & FOURBIT_MASK;
-  //return masked_number - FOURBIT_SCALE;
-  return masked_number - zero_off;
+  return float(masked_number) - zero_off;
 }
 
 
@@ -305,6 +293,9 @@ float dsp::FITSUnpacker::fourBitNumber(const int num)
 
 float dsp::FITSUnpacker::twoBitNumber(const int num)
 {
+  // Should this be producing -1.5, -0.5, +0.5, +1.5? The following code would do this:
+  // const int masked_number = num & TWOBIT_MASK;
+  // return float(masked_number) - zero_off;
   const int masked_number = num & TWOBIT_MASK;
   switch (masked_number) {
     case 0:
