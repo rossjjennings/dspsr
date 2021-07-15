@@ -115,6 +115,14 @@ void CUDA::FScrunchEngine::fpt_fscrunch(const dsp::TimeSeries *in,
   if (ndat % threads.x)
     blocks.x ++;
 
+  if (dsp::Operation::verbose)
+  {
+    cerr << "CUDA::FScrunchEngine::fpt_fscrunch blocks=(" << blocks.x << "," << blocks.y << "," << blocks.z << ")" << endl;
+    cerr << "CUDA::FScrunchEngine::fpt_fscrunch threads=(" << threads.x << "," << threads.y << "," << threads.z << ")" << endl;
+    cerr << "CUDA::FScrunchEngine::fpt_fscrunch Fstride in=" << in_Fstride << " out=" << out_Fstride << endl;
+    cerr << "CUDA::FScrunchEngine::fpt_fscrunch Pstride in=" << in_Pstride << " out=" << out_Pstride << endl;
+  }
+
   void * in_base = (void *) in->get_datptr(0,0);
   void * out_base = (void *) out->get_datptr(0,0);
 

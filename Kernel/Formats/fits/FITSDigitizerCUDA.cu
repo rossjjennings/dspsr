@@ -228,6 +228,7 @@ __global__ void fde_tsum_tfp (const float * in, float *ft, float * fts,
 
     // now reduce across the warp
     ft_thread = fde_warp_reduce_sum (ft_thread);
+    __syncthreads();
     fts_thread = fde_warp_reduce_sum (fts_thread);
 
     // store ft, fts, offset and scale in FP order
@@ -265,9 +266,14 @@ __global__ void fde_tsum_fpt (const float * in, uint64_t chanpol_stride,
     fts_thread += (in_val * in_val);
   }
 
-  // sum across block/thread
-  ft_thread = fde_block_reduce_sum (ft_thread);
-  fts_thread = fde_block_reduce_sum (fts_thread);
+  // sum across block
+  ft_thread  = fde_block_reduce_sum(ft_thread);
+
+  // force a sync here so since shared memory is shared in the 2 reductions
+  __syncthreads();
+
+  // sum across block
+  fts_thread = fde_block_reduce_sum(fts_thread);
 
   if (threadIdx.x == 0)
   {
@@ -276,6 +282,7 @@ __global__ void fde_tsum_fpt (const float * in, uint64_t chanpol_stride,
     fts[ichanpol] = fts_thread;
 
     const float offset_chanpol = ft_thread * recip;
+
     offset[ichanpol] = offset_chanpol;
     scale[ichanpol] = sqrt (fts_thread*recip - offset_chanpol*offset_chanpol);
   }
@@ -374,7 +381,7 @@ void CUDA::FITSDigitizerEngine::measure_scale (const dsp::TimeSeries *in, unsign
   }
 }
 
-// rescale, and reorder the input data fomr TFP to TPF
+// rescale, and reorder the input data from TFP to TPF
 __global__ void fde_reorder_tfp (const float * in, const unsigned * mapping, 
                       float * offset, float * scale, int * output,
                       float digi_scale, float digi_mean,
@@ -455,6 +462,10 @@ __global__ void fde_reorder_fpt (const float * in, uint64_t chanpol_stride,
 
       output[odx] = fde_reorder_fpt_shm[sdx];
     }
+
+    // synchronize to ensure all threads have read their shared memory before iterating the loop again
+    __syncthreads();
+
     ochan_block += warpSize;
   }
 }
@@ -574,7 +585,8 @@ void CUDA::FITSDigitizerEngine::digitize(const dsp::TimeSeries *input,
 #ifdef _DEBUG
       cerr << "CUDA::FITSDigitizerEngine::digitize fde_reorder_fpt blocks=(" 
            << blocks.x << "," << blocks.y << "," << blocks.z << ") " 
-           << " nthreads=" << nthreads << " shared_bytes=" << shared_bytes << endl;
+           << " nthreads=" << nthreads << " shared_bytes=" << shared_bytes
+           << " ndat=" << ndat << " nchan=" << nchan << " npol=" << npol << endl;
 #endif
       fde_reorder_fpt<<<blocks, nthreads, shared_bytes, stream>>>(first_chanpol, chanpol_stride, mapping,
                                                        d_offset, d_scale, d_scratch,

@@ -97,6 +97,9 @@ void dsp::FScrunch::transformation ()
     get_output()->resize (input->get_ndat());
     get_output()->set_input_sample (input->get_input_sample());
   }
+  else
+    throw Error(InvalidState, "CUDA::FScrunch::transformation",
+                "cannot support in-place transformation");
 
   output->rescale( sfactor );
 
