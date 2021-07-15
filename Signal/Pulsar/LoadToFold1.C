@@ -162,7 +162,7 @@ void dsp::LoadToFold::construct () try
     }
 
     config->coherent_dedispersion = false;
-    prepare_interchan (unpacked);
+    prepare_interchan (unpacked, run_on_gpu);
     build_fold (unpacked);
     return;
   }
