@@ -499,7 +499,7 @@ void dsp::LoadToFITS::construct () try
 
     fscrunch->set_factor( config->fscrunch_factor );
     fscrunch->set_input( timeseries );
-    fscrunch->set_output( timeseries );
+    fscrunch->set_output( timeseries = new_TimeSeries() );
 
 #if HAVE_CUDA
     if (run_on_gpu)

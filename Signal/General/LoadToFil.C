@@ -324,7 +324,7 @@ void dsp::LoadToFil::construct () try
     
     fscrunch->set_factor( config->fscrunch_factor );
     fscrunch->set_input( timeseries );
-    fscrunch->set_output( timeseries );
+    fscrunch->set_output( timeseries = new_TimeSeries() );
 
     operations.push_back( fscrunch );
   }
