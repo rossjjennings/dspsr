@@ -166,14 +166,52 @@ void dsp::LoadToFil::construct () try
   // the unpacked input will occupy nbytes_per_sample
   double nbytes_per_sample = sizeof(float) * nchan * npol * ndim;
 
-  double MB = 1024.0 * 1024.0;
-  uint64_t nsample = uint64_t( config->block_size*MB / nbytes_per_sample );
+#if HAVE_CFITSIO
+#if HAVE_fits
+  // if PSRFITS input, set block to exact size of FITS row
+  // this is needed to keep in sync with the callback
+  if (manager->get_info()->get_machine() == "FITS")
+  {
+    FITSFile* tmp = dynamic_cast<FITSFile*> (manager->get_input());
+    uint64_t block_size;
 
-  if (verbose)
-    cerr << "digifil: block_size=" << config->block_size << " MB "
-      "(" << nsample << " samp)" << endl;
+    if (!tmp)
+    {
+      MultiFile* mfile = dynamic_cast<MultiFile*> (manager->get_input());
+      if (mfile)
+      {
+        block_size = mfile->get_block_size();
+        tmp = dynamic_cast<FITSFile*> ( mfile->get_loader() );
+      }
+    }
+    else
+      block_size = tmp->get_block_size();
+    if (tmp)
+    {
+      unsigned samples_per_row = tmp->get_samples_in_row();
+      uint64_t current_bytes = manager->set_block_size (samples_per_row);
+      manager->set_maximum_RAM (current_bytes);
+      manager->set_block_size (samples_per_row);
+      if (verbose)
+        cerr << "digifil: block_size=" << (current_bytes/1024/1024) << " MB "
+          "(" << samples_per_row << " samp)" << endl;
+    }
+    else
+      cerr << "digifil: WARNING have FITS input but cannot set block size properly." << endl;
+  }
+  else
+#endif
+#endif
+  {
+    double MB = 1024.0 * 1024.0;
+    uint64_t nsample = uint64_t( config->block_size*MB / nbytes_per_sample );
 
-  manager->set_block_size( nsample );
+    if (verbose)
+      cerr << "digifil: block_size=" << config->block_size << " MB "
+        "(" << nsample << " samp)" << endl;
+
+    manager->set_block_size( nsample );
+  }
   
   bool do_pscrunch = (config->npol==1) && (obs->get_npol() > 1) 
     && (config->poln_select < 0);
