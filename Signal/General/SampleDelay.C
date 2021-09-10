@@ -86,8 +86,6 @@ void dsp::SampleDelay::build ()
     return;
   }
 
-  zero_delay = function->get_delay (0, 0);
-
   if (delay_span == 0)
     delay_span = input_nchan;
 
@@ -104,7 +102,7 @@ void dsp::SampleDelay::build ()
       for (unsigned i=0; i<delay_span; i++)
       {
         zero_delays[ichan + i] = span_centre_delay;
-        int64_t local_delay = span_centre_delay - function->get_delay (ichan + i, ipol);
+        int64_t local_delay = function->get_delay (ichan + i, ipol) - span_centre_delay;
         if (local_delay > zero_delay)
           zero_delay = local_delay;
       }
@@ -124,10 +122,9 @@ void dsp::SampleDelay::build ()
   {
     for (unsigned ichan=0; ichan < input_nchan; ichan++)
     {
-      uint64_t relative_delay = zero_delays[ichan] - function->get_delay(ichan, ipol);
-      //  cerr << "relative_delay[" << ichan << "]=" << relative_delay << endl;
-      if (relative_delay > total_delay)
-        total_delay = relative_delay;
+      int64_t relative_delay = int64_t(zero_delays[ichan]) - function->get_delay(ichan, ipol);
+      if (relative_delay > int64_t(total_delay))
+        total_delay = uint64_t(relative_delay);
     }
   }
 
