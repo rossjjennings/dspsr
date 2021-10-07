@@ -685,7 +685,7 @@ void dsp::LoadToFold::construct () try
 
   operations.push_back (detect.get());
 
-  if (config->npol == 3 || config->npol == 1)
+  if (config->npol == 3 || config->npol == 1 || manager->get_info()->get_npol() == 1)
   {
     detected = new_time_series ();
     detect->set_output (detected);

@@ -349,22 +349,33 @@ void dsp::CASPSRUnpacker::unpack_on_gpu ()
   const unsigned npol = input->get_npol();
 
   const unsigned char* from = input->get_rawptr();
-  float * into_pola, * into_polb;
-  unsigned ichan;
-
   cudaStream_t stream = (cudaStream_t) gpu_stream;
   cudaError error;
 
-  for (ichan=0; ichan<nchan; ichan++)
+  if (npol == 2)
   {
-    into_pola = output->get_datptr(ichan, 0);
-    into_polb = output->get_datptr(ichan, 1);
+    float * into_pola, * into_polb;
+    for (unsigned ichan=0; ichan<nchan; ichan++)
+    {
+      into_pola = output->get_datptr(ichan, 0);
+      into_polb = output->get_datptr(ichan, 1);
 
-    caspsr_unpack (stream, ndat*ndim, table->get_scale(), 
-                   from, into_pola, into_polb,
-                   threadsPerBlock);
+      caspsr_unpack_2pol(stream, ndat*ndim, table->get_scale(),
+                         from, into_pola, into_polb,
+                         threadsPerBlock);
 
-    from += ndat*ndim*npol;
+      from += ndat*ndim*npol;
+    }
+  }
+  else if (npol == 1)
+  {
+    for (unsigned ichan=0; ichan<nchan; ichan++)
+    {
+      float * into = output->get_datptr(ichan, 0);
+      caspsr_unpack_1pol(stream, ndat*ndim, table->get_scale(),
+                         from, into, threadsPerBlock);
+      from += ndat*ndim;
+    }
   }
 }
 
