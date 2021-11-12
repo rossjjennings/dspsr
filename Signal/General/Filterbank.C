@@ -147,15 +147,6 @@ void dsp::Filterbank::make_preparations ()
          << " nchan_subband=" << nchan_subband << endl;
   }
 
-  if (FTransform::get_norm() == FTransform::unnormalized)
-    scalefac = double(n_fft) * double(freq_res);
-
-  else if (FTransform::get_norm() == FTransform::normalized)
-    scalefac = double(n_fft) / double(freq_res);
-
-  // sqrt since the scale factor is applied prior to detection
-  scalefac = sqrt(scalefac);
-
   // number of complex samples invalid in result of small ffts
   nfilt_tot = nfilt_pos + nfilt_neg;
 
@@ -167,6 +158,7 @@ void dsp::Filterbank::make_preparations ()
 
   if (input->get_state() == Signal::Nyquist)
   {
+    // cerr << "Filterbank::make_preparations real-valued input data" << endl;
     nsamp_fft = 2 * n_fft;
     nsamp_overlap = 2 * nfilt_tot * nchan_subband;
   }
@@ -175,10 +167,18 @@ void dsp::Filterbank::make_preparations ()
     nsamp_fft = n_fft;
     nsamp_overlap = nfilt_tot * nchan_subband;
   }
-
   else
     throw Error (InvalidState, "dsp::Filterbank::make_preparations",
                  "invalid input data state = " + tostring(input->get_state()));
+
+  if (FTransform::get_norm() == FTransform::unnormalized)
+    scalefac = double(nsamp_fft) * double(freq_res);
+
+  else if (FTransform::get_norm() == FTransform::normalized)
+    scalefac = double(nsamp_fft) / double(freq_res);
+
+  // sqrt since the scale factor is applied prior to detection
+  scalefac = sqrt(scalefac);
 
   // configure the normalizing response to ensure FFT lengths do
   // not rescale the data exceedingly
