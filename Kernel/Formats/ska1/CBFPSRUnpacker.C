@@ -44,7 +44,7 @@ bool dsp::CBFPSRUnpacker::matches (const Observation* observation)
   return observation->get_machine() == "LowCBF"
     && observation->get_ndim() == 2
     && observation->get_npol() == 2
-    && (observation->get_nbit() == 8 || observation->get_nbit() == 16);
+    && (observation->get_nbit() == 8 || observation->get_nbit() == 16 || observation->get_nbit() == 32);
 }
 
 unsigned dsp::CBFPSRUnpacker::get_output_offset (unsigned idig) const
@@ -116,17 +116,28 @@ void dsp::CBFPSRUnpacker::unpack ()
             digs[0] = get_histogram (idig+0); 
             digs[1] = get_histogram (idig+1); 
 
-            for (unsigned isamp=0; isamp<nsamp_per_heap; isamp++)
+            if (input->get_nbit() == 16)
             {
-              from32 = from[isamp];
+              for (unsigned isamp=0; isamp<nsamp_per_heap; isamp++)
+              {
+                from32 = from[isamp];
 
-              digs[0][(int) from16[0] + 32768]++;
-              digs[1][(int) from16[1] + 32768]++;
-                
-              into[(2*isamp) + 0] = float(from16[0]);
-              into[(2*isamp) + 1] = float(from16[1]);
+                digs[0][int(from16[0]) + 32768]++;
+                digs[1][int(from16[1]) + 32768]++;
+
+                into[(2*isamp) + 0] = float(from16[0]);
+                into[(2*isamp) + 1] = float(from16[1]);
+              }
+              from += nsamp_per_heap;
             }
-            from += nsamp_per_heap;
+            else if (input->get_nbit() == 32)
+            {
+              for (unsigned isamp=0; isamp<nsamp_per_heap*ndim; isamp++)
+              {
+                into[isamp] = float(from[isamp]);
+              }
+              from += nsamp_per_heap * ndim;
+            }
           }
         }
         heap_offset += nsamp_per_heap * ndim;

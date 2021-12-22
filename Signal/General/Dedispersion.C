@@ -327,7 +327,7 @@ void dsp::Dedispersion::build ()
       calc_oversampled_discard_region(
         &impulse_neg, &impulse_pos, input_nchan/nchan, oversampling_factor);
       calc_oversampled_fft_length(
-        &ndat, input_nchan/nchan, oversampling_factor);
+        &ndat, input_nchan/nchan, oversampling_factor, 1);
       if (ndat <= impulse_neg + impulse_pos) {
         ndat = 2*(impulse_neg + impulse_pos);
         calc_oversampled_fft_length(

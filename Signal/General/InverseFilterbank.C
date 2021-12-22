@@ -167,6 +167,9 @@ inline unsigned output_to_input (
 
 void dsp::InverseFilterbank::make_preparations ()
 {
+  if (oversampling_factor != input->get_oversampling_factor()) {
+    oversampling_factor = input->get_oversampling_factor();
+  }
   if (verbose) {
     std::cerr << "dsp::InverseFilterbank::make_preparations:"
       << " oversampling_factor=" << get_oversampling_factor()
@@ -175,9 +178,6 @@ void dsp::InverseFilterbank::make_preparations ()
       << " pfb_all_chan=" << get_pfb_all_chan()
       << " fft_window_str=" << get_fft_window_str()
       << std::endl;
-  }
-  if (oversampling_factor != input->get_oversampling_factor()) {
-    oversampling_factor = input->get_oversampling_factor();
   }
 
   bool real_to_complex = (input->get_state() == Signal::Nyquist);
@@ -212,11 +212,34 @@ void dsp::InverseFilterbank::make_preparations ()
     output_sample_step = output_fft_length - output_discard_total;
 
   } else {
+#define AJTESTING
+    // we want a 128pt forward FFT in each channel
+    unsigned min_fft_length = 1024;
+    freq_res = get_oversampling_factor().normalize(min_fft_length * (input_nchan / output_nchan));
+    input_fft_length = output_to_input(freq_res, input_nchan, output_nchan, osf);
     output_fft_length = input_nchan*get_oversampling_factor().normalize(input_fft_length) / output_nchan;
     output_fft_length *= n_per_sample;
     input_fft_length *= n_per_sample;
+
+#ifdef AJTESTING
+    input_discard_pos = input_discard_neg = input_fft_length / 4;
+    input_discard_total = input_discard_neg + input_discard_pos;
+    input_sample_step = input_fft_length - input_discard_total;
+
+    output_discard_pos = output_discard_neg = output_fft_length / 4;
+    output_discard_total = output_discard_neg + output_discard_pos;
+    output_sample_step = output_fft_length - output_discard_total;
+#else
     output_sample_step = output_fft_length;
     input_sample_step = input_fft_length;
+#endif
+
+    if (verbose)
+    {
+      std::cerr << "dsp::InverseFilterbank::make_preparations input_nchan=" << input_nchan 
+                << " input_fft_length=" << input_fft_length << " OSfactor.normalize(" << input_fft_length << ")=" << get_oversampling_factor().normalize(input_fft_length) << " output_nchan=" << output_nchan << endl;
+      std::cerr << "n_per_sample=" << n_per_sample << endl;
+    }
   }
 
   if (verbose) {
