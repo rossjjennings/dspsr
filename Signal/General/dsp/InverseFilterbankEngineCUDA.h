@@ -250,14 +250,14 @@ namespace CUDA
     //! scratch space for overlap discard on input data
     float2* d_input_overlap_discard;
 
-    //! Scratch space, in samples, needed for the d_input_overlap_discard space
-    unsigned d_input_overlap_discard_samples;
+    //! Number of floats needed for the d_input_overlap_discard space
+    unsigned d_input_overlap_discard_nfloat;
 
     //! scratch space for stitching together results of forward FFTs
     float2* d_stitching;
 
-    //! Scratch space, in samples, needed for the d_stitching space
-    unsigned d_stitching_samples;
+    //! Number of floats needed for the d_stitching space
+    unsigned d_stitching_nfloat;
 
     bool record_time;
 
