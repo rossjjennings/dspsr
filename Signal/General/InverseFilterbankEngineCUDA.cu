@@ -930,12 +930,9 @@ void CUDA::InverseFilterbankEngineCUDA::setup (dsp::InverseFilterbank* filterban
       << _pfb_all_chan << std::endl;
   }
   type_forward = CUFFT_C2C;
-  n_per_sample = 1;
 
-  if (input->get_state() == Signal::Nyquist) {
+  if (input->get_state() == Signal::Nyquist)
     type_forward = CUFFT_R2C;
-    n_per_sample = 1;
-  }
 
   pfb_dc_chan = _pfb_dc_chan;
   pfb_all_chan = _pfb_all_chan;
@@ -952,10 +949,10 @@ void CUDA::InverseFilterbankEngineCUDA::setup (dsp::InverseFilterbank* filterban
   output_discard_pos = _output_discard_pos;
   output_discard_neg = _output_discard_neg;
 
-  input_discard_total = n_per_sample*(input_discard_neg + input_discard_pos);
+  input_discard_total = input_discard_neg + input_discard_pos;
   input_sample_step = input_fft_length - input_discard_total;
 
-  output_discard_total = n_per_sample*(output_discard_neg + output_discard_pos);
+  output_discard_total = output_discard_neg + output_discard_pos;
   output_sample_step = output_fft_length - output_discard_total;
 
   input_os_keep = os_factor.normalize(input_fft_length);
@@ -1042,17 +1039,17 @@ void CUDA::InverseFilterbankEngineCUDA::setup (dsp::InverseFilterbank* filterban
     }
   }
 
-  d_input_overlap_discard_samples = input_npol*input_nchan*input_fft_length;
-  d_stitching_samples = input_npol*output_nchan*output_fft_length;
+  d_input_overlap_discard_nfloat = input_npol*input_nchan*input_fft_length;
+  d_stitching_nfloat = input_npol*output_nchan*output_fft_length;
 
   // we multiply by two because the device scratch space point to float2 arrays,
   // and the Scratch object allocates in float.
-  total_scratch_needed = 2*(d_input_overlap_discard_samples + d_stitching_samples);
+  total_scratch_needed = 2*(d_input_overlap_discard_nfloat + d_stitching_nfloat);
 
   if (verbose) {
     std::cerr << "CUDA::InverseFilterbankEngineCUDA::setup:"
-      << " d_input_overlap_discard_samples=" << d_input_overlap_discard_samples
-      << " d_stitching_samples=" << d_stitching_samples
+      << " d_input_overlap_discard_nfloat=" << d_input_overlap_discard_nfloat
+      << " d_stitching_nfloat=" << d_stitching_nfloat
       << " total_scratch_needed=" << total_scratch_needed
       << std::endl;
   }
@@ -1067,7 +1064,7 @@ void CUDA::InverseFilterbankEngineCUDA::set_scratch (float* _scratch)
   }
   d_scratch = (float2*) _scratch;
   d_input_overlap_discard = d_scratch;
-  d_stitching = d_scratch + d_input_overlap_discard_samples;
+  d_stitching = d_scratch + d_input_overlap_discard_nfloat;
   // check_error ("CUDA::InverseFilterbankEngineCUDA::set_scratch");
 }
 

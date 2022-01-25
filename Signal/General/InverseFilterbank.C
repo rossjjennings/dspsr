@@ -179,11 +179,14 @@ void dsp::InverseFilterbank::make_preparations ()
       << endl;
   }
   
-  oversampling_factor = input->get_oversampling_factor();
+  Rational osf = oversampling_factor = input->get_oversampling_factor();
 
   bool real_to_complex = (input->get_state() == Signal::Nyquist);
-  unsigned n_per_sample = real_to_complex ? 2 : 1;
-  Rational osf = get_oversampling_factor();
+
+  /* number of input time samples per complex-valued output time sample
+     independent of oversampling */
+  
+  unsigned nsamp_in_per_nsamp_out = real_to_complex ? 2 : 1;
 
   // setup the dedispersion discard region for the forward and backward FFTs
   input_nchan = input->get_nchan();
@@ -212,32 +215,21 @@ void dsp::InverseFilterbank::make_preparations ()
     input_fft_length  = output_to_input (output_fft_length,
 					 input_nchan, output_nchan, osf);
 
-    input_fft_length *= n_per_sample;
+    input_fft_length  *= nsamp_in_per_nsamp_out;
+    input_discard_pos *= nsamp_in_per_nsamp_out;
+    input_discard_neg *= nsamp_in_per_nsamp_out;
 
-    /*
-      WvS AT3-119 I don't think that output_fft_length should be multiplied
-      by n_per_sample because n_per_sample is the number of input time samples
-      per output (complex-valued) FFT bin.
-    */
-    output_fft_length *= n_per_sample;
-
-    /*
-      WvS AT3-119 Furthermore, input_discard_neg and input_discard_pos should
-      be multiplied by n_per_sample.  I suspect that this has never been an
-      issue because only complex-valued inputs (n_per_sample = 1) have
-      been tested to date.
-    */
-    input_discard_total = n_per_sample*(input_discard_neg + input_discard_pos);
+    input_discard_total = input_discard_neg + input_discard_pos;
     input_sample_step = input_fft_length - input_discard_total;
 
-    output_discard_total = n_per_sample*(output_discard_neg + output_discard_pos);
+    output_discard_total = output_discard_neg + output_discard_pos;
     output_sample_step = output_fft_length - output_discard_total;
   }
   else
   {
     output_fft_length = input_nchan*get_oversampling_factor().normalize(input_fft_length) / output_nchan;
-    output_fft_length *= n_per_sample;
-    input_fft_length *= n_per_sample;
+
+    input_fft_length *= nsamp_in_per_nsamp_out;
     output_sample_step = output_fft_length;
     input_sample_step = input_fft_length;
 
