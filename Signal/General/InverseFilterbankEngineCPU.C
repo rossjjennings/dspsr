@@ -21,6 +21,7 @@
 #include <cstring>
 #include <complex>
 
+using namespace std;
 
 dsp::InverseFilterbankEngineCPU::InverseFilterbankEngineCPU ()
 {
@@ -43,14 +44,14 @@ dsp::InverseFilterbankEngineCPU::~InverseFilterbankEngineCPU ()
 void dsp::InverseFilterbankEngineCPU::setup (dsp::InverseFilterbank* filterbank)
 {
   if (verbose) {
-    std::cerr << "dsp::InverseFilterbankEngineCPU::setup" << std::endl;
+    cerr << "dsp::InverseFilterbankEngineCPU::setup" << endl;
   }
 
   verbose = filterbank->verbose;
   const TimeSeries* input = filterbank->get_input();
   TimeSeries* output = filterbank->get_output();
+
   real_to_complex = (input->get_state() == Signal::Nyquist);
-  n_per_sample = real_to_complex ? 2: 1;
 
   pfb_dc_chan = filterbank->get_pfb_dc_chan();
   pfb_all_chan = filterbank->get_pfb_all_chan();
@@ -66,66 +67,74 @@ void dsp::InverseFilterbankEngineCPU::setup (dsp::InverseFilterbank* filterbank)
   output_discard_pos = filterbank->get_output_discard_pos();
   output_discard_neg = filterbank->get_output_discard_neg();
 
-  input_discard_total = n_per_sample*(input_discard_neg + input_discard_pos);
+  input_discard_total = input_discard_neg + input_discard_pos;
   input_sample_step = input_fft_length - input_discard_total;
 
-  output_discard_total = n_per_sample*(output_discard_neg + output_discard_pos);
+  output_discard_total = output_discard_neg + output_discard_pos;
   output_sample_step = output_fft_length - output_discard_total;
 
-  if (filterbank->has_response()) {
-    if (verbose) {
-      std::cerr << "dsp::InverseFilterbankEngineCPU::setup: setting response" << std::endl;
-    }
+  if (filterbank->has_response())
+  {
+    if (verbose)
+      cerr << "dsp::InverseFilterbankEngineCPU::setup setting response" << endl;
+ 
     response = filterbank->get_response();
   }
 
-  if (filterbank->has_apodization()) {
-    if (verbose) {
-      std::cerr << "dsp::InverseFilterbankEngineCPU::setup: setting fft_window" << std::endl;
-    }
+  if (filterbank->has_apodization())
+  {
+    if (verbose)
+      cerr << "dsp::InverseFilterbankEngineCPU::setup setting fft_window" << endl;
+
     fft_window = filterbank->get_apodization();
-    if (verbose) {
-      std::cerr << "dsp::InverseFilterbankEngineCPU::setup: fft_window.get_type() "
-      << fft_window->get_type() << std::endl;
-      std::cerr << "dsp::InverseFilterbankEngineCPU::setup: fft_window.get_ndim() "
-      << fft_window->get_ndim() << std::endl;
-      std::cerr << "dsp::InverseFilterbankEngineCPU::setup: fft_window.get_ndat() "
-      << fft_window->get_ndat() << std::endl;
+    if (verbose)
+    {
+      cerr << "dsp::InverseFilterbankEngineCPU::setup fft_window.get_type() "
+	   << fft_window->get_type() << endl;
+      cerr << "dsp::InverseFilterbankEngineCPU::setup fft_window.get_ndim() "
+	   << fft_window->get_ndim() << endl;
+      cerr << "dsp::InverseFilterbankEngineCPU::setup fft_window.get_ndat() "
+	   << fft_window->get_ndat() << endl;
     }
   }
 
-  if (filterbank->get_zero_DM()) {
-    if (verbose) {
-      std::cerr << "dsp::InverseFilterbankEngineCPU::setup: setting zero_DM_response" << std::endl;
-    }
+  if (filterbank->get_zero_DM())
+  {
+    if (verbose)
+      cerr << "dsp::InverseFilterbankEngineCPU::setup setting zero_DM_response" << endl;
+
     zero_DM_response = filterbank->get_zero_DM_response();
   }
 
   OptimalFFT* optimal = 0;
-  if (response && response->has_optimal_fft()) {
-    if (verbose) {
-      std::cerr << "dsp::InverseFilterbankEngineCPU::setup: getting OptimalFFT object" << std::endl;
-    }
+  if (response && response->has_optimal_fft())
+  {
+    if (verbose)
+      cerr << "dsp::InverseFilterbankEngineCPU::setup getting OptimalFFT object" << endl;
+
     optimal = response->get_optimal_fft();
-    if (optimal) {
-      FTransform::set_library(optimal->get_library(input_fft_length));
-    }
   }
+
+  if (optimal)
+    FTransform::set_library( optimal->get_library(input_fft_length) );
+
   forward = FTransform::Agent::current->get_plan(
       input_fft_length,
       real_to_complex ? FTransform::frc: FTransform::fcc);
 
-  if (optimal) {
-    FTransform::set_library(optimal->get_library(output_fft_length));
-  }
-  backward = FTransform::Agent::current->get_plan(output_fft_length, FTransform::bcc);
-  if (verbose) {
-    std::cerr << "dsp::InverseFilterbankEngineCPU::setup: done setting up FFT plans" << std::endl;
-  }
+  if (optimal)
+    FTransform::set_library( optimal->get_library(output_fft_length) );
+
+  backward = FTransform::Agent::current->get_plan (output_fft_length,
+						   FTransform::bcc);
+  if (verbose)
+    cerr << "dsp::InverseFilterbankEngineCPU::setup FFT plans created" << endl;
+  
   fft_plans_setup = true;
 
-  if (verbose) {
-    std::cerr << "dsp::InverseFilterbankEngineCPU::setup"
+  if (verbose)
+  {
+    cerr << "dsp::InverseFilterbankEngineCPU::setup"
       << " input_nchan=" << input_nchan
       << " output_nchan=" << output_nchan
       << " input_fft_length=" << input_fft_length
@@ -134,39 +143,38 @@ void dsp::InverseFilterbankEngineCPU::setup (dsp::InverseFilterbank* filterbank)
       << " input_discard_neg=" << input_discard_neg
       << " output_discard_pos=" << output_discard_pos
       << " output_discard_neg=" << output_discard_neg
-      << std::endl;
+      << endl;
   }
 
   // compute oversampling keep/discard region
   input_os_keep = filterbank->get_oversampling_factor().normalize(input_fft_length);
   input_os_discard = input_fft_length - input_os_keep;
 
-  if (verbose) {
-    std::cerr << "dsp::InverseFilterbankEngineCPU::setup"
+  if (verbose)
+    cerr << "dsp::InverseFilterbankEngineCPU::setup"
       << " input_os_keep=" << input_os_keep
       << " input_os_discard=" << input_os_discard
-      << std::endl;
-  }
+      << endl;
 
   if (input_os_discard % 2 != 0)
-  {
-    throw "dsp::InverseFilterbankEngineCPU::setup: input_os_discard must be divisible by two";
-  }
+    throw Error (InvalidState, "dsp::InverseFilterbankEngineCPU::setup",
+		 "input_os_discard=%u must be divisible by two",
+		 input_os_discard);
 
   // setup scratch space
-  input_fft_scratch_samples = input->get_ndim()*input_fft_length;
-  input_time_scratch_samples = input_fft_scratch_samples;
-  output_fft_scratch_samples = 2*output_fft_length; // always return complex result
-  stitch_scratch_samples = 2*output_nchan*output_fft_length;
+  input_fft_scratch_nfloat = input->get_ndim()*input_fft_length;
+  input_time_scratch_nfloat = input_fft_scratch_nfloat;
+  output_fft_scratch_nfloat = 2*output_fft_length; // always return complex result
+  stitch_scratch_nfloat = 2*output_nchan*output_fft_length;
 
-  total_scratch_needed = input_fft_scratch_samples +
-                         input_time_scratch_samples +
-                         output_fft_scratch_samples +
-                         stitch_scratch_samples;
+  total_scratch_needed = input_fft_scratch_nfloat +
+                         input_time_scratch_nfloat +
+                         output_fft_scratch_nfloat +
+                         stitch_scratch_nfloat;
 
-  if (zero_DM_response != nullptr) {
-    total_scratch_needed += stitch_scratch_samples;
-  }
+  if (zero_DM_response != nullptr)
+    total_scratch_needed += stitch_scratch_nfloat;
+
   // dsp::Scratch* scratch = new Scratch;
   // input_fft_scratch = scratch->space<float>
   //   (input_time_points + input_fft_points + output_fft_points  + stitch_points);
@@ -180,13 +188,11 @@ void dsp::InverseFilterbankEngineCPU::set_scratch (float * _scratch)
 {
   scratch = _scratch;
   input_fft_scratch = scratch;
-  input_time_scratch = input_fft_scratch + input_fft_scratch_samples;
-  output_fft_scratch = input_time_scratch + input_time_scratch_samples;
-  stitch_scratch = output_fft_scratch + output_fft_scratch_samples;
-  if (zero_DM_response != nullptr) {
-    stitch_scratch_zero_DM = stitch_scratch + stitch_scratch_samples;
-  }
-
+  input_time_scratch = input_fft_scratch + input_fft_scratch_nfloat;
+  output_fft_scratch = input_time_scratch + input_time_scratch_nfloat;
+  stitch_scratch = output_fft_scratch + output_fft_scratch_nfloat;
+  if (zero_DM_response != nullptr)
+    stitch_scratch_zero_DM = stitch_scratch + stitch_scratch_nfloat;
 }
 
 void dsp::InverseFilterbankEngineCPU::perform (
@@ -211,57 +217,66 @@ void dsp::InverseFilterbankEngineCPU::perform (
   float* time_dom_ptr;
   float* output_freq_dom_ptr;
 
-  if (verbose) {
-    if (pfb_dc_chan) {
-      if (pfb_all_chan) {
-        std::cerr << "dsp::InverseFilterbankEngineCPU::perform: "
-          << "moving first half channel to end of assembled spectrum" << std::endl;
-      } else {
-        std::cerr << "dsp::InverseFilterbankEngineCPU::perform: "
-          << "moving first half channel to end of assembled spectrum and zeroing" << std::endl;
-      }
-    } else {
-      std::cerr << "dsp::InverseFilterbankEngineCPU::perform: "
-        << "leaving assembled spectrum as is" << std::endl;
+  if (verbose)
+  {
+    if (pfb_dc_chan)
+    {
+      if (pfb_all_chan)
+        cerr << "dsp::InverseFilterbankEngineCPU::perform "
+          << "moving first half channel to end of assembled spectrum" << endl;
+       else 
+        cerr << "dsp::InverseFilterbankEngineCPU::perform "
+          << "moving first half channel to end of assembled spectrum and zeroing" << endl;
+      
     }
-    std::cerr << "dsp::InverseFilterbankEngineCPU::perform: writing " << npart << " chunks" << std::endl;
+    else
+    {
+      cerr << "dsp::InverseFilterbankEngineCPU::perform "
+        << "leaving assembled spectrum as is" << endl;
+    }
+    cerr << "dsp::InverseFilterbankEngineCPU::perform writing " << npart << " chunks" << endl;
   }
-  // std::ofstream stitched_file("/home/SWIN/dshaff/stitched.dat", std::ios::out | std::ios::binary);
-  // std::ofstream ifft_file("/home/SWIN/dshaff/ifft.dat", std::ios::out | std::ios::binary);
-  // std::ofstream out_file("/home/SWIN/dshaff/out.dat", std::ios::out | std::ios::binary);
-  // std::ofstream deripple_before_file("deripple.before.dat", std::ios::out | std::ios::binary);
-  // std::ofstream deripple_before_file("deripple.before.dat", std::ios::out | std::ios::binary);
-  // std::ofstream deripple_after_file("deripple.after.dat", std::ios::out | std::ios::binary);
+  // ofstream stitched_file("/home/SWIN/dshaff/stitched.dat", ios::out | ios::binary);
+  // ofstream ifft_file("/home/SWIN/dshaff/ifft.dat", ios::out | ios::binary);
+  // ofstream out_file("/home/SWIN/dshaff/out.dat", ios::out | ios::binary);
+  // ofstream deripple_before_file("deripple.before.dat", ios::out | ios::binary);
+  // ofstream deripple_before_file("deripple.before.dat", ios::out | ios::binary);
+  // ofstream deripple_after_file("deripple.after.dat", ios::out | ios::binary);
 
-  if (verbose) {
-    if (fft_window) {
-      std::cerr << "dsp::InverseFilterbankEngineCPU::perform: fft_window.get_type() "
-        << fft_window->get_type() << std::endl;
-      std::cerr << "dsp::InverseFilterbankEngineCPU::perform: fft_window.get_ndim() "
-        << fft_window->get_ndim() << std::endl;
-      std::cerr << "dsp::InverseFilterbankEngineCPU::perform: fft_window.get_ndat() "
-        << fft_window->get_ndat() << std::endl;
+  if (verbose)
+  {
+    if (fft_window)
+    {
+      cerr << "dsp::InverseFilterbankEngineCPU::perform fft_window.get_type() "
+        << fft_window->get_type() << endl;
+      cerr << "dsp::InverseFilterbankEngineCPU::perform fft_window.get_ndim() "
+        << fft_window->get_ndim() << endl;
+      cerr << "dsp::InverseFilterbankEngineCPU::perform fft_window.get_ndat() "
+        << fft_window->get_ndat() << endl;
     }
-    std::cerr << "dsp::InverseFilterbankEngineCPU::perform: output_nchan="
-      << output_nchan << std::endl;
-    std::cerr << "dsp::InverseFilterbankEngineCPU::perform:"
+    cerr << "dsp::InverseFilterbankEngineCPU::perform output_nchan="
+      << output_nchan << endl;
+    cerr << "dsp::InverseFilterbankEngineCPU::perform"
       << " out dim=(" << out->get_nchan()
       << ", " << out->get_npol()
-      << ", " << out->get_ndat() << ")" << std::endl;
-    std::cerr << "dsp::InverseFilterbankEngineCPU::perform:"
+      << ", " << out->get_ndat() << ")" << endl;
+    cerr << "dsp::InverseFilterbankEngineCPU::perform"
       << " in dim=(" << in->get_nchan()
       << ", " << in->get_npol()
-      << ", " << in->get_ndat() << ")" << std::endl;
-    std::cerr << "dsp::InverseFilterbankEngineCPU::perform: input_nchan="
-      << input_nchan << std::endl;
+      << ", " << in->get_ndat() << ")" << endl;
+    cerr << "dsp::InverseFilterbankEngineCPU::perform input_nchan="
+      << input_nchan << endl;
   }
 
   void* src_ptr;
   void* dest_ptr;
 
-  for (uint64_t ipart = 0; ipart < npart; ipart++) {
-    for (unsigned ipol = 0; ipol < n_pol; ipol++) {
-      for (unsigned input_ichan = 0; input_ichan < input_nchan; input_ichan++) {
+  for (uint64_t ipart = 0; ipart < npart; ipart++)
+  {
+    for (unsigned ipol = 0; ipol < n_pol; ipol++)
+    {
+      for (unsigned input_ichan = 0; input_ichan < input_nchan; input_ichan++)
+      {
         freq_dom_ptr = input_fft_scratch;
         time_dom_ptr = const_cast<float*>(in->get_datptr(input_ichan, ipol));
         time_dom_ptr += n_dims*ipart*(input_fft_length - input_discard_total);
@@ -272,50 +287,53 @@ void dsp::InverseFilterbankEngineCPU::perform (
           sizeof_complex*input_fft_length
         );
 
-        if (fft_window) {
+        if (fft_window)
+	{
           // if (verbose && input_ichan == 0) {
-          //   std::cerr << "dsp::InverseFilterbankEngineCPU::perform: applying fft_window" << std::endl;
+          //   cerr << "dsp::InverseFilterbankEngineCPU::perform applying fft_window" << endl;
           // }
           fft_window->operate(input_time_scratch);
         }
 
-        if (report) {
+        if (report)
           reporter.emit("fft_window", input_time_scratch, 1, 1, input_fft_length, 2);
-        }
 
-        if (real_to_complex) {
+        if (real_to_complex)
           forward->frc1d(input_fft_length, freq_dom_ptr, input_time_scratch);
-        } else {
+        else
           // fcc1d(number_of_points, dest_ptr, src_ptr);
           forward->fcc1d(input_fft_length, freq_dom_ptr, input_time_scratch);
-        }
-        // discard oversampled regions and do circular shift
-        if (report) {
-          reporter.emit("fft", freq_dom_ptr, 1, 1, input_fft_length, 2);
-        }
 
-        if (pfb_dc_chan) {
-          if (input_ichan == 0) {
+        // discard oversampled regions and do circular shift
+        if (report)
+          reporter.emit("fft", freq_dom_ptr, 1, 1, input_fft_length, 2);
+
+        if (pfb_dc_chan)
+	{
+          if (input_ichan == 0)
+	  {
             stitched_offset_neg = n_dims*(output_nchan*output_fft_length - input_os_keep_2);
             stitched_offset_pos = 0;
-          } else {
+          }
+	  else
+	  {
             stitched_offset_neg = n_dims*(input_os_keep*input_ichan - input_os_keep_2);
             stitched_offset_pos = stitched_offset_neg + n_dims*input_os_keep_2;
           }
-        } else {
+        }
+	else
+	{
           stitched_offset_neg = n_dims*input_os_keep*input_ichan;
           stitched_offset_pos = stitched_offset_neg + n_dims*input_os_keep_2;
         }
 
-
-
-        std::memcpy(
+        memcpy(
           stitch_scratch + stitched_offset_neg,
           freq_dom_ptr + n_dims*(input_fft_length - input_os_keep_2),
           input_os_keep_2 * sizeof_complex
         );
 
-        std::memcpy(
+        memcpy(
           stitch_scratch + stitched_offset_pos,
           freq_dom_ptr,
           input_os_keep_2 * sizeof_complex
@@ -323,68 +341,76 @@ void dsp::InverseFilterbankEngineCPU::perform (
 
       } // end of for input_nchan
 
-      // If we have the zeroth PFB channel and we don't have all the PFB channels,
-      // then we zero the last half channel.
-      if (! pfb_all_chan && pfb_dc_chan) {
+      // If we have the zeroth PFB channel and we don't have all the
+      // PFB channels, then we zero the last half channel.
+      if (! pfb_all_chan && pfb_dc_chan)
+      {
         // if (verbose) {
-        //   std::cerr << "dsp::InverseFilterbankEngineCPU::perform: zeroing last half channel" << std::endl;
+        //   cerr << "dsp::InverseFilterbankEngineCPU::perform zeroing last half channel" << endl;
         // }
         int offset = n_dims*(output_nchan*output_fft_length - input_os_keep_2);
-        for (unsigned i=0; i<n_dims*input_os_keep_2; i++) {
+        for (unsigned i=0; i<n_dims*input_os_keep_2; i++)
           stitch_scratch[offset + i] = 0.0;
-        }
       }
 
 
-      if (zero_DM_response != nullptr) {
+      if (zero_DM_response != nullptr)
+      {
         // copy data from stitch_scratch into stitch_scratch_zero_DM
-        if (verbose) {
-          std::cerr << "dsp::InverseFilterbankEngineCPU::perform: applying zero_DM_response" << std::endl;
-        }
-        memcpy(stitch_scratch_zero_DM, stitch_scratch, output_nchan*output_fft_length*sizeof_complex);
-        zero_DM_response->operate(stitch_scratch_zero_DM, ipol, 0, output_nchan);
-      } else {
-        if (verbose) {
-          std::cerr << "dsp::InverseFilterbankEngineCPU::perform: NOT applying zero_DM_response" << std::endl;
-        }
-      }
+        if (verbose)
+          cerr << "dsp::InverseFilterbankEngineCPU::perform"
+	    " applying zero_DM_response" << endl;
 
-      if (response != nullptr) {
+        memcpy (stitch_scratch_zero_DM, stitch_scratch,
+		output_nchan*output_fft_length*sizeof_complex);
+	
+        zero_DM_response->operate(stitch_scratch_zero_DM, ipol, 0, output_nchan);
+      }
+      else if (verbose)
+	cerr << "dsp::InverseFilterbankEngineCPU::perform"
+	  " NOT applying zero_DM_response" << endl;
+
+      if (response != nullptr)
+      {
         // if (verbose) {
-        //   std::cerr << "dsp::InverseFilterbankEngineCPU::perform: applying response" << std::endl;
+        //   cerr << "dsp::InverseFilterbankEngineCPU::perform applying response" << endl;
         // }
         response->operate(stitch_scratch, ipol, 0, output_nchan);
-      } else {
+      }
+      else
+      {
         // if (verbose) {
-        //   std::cerr << "dsp::InverseFilterbankEngineCPU::perform: NOT applying response" << std::endl;
+        //   cerr << "dsp::InverseFilterbankEngineCPU::perform NOT applying response" << endl;
         // }
       }
 
-      if (report) {
+      if (report)
         reporter.emit("response_stitch", stitch_scratch, 1, 1, output_fft_length*output_nchan, 2);
-      }
-      // std::complex<float>* stitch_scratch_complex = reinterpret_cast<std::complex<float>*>(stitch_scratch);
+
+      // complex<float>* stitch_scratch_complex = reinterpret_cast<complex<float>*>(stitch_scratch);
       // for (int idat=0; idat<output_fft_length*output_nchan; idat++)
       // {
-      //   std::cerr << stitch_scratch_complex[idat] << " ";
+      //   cerr << stitch_scratch_complex[idat] << " ";
       // }
-      // std::cerr << std::endl;
+      // cerr << endl;
 
-      if (out != nullptr) {
+      if (out != nullptr)
+      {
         // if (verbose) {
-        //   std::cerr << "dsp::InverseFilterbankEngineCPU::perform: pol=" << ipol <<" loop=" << ipart+1 << "/" << npart << " doing inverse FFT" << std::endl; //. output_fft_length: "<< output_fft_length << std::endl;
+        //   cerr << "dsp::InverseFilterbankEngineCPU::perform pol=" << ipol <<" loop=" << ipart+1 << "/" << npart << " doing inverse FFT" << endl; //. output_fft_length: "<< output_fft_length << endl;
         // }
         output_freq_dom_ptr = stitch_scratch;
-        for (unsigned output_ichan=0; output_ichan<output_nchan; output_ichan++) {
+        for (unsigned output_ichan=0; output_ichan<output_nchan; output_ichan++)
+	{
           // if (verbose) {
-          //   std::cerr << "dsp::InverseFilterbankEngineCPU::perform output_ichan=" << output_ichan << std::endl;
+          //   cerr << "dsp::InverseFilterbankEngineCPU::perform output_ichan=" << output_ichan << endl;
           // }
-          // std::cerr << "dsp::InverseFilterbankEngineCPU::perform: before fft" << std::endl;
+          // cerr << "dsp::InverseFilterbankEngineCPU::perform before fft" << endl;
           backward->bcc1d(output_fft_length, output_fft_scratch, output_freq_dom_ptr);
-          if (report) {
+          if (report)
             reporter.emit("ifft", output_fft_scratch, 1, 1, output_fft_length, 2);
-          }
-          // std::cerr << "dsp::InverseFilterbankEngineCPU::perform: after fft" << std::endl;
+
+          // cerr << "dsp::InverseFilterbankEngineCPU::perform after fft" << endl;
           // ifft_file.write(
           //   reinterpret_cast<const char*>(output_fft_scratch),
           //   output_fft_length*sizeof_complex
@@ -396,36 +422,36 @@ void dsp::InverseFilterbankEngineCPU::perform (
           dest_ptr = (void *)(
               out->get_datptr(output_ichan, ipol) +
               ipart*output_sample_step*floats_per_complex);
-          std::memcpy(dest_ptr, src_ptr, output_sample_step*sizeof_complex);
+          memcpy(dest_ptr, src_ptr, output_sample_step*sizeof_complex);
           output_freq_dom_ptr += output_fft_length*n_dims;
 
-          if (zero_DM_response != nullptr) {
+          if (zero_DM_response != nullptr)
+	  {
             backward->bcc1d(output_fft_length, output_fft_scratch, stitch_scratch_zero_DM + output_ichan*output_fft_length*n_dims);
             src_ptr = (void *)(
                 output_fft_scratch + output_discard_pos*floats_per_complex);
             dest_ptr = (void *)(
                 zero_DM_out->get_datptr(output_ichan, ipol) +
                 ipart*output_sample_step*floats_per_complex);
-            std::memcpy(dest_ptr, src_ptr, output_sample_step*sizeof_complex);
+            memcpy(dest_ptr, src_ptr, output_sample_step*sizeof_complex);
           }
 
-
-          // std::cerr << "dsp::InverseFilterbankEngineCPU::perform: after copy" << std::endl;
+          // cerr << "dsp::InverseFilterbankEngineCPU::perform after copy" << endl;
           // out_file.write(
           //   reinterpret_cast<const char*>(dest_ptr),
           //   output_sample_step*sizeof_complex
           // );
         }
         // if (verbose) {
-        //   std::cerr << "dsp::InverseFilterbankEngineCPU::perform: backward FFTs complete." << std::endl;
+        //   cerr << "dsp::InverseFilterbankEngineCPU::perform backward FFTs complete." << endl;
         // }
       }
     } // end of n_pol
   } // end of ipart
 
-  if (verbose) {
-    std::cerr << "dsp::InverseFilterbankEngineCPU::perform: finish" << std::endl;
-  }
+  if (verbose)
+    cerr << "dsp::InverseFilterbankEngineCPU::perform finish" << endl;
+
   // stitched_file.close();
   // ifft_file.close();
   // out_file.close();
@@ -447,7 +473,6 @@ void dsp::InverseFilterbankEngineCPU::perform (
 
 void dsp::InverseFilterbankEngineCPU::finish ()
 {
-  if (verbose) {
-    std::cerr << "dsp::InverseFilterbankEngineCPU::finish" << std::endl;
-  }
+  if (verbose)
+    cerr << "dsp::InverseFilterbankEngineCPU::finish" << endl;
 }

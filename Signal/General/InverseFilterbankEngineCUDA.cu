@@ -5,12 +5,13 @@
  *   Licensed under the Academic Free License version 2.1
  *
  ***************************************************************************/
+
+#include "dsp/InverseFilterbankEngineCUDA.h"
+#include "CUFFTError.h"
+
 #include <cstdio>
 #include <vector>
 #include <complex>
-
-#include "CUFFTError.h"
-#include "dsp/InverseFilterbankEngineCUDA.h"
 
 void check_error (const char*);
 

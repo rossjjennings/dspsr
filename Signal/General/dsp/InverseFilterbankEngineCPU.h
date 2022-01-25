@@ -73,10 +73,6 @@ namespace dsp
     //! FFT window applied before forward FFT
     Apodization* fft_window;
 
-    //! This is the number of floats per sample. This could be 1 or 2,
-    //! depending on whether input is Analytic (complex) or Nyquist (real)
-    unsigned n_per_sample;
-
     //! the number of input polarizations
     unsigned input_npol;
 
@@ -99,9 +95,9 @@ namespace dsp
     //! The total number of samples discarded ain an input TimeSeries. From the parent InverseFilterbank.
     unsigned output_discard_total;
 
-    //! The number of floats in the forward FFT
+    //! The number of samples in the forward FFT
     unsigned input_fft_length;
-    //! The number of floats in the backward FFT
+    //! The number of samples in the backward FFT
     unsigned output_fft_length;
 
     //! The number samples in an input TimeSeries step, or segment. From the parent InverseFilterbank
@@ -143,31 +139,29 @@ namespace dsp
     //! Scratch space for performing forward FFTs
     float* input_fft_scratch;
 
-    //! Scratch space, in samples, needed for the input_fft_scratch space
-    unsigned input_fft_scratch_samples;
+    //! Number of floats needed for the input_fft_scratch space
+    unsigned input_fft_scratch_nfloat;
 
     //! Scratch space for input time series chunk
     float* input_time_scratch;
 
-    //! Scratch space, in samples, needed for the input_time_scratch space
-    unsigned input_time_scratch_samples;
+    //! Number of floats needed for the input_time_scratch space
+    unsigned input_time_scratch_nfloat;
 
     //! Scratch space for performing backward FFTs
     float* output_fft_scratch;
 
-    //! Scratch space, in samples, needed for the output_fft_scratch space
-    unsigned output_fft_scratch_samples;
+    //! Number of floats needed for the output_fft_scratch space
+    unsigned output_fft_scratch_nfloat;
 
     //! Scratch space where results of forward FFTs get assembled into
     //! upsampled spectrum
     float* stitch_scratch;
 
-    //! Scratch space, in samples, needed for the stitch_scratch space
-    unsigned stitch_scratch_samples;
+    //! Number of floats needed for the stitch_scratch space
+    unsigned stitch_scratch_nfloat;
 
     float* stitch_scratch_zero_DM;
-
-
   };
 
 }
