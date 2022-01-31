@@ -312,11 +312,8 @@ void dsp::InverseFilterbank::make_preparations ()
   if (has_buffering_policy())
   {
     if (verbose)
-      cerr << "dsp::InverseFilterbank::make_preparations reserve="
-           << output_fft_length << endl;
-
-    // WvS AT3-119 should be input_fft_length (input samples are buffered)
-    get_buffering_policy()->set_minimum_samples(output_fft_length);
+      cerr << "dsp::InverseFilterbank::make_preparations reserve=" << input_fft_length << endl;
+    get_buffering_policy()->set_maximum_samples (input_fft_length);
   }
 
   scalefac = 1.0;
@@ -552,14 +549,17 @@ void dsp::InverseFilterbank::resize_output (bool reserve_extra)
          << " npart=" << npart << " output ndat=" << output_ndat << endl;
   }
 
-#define DEBUGGING_OVERLAP 0
+#define DEBUGGING_OVERLAP 1
 #if DEBUGGING_OVERLAP
   // this exception is useful when debugging, but not at the end-of-file
-  if ( !has_buffering_policy() && ndat > 0
-       && (input_sample_step*npart + nsamp_overlap != ndat) )
+  if ( !has_buffering_policy() && ndat > 0 )
+  {
+    cerr << "testing overlap" << endl;
+    if (input_sample_step*npart + nsamp_overlap != ndat)
     throw Error (InvalidState, "dsp::InverseFilterbank::resize_output",
 		 "npart=%u * step=%u + overlap=%u != ndat=%u",
  		 npart, input_sample_step, nsamp_overlap, ndat);
+  }
 #endif
 
   // prepare the output TimeSeries
