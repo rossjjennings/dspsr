@@ -38,8 +38,8 @@ namespace dsp {
     //! Set the first sample to be used from the input next time
     void set_next_start (uint64_t next_start_sample);
     
-    //! Set the minimum number of samples that can be processed
-    void set_minimum_samples (uint64_t samples);
+    //! Set the maximum number of samples to be buffered
+    void set_maximum_samples (uint64_t samples);
 
     //! Get the next contiguous sample following the current buffer
     int64_t get_next_contiguous () const;

@@ -398,9 +398,9 @@ void dsp::SpectralKurtosis::prepare ()
 
   if (has_buffering_policy())
   {
-    get_buffering_policy()->set_minimum_samples (max_M);
+    get_buffering_policy()->set_maximum_samples (max_M);
     if (zero_DM)
-      get_zero_DM_buffering_policy()->set_minimum_samples (max_M);
+      get_zero_DM_buffering_policy()->set_maximum_samples (max_M);
   }
 
   if (engine)

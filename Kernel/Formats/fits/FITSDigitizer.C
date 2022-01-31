@@ -104,7 +104,7 @@ void dsp::FITSDigitizer::set_rescale_samples (unsigned nsamp)
   rescale_nsamp = nsamp;
   if (!has_buffering_policy())
     set_buffering_policy( new InputBuffering (this) );
-  get_buffering_policy()->set_minimum_samples (rescale_nsamp);
+  get_buffering_policy()->set_maximum_samples (rescale_nsamp);
 }
 
 void dsp::FITSDigitizer::set_rescale_nblock (unsigned nblock)

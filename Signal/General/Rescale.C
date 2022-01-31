@@ -80,7 +80,7 @@ void dsp::Rescale::set_exact (bool value)
   if (exact && !interval_samples)
       throw Error(InvalidState, "dsp::Rescale::set_exact", 
           "interval_sample == 0 (must be set)");
-  get_buffering_policy()->set_minimum_samples (interval_samples);
+  get_buffering_policy()->set_maximum_samples (interval_samples);
 }
 
 template<typename T>

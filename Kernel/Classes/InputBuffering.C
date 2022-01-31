@@ -25,8 +25,8 @@ void dsp::InputBuffering::set_target (HasInput<TimeSeries>* _target)
   target = _target;
 }
 
-//! Set the minimum number of samples that can be processed
-void dsp::InputBuffering::set_minimum_samples (uint64_t samples)
+//! Set the maximum number of samples to be buffered
+void dsp::InputBuffering::set_maximum_samples (uint64_t samples)
 {
   reserve->reserve( get_input(), samples );
 }

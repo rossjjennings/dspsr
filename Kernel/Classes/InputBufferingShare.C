@@ -53,13 +53,13 @@ dsp::InputBuffering::Share::~Share ()
 }
 
 //! Set the minimum number of samples that can be processed
-void dsp::InputBuffering::Share::set_minimum_samples (uint64_t samples) try
+void dsp::InputBuffering::Share::set_maximum_samples (uint64_t samples) try
 {
   reserve->reserve ( target->get_input(), samples );
 }
 catch (Error& error)
 {
-  throw error += "dsp::InputBuffering::Share::set_minimum_samples";
+  throw error += "dsp::InputBuffering::Share::set_maximum_samples";
 }
 
 /*! Copy remaining data from the target Transformation's input to buffer */
