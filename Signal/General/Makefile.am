@@ -211,4 +211,5 @@ LDADD += @CUFFT_LIBS@
 endif
 endif
 
+libs: install-libLTLIBRARIES
 
