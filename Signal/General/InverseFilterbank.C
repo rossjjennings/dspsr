@@ -18,6 +18,9 @@
 #include "dsp/OptimalFFT.h"
 
 #include <vector>
+#include <stdlib.h>
+#include <inttypes.h>
+#include <assert.h>
 
 using namespace std;
 
@@ -73,6 +76,33 @@ void dsp::InverseFilterbank::set_engine (Engine* _engine)
   engine = _engine;
 }
 
+inline uint64_t output_to_input (
+  uint64_t n,
+  unsigned _input_n,
+  unsigned _output_n,
+  const Rational& osf
+)
+{
+  imaxdiv_t result = imaxdiv (n * _output_n * osf.get_numerator(), _input_n * osf.get_denominator());
+  if (result.rem != 0)
+    throw std::domain_error ("output_to_input result is not an integer");
+
+  return result.quot;
+}
+
+inline uint64_t input_to_output (
+  uint64_t n,
+  unsigned _input_n,
+  unsigned _output_n,
+  const Rational& osf
+)
+{
+  imaxdiv_t result = imaxdiv (n * _input_n * osf.get_denominator(), _output_n * osf.get_numerator());
+  if (result.rem != 0)
+    throw std::domain_error ("input_to_out result is not an integer");
+
+  return result.quot;
+}
 
 void dsp::InverseFilterbank::transformation ()
 {
@@ -97,31 +127,17 @@ void dsp::InverseFilterbank::transformation ()
   uint64_t output_ndat = output->get_ndat();
 
   int64_t input_sample = input->get_input_sample();
-  int64_t new_output_sample = 0;
-
-  /* WvS AT3-119 - I don't understand the following lines of code
-
-     ndat is the number of samples (also a relative offset from first sample)
-     input_sample is the absolute offset from the start of the file
-
-     The following lines set the input_sample of the output TimeSeries
-     to the ndat of the output TimeSeries.
-  */
-    
-  if (input_sample >= 0)
-  {
-    // unsigned nkeep = freq_res - nfilt_tot;
-    // new_output_sample = (input_sample / input_sample_step) * nkeep;
-    new_output_sample = output_ndat;
-  }
+  int64_t output_sample = input_to_output ( input_sample, 
+                                            input_nchan, output_nchan, 
+                                            input->get_oversampling_factor() );
 
   if (verbose)
     cerr << "dsp::InverseFilterbank::transformation: setting input sample to "
-      << new_output_sample << endl;
+      << output_sample << endl;
 
-  output->set_input_sample (new_output_sample);
+  output->set_input_sample (output_sample);
   if (zero_DM)
-    get_zero_DM_output()->set_input_sample(new_output_sample);
+    get_zero_DM_output()->set_input_sample(output_sample);
 
   if (verbose)
     cerr << "dsp::InverseFilterbank::transformation after prepare output"
@@ -154,17 +170,6 @@ void dsp::InverseFilterbank::filterbank()
   if (Operation::record_time)
     engine->finish ();
 }
-
-inline unsigned output_to_input (
-  unsigned n,
-  unsigned _input_n,
-  unsigned _output_n,
-  const Rational& osf
-)
-{
-  return (n*osf.get_numerator()) / (osf.get_denominator()*(_input_n/_output_n));
-}
-
 
 void dsp::InverseFilterbank::make_preparations ()
 {
