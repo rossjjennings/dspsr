@@ -6,7 +6,9 @@ nobase_include_HEADERS =  dsp/GUPPIFile.h \
 			  dsp/GUPPIUnpacker.h \
 			  dsp/GUPPIFourBit.h \
 			  dsp/GUPPITwoBitCorrection.h \
-			  dsp/GUPPITwoBitCorrectionComplex.h
+			  dsp/GUPPITwoBitCorrectionComplex.h \
+			  fitshead.h \
+			  fitshead_utils.h
 
 libguppi_la_SOURCES = GUPPIFile.C \
 		      GUPPIBlockFile.C \
