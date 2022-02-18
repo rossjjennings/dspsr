@@ -49,6 +49,8 @@ void usage ()
     " -d         produce dynamic spectrum (greyscale) \n"
     " -F min,max set the min,max x-value (e.g. frequency zoom) \n" 
     " -r min,max set the min,max y-value (e.g. saturate birdies) \n"
+    " -l         y-axis on log scale \n"
+    " -m         report index of maximum power \n"
     " -n nchan   number of frequency channels in each spectrum \n"
     " -t seconds integration interval for each spectrum \n"
     " -s         quit after a single integration \n"
@@ -56,6 +58,8 @@ void usage ()
     " -R         test RFIFilter class \n"
        << endl;
 }
+
+void print_max_index (const dsp::Response*);
 
 int main (int argc, char** argv) try {
 
@@ -103,6 +107,9 @@ int main (int argc, char** argv) try {
   // GeometricDelay computes the required delays
   dsp::GeometricDelay* geometry = 0;
 
+  // report the index at which psd peaks
+  bool report_max = false;
+
   // the colour map
   pgplot::ColourMap::Name colour_map = pgplot::ColourMap::Heat;
   pgplot::ColourMap cmap;
@@ -115,7 +122,7 @@ int main (int argc, char** argv) try {
   int width_pixels  = 0;
   int height_pixels = 0;
 
-  static const char* args = "ibB:c:dD:f:F:G:g:lr:n:pRS:T:t:shvV";
+  static const char* args = "bB:c:dD:f:F:G:g:hilmn:pRr:S:T:t:svV";
 
   while ((c = getopt(argc, argv, args)) != -1)
     switch (c) {
@@ -177,6 +184,10 @@ int main (int argc, char** argv) try {
 
     case 'l':
       plotter.logarithmic = true;
+      break;
+
+    case 'm':
+      report_max = true;
       break;
 
     case 'R':
@@ -425,6 +436,9 @@ int main (int argc, char** argv) try {
 	  plotter.plot (output, voltages);
 	}
 
+        if (report_max)
+          print_max_index (output);
+
 	passband->reset_output();
       }
       if (single_quit)
@@ -457,5 +471,38 @@ int main (int argc, char** argv) try {
 catch (Error& error) {
   cerr << "Error thrown: " << error << endl;
   return -1;
+}
+
+void print_max_index (const dsp::Response* response)
+{
+  unsigned nchan = response->get_nchan();
+  unsigned ndat = response->get_ndat();
+  unsigned npol = response->get_npol();
+
+  assert (response->get_ndim() == 1);
+
+  cerr << "print_max_index nchan=" << nchan << " npol=" << npol << " ndat=" << ndat << endl;
+
+  unsigned ipol_max = 0;
+  unsigned ichan_max = 0;
+  unsigned idat_max = 0;
+  float val_max = 0.0;
+
+  for (unsigned ichan=0; ichan < nchan; ichan++)
+    for (unsigned ipol=0; ipol < npol; ipol++)
+    {
+      const float* dat = response->get_datptr (ichan, ipol);
+      for (unsigned idat=0; idat < ndat; idat++)
+        if (dat[idat] > val_max)
+        {
+          val_max = dat[idat];
+          idat_max = idat;
+          ipol_max = ipol;
+          ichan_max = ichan;
+        }
+    }
+
+  cout << "max val=" << val_max << " chan=" << ichan_max 
+       << " pol=" << ipol_max << " i=" << idat_max << endl;
 }
 
