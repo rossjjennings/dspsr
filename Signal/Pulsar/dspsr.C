@@ -421,7 +421,7 @@ void parse_options (int argc, char** argv) try
   menu.add ("\n" "Detection options:");
 
   arg = menu.add (config->npol, 'd', "npol");
-  arg->set_help ("1=PP+QQ, 2=PP,QQ, 3=(PP+QQ)^2 4=PP,QQ,PQ,QP");
+  arg->set_help ("0=P,Q; 1=PP+QQ; 2=PP,QQ; 3=(PP+QQ)^2; 4=PP,QQ,PQ,QP");
 
   arg = menu.add (config->ndim, 'n', "ndim");
   arg->set_help ("[experimental] ndim of output when npol=4");

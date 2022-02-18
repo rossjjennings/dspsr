@@ -667,8 +667,11 @@ void dsp::LoadToFold::construct () try
     operations.push_back (skestimator.get());
   }
 
+  if (config->npol == 0)
+    cerr << "LoadToFold::construct folding voltages" << endl;
+
   // Cyclic spectrum also detects and folds
-  if (config->cyclic_nchan)
+  if (config->cyclic_nchan || config->npol == 0)
   {
     build_fold(cleaned);
     return;
