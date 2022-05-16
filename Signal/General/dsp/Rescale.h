@@ -109,8 +109,9 @@ namespace dsp
 
     bool constant_offset_scale;
 
+    bool first_integration;
     void init ();
-    void compute_various (bool first_call = false);
+    void compute_various (bool first_call = false, bool first_integration = false);
   };
 }
 

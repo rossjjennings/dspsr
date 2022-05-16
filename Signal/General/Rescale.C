@@ -24,6 +24,7 @@ dsp::Rescale::Rescale ()
   output_after_interval = false;
   do_decay=false;
   decay_constant=1e4;
+  first_integration=false;
 }
 
 dsp::Rescale::~Rescale ()
@@ -183,12 +184,17 @@ void dsp::Rescale::transformation ()
   bool first_call = nsample == 0;
 
   if (first_call)
+  {
+    first_integration = true;
     init ();
+  }
 
   const uint64_t input_ndat  = input->get_ndat();
   const unsigned input_ndim  = input->get_ndim();
   const unsigned input_npol  = input->get_npol();
   const unsigned input_nchan = input->get_nchan();
+
+  const float * inptr = input->get_datptr (0, 0);
 
   if (verbose)
     cerr << "dsp::Rescale::transformation input_ndat=" << input_ndat 
@@ -272,11 +278,12 @@ void dsp::Rescale::transformation ()
 
           for (unsigned idat=start_dat; idat < end_dat; idat++)
           {
-            sum += in_data[idat];
-            sumsq += in_data[idat] * in_data[idat];
+            const double val = double(in_data[idat]);
+            sum += val;
+            sumsq += val * val;
 
             if (output_time_total)
-              time_total[ipol][samp_dat] += in_data[idat];
+              time_total[ipol][samp_dat] += float(in_data[idat]);
 
             samp_dat++;
           }
@@ -294,7 +301,7 @@ void dsp::Rescale::transformation ()
     }
     isample = samp_dat;
 
-   if (samp_dat == nsample || first_call)
+   if (samp_dat == nsample || first_call || first_integration)
    {
     if (verbose)
       cerr << "dsp::Rescale::transformation rescale"
@@ -305,19 +312,23 @@ void dsp::Rescale::transformation ()
     if (first_call)
       update_epoch = input->get_start_time();
 
-    compute_various (first_call);
+    compute_various (first_call, first_integration);
     update (this);
 
     update_epoch += isample / input->get_rate();
-    isample = 0;
-    first_call = false;
 
-    for (unsigned ipol=0; ipol < input_npol; ipol++)
+    if (isample == nsample)
     {
-      zero (freq_total[ipol]);
-      zero (freq_totalsq[ipol]);
-      if (output_time_total)
-        zero (time_total[ipol]);
+      isample = 0;
+      first_integration = false;
+
+      for (unsigned ipol=0; ipol < input_npol; ipol++)
+      {
+        zero (freq_total[ipol]);
+        zero (freq_totalsq[ipol]);
+        if (output_time_total)
+          zero (time_total[ipol]);
+      }
     }
   }
 
@@ -391,7 +402,7 @@ void dsp::Rescale::transformation ()
     cerr << "dsp::Rescale::transformation exit" << endl;
 }
 
-void dsp::Rescale::compute_various (bool first_call)
+void dsp::Rescale::compute_various (bool first_call, bool first_integration)
 {
   // cerr << "dsp::Rescale::compute_various isample=" << isample << endl;
 
@@ -406,13 +417,10 @@ void dsp::Rescale::compute_various (bool first_call)
       double meansq = freq_totalsq[ipol][ichan] / isample;
       double variance = meansq - mean*mean;
 
-      freq_total[ipol][ichan] = mean;
-      freq_totalsq[ipol][ichan] = variance;
-
-      if (!constant_offset_scale || first_call)
+      if (!constant_offset_scale || first_call || first_integration)
       {
         offset[ipol][ichan] = -mean;
-        if (variance == 0.0)
+        if (variance <= 0.0)
           scale[ipol][ichan] = 1.0;
         else
           scale[ipol][ichan] = 1.0 / sqrt(variance);
