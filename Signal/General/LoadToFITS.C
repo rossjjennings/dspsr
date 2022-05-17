@@ -97,6 +97,9 @@ dsp::LoadToFITS::Config::Config()
   coherent_dedisp = false;
   start_time_delay = 0;
 
+  tscrunch_factor = 0;
+  fscrunch_factor = 0;
+
   rescale_seconds = -1;
   rescale_constant = false;
 
