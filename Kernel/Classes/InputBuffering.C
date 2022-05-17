@@ -25,8 +25,8 @@ void dsp::InputBuffering::set_target (HasInput<TimeSeries>* _target)
   target = _target;
 }
 
-//! Set the minimum number of samples that can be processed
-void dsp::InputBuffering::set_minimum_samples (uint64_t samples)
+//! Set the maximum number of samples to be buffered
+void dsp::InputBuffering::set_maximum_samples (uint64_t samples)
 {
   reserve->reserve( get_input(), samples );
 }
@@ -81,7 +81,7 @@ void dsp::InputBuffering::set_next_start (uint64_t next)
 
   if (Operation::verbose)
     cerr << "dsp::InputBuffering::set_next_start resize buffer"
-      " minimum_samples=" << reserve->get_reserved() << endl;
+      " reserved_samples=" << reserve->get_reserved() << endl;
 
   buffer->resize( reserve->get_reserved() );
   buffer->copy_data( input, next_start_sample, buffer_ndat );
@@ -103,7 +103,12 @@ void dsp::InputBuffering::pre_transformation () try
     return;
 
   if (buffer->get_input_sample() >= want)
+  {
+    if (Operation::verbose)
+      cerr << "dsp::InputBuffering::pre_transformation buffer->input_sample=" << buffer->get_input_sample()
+           << " > want=" << want << endl;
     return;
+  }
 
   int64_t have = buffer->get_input_sample() + buffer->get_ndat();
   if (have > want)

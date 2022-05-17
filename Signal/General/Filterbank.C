@@ -294,7 +294,7 @@ void dsp::Filterbank::make_preparations ()
       cerr << "dsp::Filterbank::make_preparations"
         " reserve=" << nsamp_fft << endl;
 
-    get_buffering_policy()->set_minimum_samples (nsamp_fft);
+    get_buffering_policy()->set_maximum_samples (nsamp_fft);
   }
 
   prepare_output ();

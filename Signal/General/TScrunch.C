@@ -78,8 +78,8 @@ void dsp::TScrunch::prepare ()
   if (has_buffering_policy())
   {
     if (verbose)
-      cerr << "dsp::TScrunch::prepare set_minimum_samples(" << sfactor << ")" << endl;
-    get_buffering_policy()->set_minimum_samples (sfactor);
+      cerr << "dsp::TScrunch::prepare set_maximum_samples(" << sfactor << ")" << endl;
+    get_buffering_policy()->set_maximum_samples (sfactor);
   }
 
   if (verbose)

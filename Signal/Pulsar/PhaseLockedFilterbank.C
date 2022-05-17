@@ -300,7 +300,7 @@ void dsp::PhaseLockedFilterbank::transformation ()
 
   // cerr << "main loop finished" << endl;
 
-  get_buffering_policy()->set_minimum_samples (ndat_fft);
+  get_buffering_policy()->set_maximum_samples (ndat_fft);
   get_buffering_policy()->set_next_start (idat_start);
 
   get_output()->increment_integration_length( total_integrated );

@@ -35,7 +35,7 @@ namespace dsp {
     virtual void set_next_start (uint64_t next_start_sample) = 0;
 
     //! Set the minimum number of samples that can be processed
-    virtual void set_minimum_samples (uint64_t minimum_samples) = 0;
+    virtual void set_maximum_samples (uint64_t minimum_samples) = 0;
 
     //! Returns the name
     std::string get_name() { return name; }

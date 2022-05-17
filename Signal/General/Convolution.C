@@ -297,10 +297,9 @@ void dsp::Convolution::prepare ()
   if (has_buffering_policy())
   {
     if (verbose)
-      cerr << "dsp::Convolution::prepare"
-        " reserve=" << nsamp_fft << endl;
+      cerr << "dsp::Convolution::prepare reserve=" << nsamp_fft << endl;
 
-    get_buffering_policy()->set_minimum_samples (nsamp_fft);
+    get_buffering_policy()->set_maximum_samples (nsamp_fft);
   }
   if (zero_DM) {
     if (!zero_DM) {

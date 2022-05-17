@@ -80,11 +80,12 @@ double Rational::doubleValue( ) const
   return double(numerator) / double(denominator);
 }
 
+// returns i divided by this
 int Rational::normalize (int i) const
 {
   div_t result = div (i * denominator, numerator);
   if (result.rem != 0)
-    throw std::domain_error ("Rational operator / result is not an integer");
+    throw std::domain_error ("Rational::normalize result is not an integer");
 
   return result.quot;
 }

@@ -155,7 +155,7 @@ void dsp::SampleDelay::prepare ()
   if (verbose)
     cerr << "dsp::SampleDelay::prepare reserve=" << total_delay << endl;
 
-  get_buffering_policy()->set_minimum_samples (total_delay);
+  get_buffering_policy()->set_maximum_samples (total_delay);
 }
 
 //! prepare the output timeseries

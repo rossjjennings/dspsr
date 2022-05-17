@@ -18,48 +18,62 @@
 
 namespace dsp {
 
-  //! Performs the PFB inversion synthesis operation, combining multiple input
-  //! frequency channels into a smaller number of output channels.
-  //!
-  //! The PFB inversion algorithm is fed a chunk of input data. The size of this
-  //! chunk is determined by the upstream IOManager. For each input chunk, it does
-  //! the following.
-  //!   - Advance through the input data by `input_fft_length` minus
-  //!   `input_discard_total`, or the number of samples skipped from the
-  //!   start and end of each input step. If the `input_discard_total` is
-  //!   greater than zero, this means that each successive step will be reading
-  //!   from data that we've already operated on.
-  //!   - For each channel in the input data step, apply an `input_fft_length` size
-  //!   FFT. If there is an oversampling factor that is greater than one, discard
-  //!   samples from either end of the resulting frequency domain data, before
-  //!   stitching into a large array whose size will be `output_fft_length` long.
-  //!   How these samples get stitched into this array is determined by the
-  //!   precense of the zeroth PFB channel.
-  //!   - Apply an inverse FFT to the stitched spectrum, before copying the
-  //!   newly created upsampled time domain data into the output TimeSeries
-  //!   buffer. In the same way that we read overlapped chunks of input data,
-  //!   we also write out the output data in overlapped segments.
-  //!
-  //! The input TimeSeries can be critically sampled or over sampled.
-  //! In the over sampled case, input spectra will be appropriately stitched
-  //! together, discarding band edge overlap regions.
-  //!
-  //! The manner in which input channels are synthesized depends on the number
-  //! of input channels that are present, and if the zeroth PFB channel is present.
-  //! Here, the "reassembled" spectrum refers to the spectrum that gets assembled
-  //! from forward FFTs operating on each input channel in the transformation
-  //! step.
-  //! There are three distinct scenarios:
-  //!   - All PFB channels are present, and the zeroth, or DC PFB channel is present.
-  //!   Here, the first half channel of the reassembled spectrum gets put at the end
-  //!   of the spectrum; we "roll" the assembled spectrum by half a channel.
-  //!   - The DC PFB channel is present, but we only have a subset of the channels
-  //!   from upstream channelization. In this case, we discard the zeroth channel,
-  //!   and append a half channel's worth of zeros to the end of the assembled
-  //!   spectrum
-  //!   - We have neither the DC PFB channel nor all the PFB channels. In this
-  //!   case we leave the assembled spectrum as is.
+  //! Performs the PFB inversion synthesis operation
 
+  /*! Combines multiple input frequency channels into a smaller number
+   of output channels.
+  
+   The PFB inversion algorithm is fed a chunk of input data. The size
+   of this chunk is determined by the upstream IOManager. For each
+   input chunk, it does the following.
+
+   - Advance through the input data by `input_fft_length` minus
+     `input_discard_total`, or the number of samples skipped from the
+     start and end of each input step. If the `input_discard_total` is
+     greater than zero, this means that each successive step will be
+     reading from data that we've already operated on.
+
+   - For each channel in the input data step, apply an
+     `input_fft_length` size FFT. If there is an oversampling factor
+     that is greater than one, discard samples from either end of the
+     resulting frequency domain data, before stitching into a large
+     array whose size will be `output_fft_length` long.  How these
+     samples get stitched into this array is determined by the
+     presence of the zeroth PFB channel.
+
+   - Apply an inverse FFT to the stitched spectrum, before copying the
+     newly created upsampled time domain data into the output
+     TimeSeries buffer. In the same way that we read overlapped chunks
+     of input data, we also write out the output data in overlapped
+     segments.
+  
+   The input TimeSeries can be critically sampled or over sampled.  In
+   the over sampled case, input spectra will be appropriately stitched
+   together, discarding band edge overlap regions.
+  
+   The manner in which input channels are synthesized depends on the
+   number of input channels that are present, and if the zeroth PFB
+   channel is present.  Here, the "reassembled" spectrum refers to the
+   spectrum that gets assembled from forward FFTs operating on each
+   input channel in the transformation step.  There are three distinct
+   scenarios:
+
+   - All PFB channels are present, and the zeroth, or DC PFB channel
+     is present.  Here, the first half channel of the reassembled
+     spectrum gets put at the end of the spectrum; we "roll" the
+     assembled spectrum by half a channel.
+
+   - The DC PFB channel is present, but we only have a subset of the
+     channels from upstream channelization. In this case, we discard
+     the zeroth channel, and append a half channel's worth of zeros to
+     the end of the assembled spectrum
+
+   - We have neither the DC PFB channel nor all the PFB channels. In
+     this case we leave the assembled spectrum as is.
+
+   WvS AT3-119 Are these scenarios specific to a certain analysis
+   PFB implementation, or are they generic?
+  */
 
   class InverseFilterbank: public Convolution {
 
@@ -69,7 +83,8 @@ namespace dsp {
     class Config;
 
     //! Null constructor
-    InverseFilterbank (const char* name = "InverseFilterbank", Behaviour type = outofplace);
+    InverseFilterbank (const char* name = "InverseFilterbank",
+		       Behaviour type = outofplace);
 
     void set_input (const TimeSeries* input);
 
@@ -160,16 +175,16 @@ namespace dsp {
     //! Get the number of samples discarded at the start of an output step
     void set_output_discard_pos(int _output_discard_pos) { output_discard_pos = _output_discard_pos;}
 
-    //! Get the size of the forward fft, in number of floats
+    //! Get the size of the forward fft, in number of samples
     int get_input_fft_length() const {return input_fft_length;}
 
-    //! Set the size of the forward fft, in number of floats
+    //! Set the size of the forward fft, in number of samples
     void set_input_fft_length(int _input_fft_length) { input_fft_length = _input_fft_length;}
 
-    //! Get the size of the backward fft, in number of floats
+    //! Get the size of the backward fft, in number of samples
     int get_output_fft_length() const {return output_fft_length;}
 
-    //! Set the size of the backward fft, in number of floats
+    //! Set the size of the backward fft, in number of samples
     void set_output_fft_length(int _output_fft_length) { output_fft_length = _output_fft_length;}
 
 
@@ -255,19 +270,19 @@ namespace dsp {
     //! Determine the number of steps in a given TimeSeries.
     void resize_output (bool reserve_extra = false);
 
-    //! The size of the forward FFT used in the Engine, in number of floats.
+    //! The size of the forward FFT used in the Engine, in number of samples.
     int input_fft_length;
 
-    //! The size of the backward FFT used in the Engine, in number of floats.
+    //! The size of the backward FFT used in the Engine, in number of samples.
     int output_fft_length;
 
-    //! The total number of floats discarded in a given input TimeSeries step.
+    //! The total number of samples discarded in a given input TimeSeries step.
     int input_discard_total;
 
     //! The number samples in an input TimeSeries step, or segment.
     int input_sample_step;
 
-    //! The number of floats discarded in a given output TimeSeries step.
+    //! The total number of samples discarded in a given output TimeSeries step.
     int output_discard_total;
 
     //! The number of samples in an input TimeSeries step, or segment.

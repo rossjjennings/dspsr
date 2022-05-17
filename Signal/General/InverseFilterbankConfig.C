@@ -22,8 +22,8 @@
 #endif
 
 #include <iostream>
-
-namespace dsp {
+using namespace std;
+using namespace dsp;
 
   InverseFilterbank::Config::Config ()
   {
@@ -71,7 +71,7 @@ namespace dsp {
   }
 
   //! Insertion operator
-  std::ostream& operator << (std::ostream& os, const InverseFilterbank::Config& config)
+  std::ostream& dsp::operator << (std::ostream& os, const InverseFilterbank::Config& config)
   {
     os << config.get_nchan();
     Filterbank::Config::When convolve_when = config.get_convolve_when();
@@ -92,7 +92,7 @@ namespace dsp {
   }
 
   //! Extraction operator
-  std::istream& operator >> (std::istream& is, InverseFilterbank::Config& config)
+  std::istream& dsp::operator >> (std::istream& is, InverseFilterbank::Config& config)
   {
     unsigned value;
     is >> value;
@@ -135,7 +135,11 @@ namespace dsp {
       config.set_freq_res (nfft);
     }
 
-    if (is.peek() == ':') {
+    if (!is.good())
+      return is;
+
+    if (is.peek() == ':')
+    {
       is.get();
       unsigned overlap;
       is >> overlap;
@@ -144,4 +148,3 @@ namespace dsp {
 
     return is;
   }
-}

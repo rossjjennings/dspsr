@@ -75,12 +75,14 @@ void dsp::Rescale::set_interval_samples (uint64_t samples)
 void dsp::Rescale::set_exact (bool value)
 {
   exact = value;
-  if (!has_buffering_policy())
-    set_buffering_policy( new InputBuffering (this) );
   if (exact && !interval_samples)
       throw Error(InvalidState, "dsp::Rescale::set_exact", 
           "interval_sample == 0 (must be set)");
-  get_buffering_policy()->set_minimum_samples (interval_samples);
+
+  if (!has_buffering_policy())
+    set_buffering_policy( new InputBuffering (this) );
+
+  get_buffering_policy()->set_maximum_samples (interval_samples);
 }
 
 template<typename T>
