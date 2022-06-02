@@ -44,6 +44,7 @@
 #include "dsp/DetectionCUDA.h"
 #include "dsp/FScrunchCUDA.h"
 #include "dsp/TScrunchCUDA.h"
+#include "dsp/PScrunchCUDA.h"
 #include "dsp/MemoryCUDA.h"
 #include "dsp/TimeSeriesCUDA.h"
 #include "dsp/SampleDelayCUDA.h"
@@ -417,6 +418,35 @@ void dsp::LoadToFITS::construct () try
 #endif
 
     operations.push_back( detection );
+  }
+  else
+  {
+    if (int(obs->get_npol()) > config->npol)
+    {
+      if (verbose)
+        cerr << "digifits: creating pscrunch transformation" << endl;
+
+      PScrunch* pscrunch = new PScrunch;
+      pscrunch->set_input(timeseries);
+      pscrunch->set_output(timeseries = new_TimeSeries());
+      if (config->npol == 1)
+        pscrunch->set_output_state(Signal::Intensity);
+      else if (config->npol == 2)
+        pscrunch->set_output_state(Signal::PPQQ);
+      else if (config->npol == 4)
+        pscrunch->set_output_state(Signal::Coherence);
+      else
+        throw Error (InvalidState, "dsp::LoadToFITS::construct",
+                    "output polarisation invalid %d", config->npol);
+      operations.push_back(pscrunch);
+#ifdef HAVE_CUDA
+      if (run_on_gpu)
+      {
+        pscrunch->set_engine (new CUDA::PScrunchEngine(stream));
+        timeseries->set_memory (device_memory);
+      }
+#endif
+    }
   }
 
 #if HAVE_CUDA
