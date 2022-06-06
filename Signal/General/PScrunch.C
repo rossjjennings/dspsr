@@ -79,12 +79,6 @@ void dsp::PScrunch::prepare()
   if (input->get_state() == Signal::Stokes)
     throw Error (InvalidState, "dsp::PScrunch::prepare",
 		 "input state of Signal::Stokes not supported");
-
-  // determine the scale factor to be applied
-  if (output_npol == 1 && input->get_npol() > 1)
-    sfactor = 2;
-  else
-    sfactor = 1;
 }
 
 void dsp::PScrunch::prepare_output ()
@@ -103,7 +97,6 @@ void dsp::PScrunch::prepare_output ()
   output->resize(input->get_ndat());
   output->set_zeroed_data(input->get_zeroed_data());
   output->set_input_sample(input->get_input_sample());
-  output->rescale(sfactor);
 }
 
 /*!

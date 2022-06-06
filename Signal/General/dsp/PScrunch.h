@@ -49,9 +49,6 @@ namespace dsp
 
   private:
 
-    //! factor by which the output is scaled
-    float sfactor;
-
     //! number of polarisations in the output
     unsigned output_npol;
 
