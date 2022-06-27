@@ -227,7 +227,13 @@ namespace util {
   void init_TimeSeries(dsp::TimeSeries* ts, FunctionType filler);
 
   template<typename FunctionType>
+  void init_TimeSeries_TFP(dsp::TimeSeries* ts, FunctionType filler);
+
+  template<typename FunctionType>
   uint64_t check_TimeSeries(dsp::TimeSeries* ts, FunctionType checker);
+
+  template<typename FunctionType>
+  uint64_t check_TimeSeries_TFP(dsp::TimeSeries* ts, FunctionType checker);
 
   std::function<void(dsp::TimeSeries*, dsp::TimeSeries*, cudaMemcpyKind)> transferTimeSeries (
     cudaStream_t stream, CUDA::DeviceMemory* memory);
@@ -517,6 +523,28 @@ void test::util::init_TimeSeries (
 }
 
 template<typename FunctionType>
+void test::util::init_TimeSeries_TFP (
+  dsp::TimeSeries* ts,
+  FunctionType filler
+)
+{
+  float* ts_data;
+  unsigned ndim = ts->get_ndim();
+  unsigned idx = 0;
+  ts_data = ts->get_dattfp ();
+  for (unsigned idat = 0; idat < ts->get_ndat(); idat++) {
+    for (unsigned ichan=0; ichan<ts->get_nchan(); ichan++) {
+      for (unsigned ipol=0; ipol < ts->get_npol(); ipol++) {
+        for (unsigned idim = 0; idim < ndim; idim++) {
+          ts_data[idx] = filler(ichan, ipol, idat, idim);
+          idx++;
+        }
+      }
+    }
+  }
+}
+
+template<typename FunctionType>
 uint64_t test::util::check_TimeSeries (
   dsp::TimeSeries* ts,
   FunctionType checker
@@ -540,5 +568,31 @@ uint64_t test::util::check_TimeSeries (
   }
   return error_count;
 }
+
+template<typename FunctionType>
+uint64_t test::util::check_TimeSeries_TFP (
+  dsp::TimeSeries* ts,
+  FunctionType checker
+)
+{
+  uint64_t error_count = 0;
+  float* ts_data;
+  unsigned ndim = ts->get_ndim();
+  unsigned idx = 0;
+  ts_data = ts->get_dattfp();
+  for (unsigned idat = 0; idat < ts->get_ndat(); idat++) {
+    for (unsigned ichan=0; ichan<ts->get_nchan(); ichan++) {
+      for (unsigned ipol=0; ipol < ts->get_npol(); ipol++) {
+        for (unsigned idim = 0; idim < ndim; idim++) {
+          if (!isclose(ts_data[idx], checker(ichan, ipol, idat, idim)))
+            error_count++;
+          idx++;
+        }
+      }
+    }
+  }
+  return error_count;
+}
+
 
 #endif

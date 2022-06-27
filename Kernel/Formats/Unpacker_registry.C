@@ -48,6 +48,13 @@ static dsp::Unpacker::Register::Enter<dsp::ASPUnpacker> asp;
 static dsp::Unpacker::Register::Enter<dsp::BCPMUnpacker> registry_bcpm;
 #endif
 
+#if HAVE_boreas
+#include "dsp/BoreasSurveyUnpacker.h"
+static dsp::Unpacker::Register::Enter<dsp::BoreasSurveyUnpacker> boreas_survey;
+#include "dsp/BoreasVoltageUnpacker.h"
+static dsp::Unpacker::Register::Enter<dsp::BoreasVoltageUnpacker> boreas_voltage;
+#endif
+
 #if HAVE_bpsr
 #include "dsp/BPSRUnpacker.h"
 static dsp::Unpacker::Register::Enter<dsp::BPSRUnpacker> bpsr;

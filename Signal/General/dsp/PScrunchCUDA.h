@@ -31,6 +31,9 @@ namespace CUDA
     void tfp_pscrunch (const dsp::TimeSeries* in,
                        dsp::TimeSeries* out);
 
+    template<typename S>
+    void tfp_pscrunch_launch(const dsp::TimeSeries* input, dsp::TimeSeries* output);
+
   protected:
 
     cudaStream_t stream;

@@ -6,8 +6,6 @@
  *
  ***************************************************************************/
 
-// dspsr/Signal/General/dsp/PScrunch.h
-
 #ifndef __baseband_dsp_PScrunch_h
 #define __baseband_dsp_PScrunch_h
 
@@ -27,16 +25,35 @@ namespace dsp
     //! Default constructor
     PScrunch ();
 
-    //! PScrunch to zero mean and unit variance
+    //! set the output polarisation state for the Pscrunch operation
+    void set_output_state(Signal::State state);
+
+    //! prepare the transformation
+    void prepare();
+
+    //! prepare the output time-series for the transformation
+    void prepare_output();
+
+    //! combine the polaristionas in the input time series to form the output time series
     void transformation ();
 
-   class Engine;
+    class Engine;
 
-   void set_engine (Engine*);
+    //! set the alternate processing engine to be used
+    void set_engine (Engine*);
 
   protected:
 
+    //! alternate processing engine
     Reference::To<Engine> engine;
+
+  private:
+
+    //! number of polarisations in the output
+    unsigned output_npol;
+
+    //! output state for the transformation
+    Signal::State state;
 
   };
 

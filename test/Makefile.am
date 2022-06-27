@@ -18,24 +18,29 @@ test_main_SOURCES = toml.h catch.hpp test_main.cpp \
                     InverseFilterbank/test_InverseFilterbank.cpp \
                     InverseFilterbank/test_InverseFilterbankPipeline.cpp \
                     InverseFilterbank/InverseFilterbankTestConfig.cpp \
+                    PScrunch/test_PScrunch.cpp \
                     SpectralKurtosis/test_SpectralKurtosis.cpp
 
 if HAVE_CUFFT
-  test_main_SOURCES += Filterbank/test_FilterbankEngineCUDA.cpp
 
-  test_main_SOURCES += InverseFilterbank/test_InverseFilterbankEngineCUDA_kernels.cpp \
-                       InverseFilterbank/test_InverseFilterbankEngineCUDA.cpp \
-                       InverseFilterbank/test_InverseFilterbankEngine_integration.cpp \
-                SpectralKurtosis/test_SpectralKurtosis_integration.cpp \
-		util/TestReporter.hpp SpectralKurtosis/SpectralKurtosisTestConfig.hpp
+  test_main_SOURCES += \
+        Filterbank/test_FilterbankEngineCUDA.cpp \
+        InverseFilterbank/test_InverseFilterbankEngineCUDA_kernels.cpp \
+        InverseFilterbank/test_InverseFilterbankEngineCUDA.cpp \
+        InverseFilterbank/test_InverseFilterbankEngine_integration.cpp \
+        PScrunch/test_PScrunchCUDA.cpp \
+        SpectralKurtosis/test_SpectralKurtosis_integration.cpp \
+        SpectralKurtosis/SpectralKurtosisTestConfig.hpp \
+        util/TestReporter.hpp
 
   test_main_SOURCES += test_FTransform_cufft_precision.cpp
 
-  bench_InverseFilterbank_SOURCES = util/util.cpp \
-                                    util/TestConfig.cpp \
-                                    InverseFilterbank/InverseFilterbankTestConfig.cpp \
-					InverseFilterbank/InverseFilterbankTestConfig.hpp \
-                                    InverseFilterbank/bench_InverseFilterbank.cpp
+  bench_InverseFilterbank_SOURCES = \
+        util/util.cpp \
+        util/TestConfig.cpp \
+        InverseFilterbank/InverseFilterbankTestConfig.cpp \
+        InverseFilterbank/InverseFilterbankTestConfig.hpp \
+        InverseFilterbank/bench_InverseFilterbank.cpp
 
 endif
 
