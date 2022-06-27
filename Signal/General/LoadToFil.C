@@ -47,10 +47,16 @@ bool dsp::LoadToFil::verbose = false;
 
 static void* const undefined_stream = (void *) -1;
 
-dsp::LoadToFil::LoadToFil (Config* configuration)
+dsp::LoadToFil::LoadToFil (Config* configuration) try
 {
   kernel = NULL;
-  set_configuration (configuration);
+
+  if (configuration)
+    set_configuration (configuration);
+}
+catch (Error& error)
+{
+  throw error += "LoadToFil ctor Config*=" + tostring ((void*)configuration);
 }
 
 //! Run through the data

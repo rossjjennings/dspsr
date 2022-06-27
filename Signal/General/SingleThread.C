@@ -69,7 +69,9 @@ dsp::SingleThread::~SingleThread ()
 void dsp::SingleThread::set_configuration (Config* configuration) try
 {
   config = configuration;
-  initialize ();
+
+  if (configuration)
+    initialize ();
 }
 catch (Error& error)
 {
@@ -100,7 +102,7 @@ unsigned count (const std::vector<T>& data, T element)
 void dsp::SingleThread::initialize () try
 {
   if (Operation::verbose)
-    cerr << "dsp::SingleThread::initialize" << endl;
+    cerr << "dsp::SingleThread::initialize config=" << config.ptr() << endl;
 
 #if HAVE_CUDA
   bool run_on_gpu = thread_id < config->get_cuda_ndevice();
