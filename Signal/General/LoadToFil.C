@@ -406,8 +406,16 @@ void dsp::LoadToFil::construct () try
 
     PScrunch* pscrunch = new PScrunch;
     pscrunch->set_input (timeseries);
-    pscrunch->set_output (timeseries);
-
+    pscrunch->set_output (timeseries = new_TimeSeries());
+    if (config->npol == 1)
+      pscrunch->set_output_state(Signal::Intensity);
+    else if (config->npol == 2)
+      pscrunch->set_output_state(Signal::PPQQ);
+    else if (config->npol == 4)
+      pscrunch->set_output_state(Signal::Coherence);
+    else
+      throw Error (InvalidState, "dsp::LoadToFil::construct",
+                  "output polarisation invalid %d", config->npol);
     operations.push_back( pscrunch );
   }
 
