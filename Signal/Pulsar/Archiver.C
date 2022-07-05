@@ -14,10 +14,11 @@
 #include "dsp/TwoBitCorrection.h"
 #include "dsp/OutputArchive.h"
 
-#include "Pulsar/ArchiveExpert.h"
 #include "Pulsar/Interpreter.h"
 #include "Pulsar/Integration.h"
 #include "Pulsar/IntegrationExpert.h"
+#include "Pulsar/Dedisperse.h"
+
 #include "Pulsar/Profile.h"
 #include "Pulsar/FourthMoments.h"
 
@@ -46,10 +47,6 @@ unsigned dsp::Archiver::verbose = 1;
 
 dsp::Archiver::Archiver ()
 {
-  // disable the psrchive check for internal consistency of 
-  // dedispersion related book-keeping attributes
-  Pulsar::Archive::Check::disable ("Dedispersed");
-
   archive_software = "Software Unknown";
   archive_dedispersed = false;
   profiles = 0;
@@ -327,15 +324,6 @@ void dsp::Archiver::postprocess (Pulsar::Archive* data) try
 
   if (verbose > 2)
     cerr << "dsp::Archiver::postprocess data=" << data << endl;
-
-  /*
-     Setup the Archive as though it was just loaded from file.
-     Archive::correct 
-       - performs the corrections defined in Base/Checks/Check_registry.C
-       - is called by Archive::load just before releasing new Archive
-       - sets up things like dedispersion history extensions
-   */
-  data -> expert() -> correct();
 
   if (verbose > 2)
     cerr << "dsp::Archiver::postprocess script starting" << endl;
@@ -680,6 +668,14 @@ try
          << " epoch=" << integration->get_epoch().printdays(13)
          << " duration=" << integration->get_duration()
          << " period=" << integration->get_folding_period() << endl;
+
+  if (archive_dedispersed)
+  {
+    Pulsar::Dedisperse* corrected = new Pulsar::Dedisperse;
+    corrected->set_dispersion_measure( phase->get_dispersion_measure() );
+    corrected->set_reference_frequency( phase->get_centre_frequency() );
+    integration->add_extension( corrected );
+  }
 
   for (unsigned ichan=0; ichan<nchan; ichan++)
   {
