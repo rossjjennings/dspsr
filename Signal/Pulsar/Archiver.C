@@ -263,6 +263,9 @@ void dsp::Archiver::unload (const PhaseSeries* _profiles) try
 
   set (archive, profiles);
 
+  if (verbose > 2)
+    cerr << "dsp::Archiver::unload postprocess" << endl;
+
   postprocess (archive);
 
   if (verbose > 2)
@@ -321,7 +324,7 @@ void dsp::Archiver::postprocess (Pulsar::Archive* data) try
   if (script.size() == 0)
     return;
 
-  // if (verbose > 2)
+  if (verbose > 2)
     cerr << "dsp::Archiver::postprocess data=" << data << endl;
 
   if (!interpreter)
@@ -330,16 +333,21 @@ void dsp::Archiver::postprocess (Pulsar::Archive* data) try
   interpreter->set( data );
   interpreter->script( script );
 
+  if (verbose > 2)
+    cerr << "dsp::Archiver::postprocess script finished" << endl;
+
   Pulsar::Archive* processed = interpreter->get ();
+
   if ( processed != data )
-    cerr << "BADDA BOOM!" << endl;
+    throw Error (InvalidState, "dsp::Archiver::postprocess",
+                 "cannot handle interpreter input != output");
+
+  if (verbose > 2)
+    cerr << "dsp::Archiver::postprocess processed=" << processed << endl;
 }
 catch (Error& error)
 {
-  if (verbose)
-    cerr << "dsp::Archiver::postprocess "
-         << single_archive->get_filename() << " failed:\n"
-         << error.get_message() << endl;
+  throw error += "dsp::Archiver::postprocess";
 }
 
 void dsp::Archiver::add (Pulsar::Archive* archive, const PhaseSeries* phase)
