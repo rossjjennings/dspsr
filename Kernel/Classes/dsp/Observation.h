@@ -42,6 +42,7 @@ namespace dsp
     Observation ();
 
     Observation (const Observation&);
+    Observation (const Observation*);
     const Observation& operator = (const Observation&);
 
     //! Virtual destructor (see Effective C++ Item 14)

@@ -362,11 +362,16 @@ dsp::Observation::~Observation()
 {
 }
 
-#if 1
 dsp::Observation::Observation (const Observation & in_obs)
 {
   init ();
-  dsp::Observation::operator=(in_obs);
+  Observation::operator=(in_obs);
+}
+
+dsp::Observation::Observation (const Observation* in_obs)
+{
+  init ();
+  Observation::operator=( *in_obs );
 }
 
 //! Copy the dimensions of another observation
@@ -426,8 +431,6 @@ const dsp::Observation& dsp::Observation::operator = (const Observation& in_obs)
 
   return *this;
 }
-
-#endif
 
 unsigned dsp::Observation::get_unswapped_ichan (unsigned ichan) const
 {

@@ -142,7 +142,7 @@ void dsp::MultiFile::open (const vector<string>& new_filenames)
 
 void dsp::MultiFile::setup ()
 {
-  info = files[0]->get_info();
+  info = new Observation (files[0]->get_info());
 
   uint64_t total_ndat = 0;
   for( unsigned i=0; i<files.size(); i++)
@@ -319,6 +319,10 @@ int64_t dsp::MultiFile::seek_bytes (uint64_t bytes)
     // Number of bytes stored in this file
     uint64_t file_bytes = files[index]->get_info()->get_nbytes();
 
+    if (verbose)
+      cerr << "dsp::MultiFile::seek_bytes file[" << index << "] nbytes="
+           << file_bytes << endl;
+
     if (bytes < total_bytes + file_bytes)
       break;
 
@@ -331,6 +335,9 @@ int64_t dsp::MultiFile::seek_bytes (uint64_t bytes)
       " past end of data" << endl;
     return -1;
   }
+
+  if (verbose)
+    cerr << "dsp::MultiFile::seek_bytes index=" << index << endl;
 
   set_loader (index);
 
