@@ -14,6 +14,7 @@
 #include "dsp/TwoBitCorrection.h"
 #include "dsp/OutputArchive.h"
 
+#include "Pulsar/ArchiveExpert.h"
 #include "Pulsar/Interpreter.h"
 #include "Pulsar/Integration.h"
 #include "Pulsar/IntegrationExpert.h"
@@ -326,6 +327,18 @@ void dsp::Archiver::postprocess (Pulsar::Archive* data) try
 
   if (verbose > 2)
     cerr << "dsp::Archiver::postprocess data=" << data << endl;
+
+  /*
+     Setup the Archive as though it was just loaded from file.
+     Archive::correct 
+       - performs the corrections defined in Base/Checks/Check_registry.C
+       - is called by Archive::load just before releasing new Archive
+       - sets up things like dedispersion history extensions
+   */
+  data -> expert() -> correct();
+
+  if (verbose > 2)
+    cerr << "dsp::Archiver::postprocess script starting" << endl;
 
   if (!interpreter)
     interpreter = standard_shell();
