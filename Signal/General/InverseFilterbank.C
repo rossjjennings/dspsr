@@ -181,7 +181,6 @@ void dsp::InverseFilterbank::make_preparations ()
       << " input oversampling_factor=" << input->get_oversampling_factor()
       << " pfb_dc_chan=" << get_pfb_dc_chan()
       << " pfb_all_chan=" << get_pfb_all_chan()
-      << " fft_window_str=" << get_fft_window_str()
       << endl;
   
   bool real_to_complex = (input->get_state() == Signal::Nyquist);
@@ -286,20 +285,13 @@ void dsp::InverseFilterbank::make_preparations ()
   if (has_apodization())
   {
     if (verbose)
-    {
       cerr << "dsp::InverseFilterbank::make_preparations creating FFT window" << endl;
-      cerr << "dsp::InverseFilterbank::make_preparations fft_window_str=" << fft_window_str << endl;
-    }
 
     dsp::Apodization* fft_window = get_apodization();
-    dsp::Apodization::Type fft_window_type = dsp::Apodization::type_map[fft_window_str];
-    fft_window->set_shape(
-      input_fft_length,
-      fft_window_type,
-      true,
-      input_discard_pos,
-      0
-    );
+    fft_window->set_size (input_fft_length);
+    fft_window->set_analytic (true);
+    fft_window->set_transition (input_discard_pos);
+    fft_window->build ();
   }
 
   if (verbose)
@@ -358,7 +350,9 @@ void dsp::InverseFilterbank::make_preparations ()
 void dsp::InverseFilterbank::prepare_output (uint64_t ndat, bool set_ndat)
 {
   if (verbose)
-    cerr << "dsp::InverseFilterbank::prepare_output" << endl;
+    cerr << "dsp::InverseFilterbank::prepare_output ndat=" << ndat
+         << " set_ndat=" << set_ndat 
+         << " input->ndat=" << get_input()->get_ndat() << endl;
 
   if (set_ndat)
   {

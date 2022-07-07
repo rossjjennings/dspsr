@@ -75,15 +75,15 @@ int main (int argc, char** argv) try
 
   Reference::To<dsp::Pipeline> engine;
 
-  if (config->get_total_nthread() > 1){
-
+  if (config->get_total_nthread() > 1)
+  {
     if(dsp::Observation::verbose)
       cerr << "using dsp::LoadToFoldN" << endl;
 
     engine = new dsp::LoadToFoldN (config);
   }
-  else{
-
+  else
+  {
     if(dsp::Observation::verbose)
       cerr << "using dsp::LoadToFold" << endl;
 
@@ -339,6 +339,17 @@ void parse_options (int argc, char** argv) try
   *********************************************************************** */
 
   menu.add ("\n" "Dispersion removal options:");
+
+  arg = menu.add (config->apodization_type, "taper", "name");
+  arg->set_help ("name of time domain apodization/tapering/window function");
+  arg->set_long_help
+    ("Available tapering functions are\n"
+    " - hanning: Hanning window\n"
+    " - welch: Welch window\n"
+    " - bartlett: Bartlett window\n"
+    " - tukey: Tukey window\n"
+    " - top_hat: Top Hat window \n"
+    " - none: No window function (default)\n");
 
   arg = menu.add (config->filterbank, 'F', "<N>[:D]");
   arg->set_help ("create an N-channel filterbank");

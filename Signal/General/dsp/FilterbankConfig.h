@@ -56,6 +56,8 @@ namespace dsp
     unsigned freq_res;
     When when;
 
+    std::string apodization;
+
   };
 
   //! Insertion operator

@@ -151,9 +151,6 @@ dsp::LoadToFold::Config::Config ()
   no_dynamic_extensions = false;
 
   do_deripple = false;
-
-  inverse_filterbank_fft_window = "tukey";
-
 }
 
 unsigned dsp::LoadToFold::Config::get_nfold () const

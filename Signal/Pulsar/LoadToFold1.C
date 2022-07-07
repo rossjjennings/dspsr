@@ -1,4 +1,4 @@
-/***************************************************************************
+ /**************************************************************************2
  *
  *   Copyright (C) 2007-2009 by Willem van Straten
  *   Licensed under the Academic Free License version 2.1
@@ -180,6 +180,14 @@ void dsp::LoadToFold::construct () try
     config->coherent_dedispersion = false;
   }
 
+  Reference::To<dsp::Apodization> apodization_window;
+
+  if (config->apodization_type != "")
+  {
+    apodization_window = new dsp::Apodization;
+    apodization_window->set_type (config->apodization_type);
+  }
+
   // the data are not detected, so set up phase coherent reduction path
   // NB that this does not necessarily mean coherent dedispersion.
   unsigned frequency_resolution = config->filterbank.get_freq_res ();
@@ -284,8 +292,10 @@ void dsp::LoadToFold::construct () try
   unsigned filter_channels;
   bool using_inverse_filterbank = false;
 
-  if (config->inverse_filterbank.get_nchan() != 0) {
+  if (config->inverse_filterbank.get_nchan() != 0)
+  {
     // using inverse filterbank
+
     using_inverse_filterbank = true;
     convolve_when = config->inverse_filterbank.get_convolve_when();
     filter_channels = config->inverse_filterbank.get_nchan();
@@ -370,67 +380,67 @@ void dsp::LoadToFold::construct () try
     if (convolve_when != Filterbank::Config::Before){
       operations.push_back (inverse_filterbank.get());
     }
-  } else {
-    // filterbank is performing channelisation
+  }
+  else if (config->filterbank.get_nchan() > 1)
+  {
+    // Filterbank is performing channelisation
+
     convolve_when = config->filterbank.get_convolve_when();
     filter_channels = config->filterbank.get_nchan();
-    if (filter_channels > 1)
+
+    // new storage for filterbank output (must be out-of-place)
+    filterbanked = new_time_series ();
+
+#if HAVE_CUDA
+    if (run_on_gpu)
+      filterbanked->set_memory (device_memory);
+#endif
+
+    config->filterbank.set_device( device_memory.ptr() );
+    config->filterbank.set_stream( gpu_stream );
+
+    // software filterbank constructor
+    if (!filterbank)
+      filterbank = config->filterbank.create();
+
+    if (!config->input_buffering)
+      filterbank->set_buffering_policy (NULL);
+
+    filterbank->set_input (unpacked);
+    filterbank->set_output (filterbanked);
+
+    if (convolve_when == Filterbank::Config::During)
     {
-      // new storage for filterbank output (must be out-of-place)
-      filterbanked = new_time_series ();
+      filterbank->set_response (response);
 
-#if HAVE_CUDA
-      if (run_on_gpu)
-        filterbanked->set_memory (device_memory);
-#endif
+      // accumulate the passband only if not generating single pulses
+      if (!config->integration_turns)
+        filterbank->get_engine()->set_passband (passband);
 
-      config->filterbank.set_device( device_memory.ptr() );
-      config->filterbank.set_stream( gpu_stream );
-
-      // software filterbank constructor
-      if (!filterbank)
-        filterbank = config->filterbank.create();
-
-      if (!config->input_buffering)
-        filterbank->set_buffering_policy (NULL);
-
-      filterbank->set_input (unpacked);
-      filterbank->set_output (filterbanked);
-
-      if (convolve_when == Filterbank::Config::During)
+      // if coherent dedispersion is being performed and SK is required,
+      // a zero DM time series must be produced by the filterbank
+      if (config->coherent_dedispersion && config->sk_zap)
       {
-        filterbank->set_response (response);
-        if (!config->integration_turns)
-          filterbank->get_engine()->set_passband (passband);
-
-        // if coherent dedispersion is being performed and SK is required,
-        // a zero DM time series must be produced by the filterbank
-        if (config->coherent_dedispersion && config->sk_zap)
-        {
-          cerr << "dspsr: using Filterbank with zero DM output timeseries" << endl;
-          zero_DM_time_series = new_time_series();
+        cerr << "dspsr: using Filterbank with zero DM output timeseries" << endl;
+        zero_DM_time_series = new_time_series();
 #if HAVE_CUDA
-          if (run_on_gpu) {
-            zero_DM_time_series->set_memory (device_memory);
-          }
-#endif
-          filterbank->set_zero_DM (true);
-          filterbank->set_zero_DM_output (zero_DM_time_series);
+        if (run_on_gpu) {
+          zero_DM_time_series->set_memory (device_memory);
         }
+#endif
+        filterbank->set_zero_DM (true);
+        filterbank->set_zero_DM_output (zero_DM_time_series);
       }
+    }
 
-      // Get order of operations correct
-      if (convolve_when != Filterbank::Config::Before){
-        operations.push_back (filterbank.get());
-      }
+    // Get order of operations correct
+    if (convolve_when != Filterbank::Config::Before){
+      operations.push_back (filterbank.get());
     }
   }
 
-
   // output of convolved will be filterbanked|unpacked
   TimeSeries* convolved = filterbanked;
-
-  bool filterbank_after_dedisp = convolve_when == Filterbank::Config::Before;
 
   if (config->coherent_dedispersion &&
       convolve_when != Filterbank::Config::During)
@@ -460,16 +470,8 @@ void dsp::LoadToFold::construct () try
       convolution->set_zero_DM_output(zero_DM_time_series);
     }
 
-    if (filterbank_after_dedisp)
-    {
-      convolution->set_input  (filterbanked);
-      convolution->set_output (convolved);    // out of place
-    }
-    else
-    {
-      convolution->set_input  (filterbanked);
-      convolution->set_output (convolved);  // out of place
-    }
+    convolution->set_input  (filterbanked);
+    convolution->set_output (convolved);
 
 #if HAVE_CUDA
     if (run_on_gpu)
@@ -487,15 +489,16 @@ void dsp::LoadToFold::construct () try
     operations.push_back (convolution.get());
   }
 
-  if (filterbank_after_dedisp)
-    prepare_interchan (convolved, run_on_gpu);
-  else
-    prepare_interchan (convolved, run_on_gpu);
+  prepare_interchan (convolved, run_on_gpu);
 
-  if (filterbank_after_dedisp && filterbank) {
-    if (! using_inverse_filterbank) {
+  if (filterbank && convolve_when == Filterbank::Config::Before)
+  {
+    if (! using_inverse_filterbank)
+    {
       operations.push_back (filterbank.get());
-    } else {
+    }
+    else 
+    {
       operations.push_back (inverse_filterbank.get());
     }
   }

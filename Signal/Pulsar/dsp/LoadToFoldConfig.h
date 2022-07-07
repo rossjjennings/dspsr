@@ -157,6 +157,9 @@ namespace dsp {
     // Filterbank configuration options
     Filterbank::Config filterbank;
 
+    // Time-domain window applied in either Convolution or Filterbank
+    std::string apodization_type;
+
     // Inverse Filterbank configuration options
     InverseFilterbank::Config inverse_filterbank;
 
