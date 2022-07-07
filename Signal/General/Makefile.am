@@ -108,10 +108,11 @@ filterbank_speed_SOURCES = filterbank_speed.C
 # test_InverseFilterbankResponse_SOURCES = test_InverseFilterbankResponse.C
 # test_FIRFilter_SOURCES = test_FIRFilter.C
 
-check_PROGRAMS = test_PolnCalibration test_OptimalFFT
+check_PROGRAMS = test_PolnCalibration test_OptimalFFT test_Apodization
 
 test_PolnCalibration_SOURCES = test_PolnCalibration.C
 test_OptimalFFT_SOURCES = test_OptimalFFT.C
+test_Apodization_SOURCES = test_Apodization.C
 
 libdspdsp_la_LIBADD = @YAMLCPP_LIBS@
 

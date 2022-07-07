@@ -271,6 +271,17 @@ void dsp::Convolution::prepare ()
 
   response->match(input);
 
+  if (apodization)
+  {
+    if (verbose)
+      cerr << "dsp::Convolution::prepare creating tapering window" << endl;
+
+    apodization->set_size( nsamp_fft );
+    apodization->set_transition_start (nfilt_pos);
+    apodization->set_transition_end (nfilt_neg);
+    apodization->build ();
+  }
+
   if (zero_DM)
   {
     if (zero_DM_response)
