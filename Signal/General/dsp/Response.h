@@ -139,7 +139,7 @@ namespace dsp {
     void integrate (float* spectrum1, float* spectrum2, int ichan=-1);
 
     //! Returns true if the dimension and ordering match
-    virtual bool matches (const Response* response);
+    virtual bool matches (const Shape* response);
 
     //! Modify the out Observation information as seen fit by sub-classes
     virtual void mark (Observation* output);

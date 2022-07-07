@@ -186,8 +186,13 @@ void dsp::Response::match (const Observation* input, unsigned channels)
 }
 
 //! Returns true if the dimension and ordering match
-bool dsp::Response::matches (const Response* response)
+bool dsp::Response::matches (const Shape* shape)
 {
+  const Response* response = dynamic_cast<const Response*> (shape);
+
+  if (!response)
+    return false;
+
   return
     whole_swapped == response->whole_swapped &&
     swap_divisions == response->swap_divisions &&
@@ -195,8 +200,6 @@ bool dsp::Response::matches (const Response* response)
 
     nchan == response->get_nchan() &&
     ndat == response->get_ndat();
-    // Shape::matches (response);
-
 }
 
 //! Match the frequency response to another Response
