@@ -39,8 +39,8 @@ void dsp::ChannelOrder::transformation()
 
   if( rapid==Channel ){
     // number of floats between (t0,f0) and (t1,f0) of a BitSeries
-    register const unsigned input_stride = input->get_nchan()*input->get_npol()*input->get_ndim();
-    register const unsigned output_stride = output->get_ndim();
+    const unsigned input_stride = input->get_nchan()*input->get_npol()*input->get_ndim();
+    const unsigned output_stride = output->get_ndim();
     
     for( unsigned idim=0; idim<output->get_ndim(); idim++){
       for( unsigned ichan=0; ichan<output->get_nchan(); ichan++){
@@ -48,8 +48,8 @@ void dsp::ChannelOrder::transformation()
 	  float* in = (float*)input->get_rawptr() + idim + input->get_ndim()*         (ichan + input->get_nchan()*ipol); 
 	  float* out = (float*)output->get_datptr(ichan,ipol)+idim;
 	  
-	  register const unsigned isamp_end = output->get_ndat()*output->get_ndim(); 
-	  register unsigned input_samp=0; 
+	  const unsigned isamp_end = output->get_ndat()*output->get_ndim(); 
+	  unsigned input_samp=0; 
 	  
 	  for( unsigned isamp=0; isamp<isamp_end;
 	       isamp+=output_stride, input_samp+=input_stride)
@@ -61,8 +61,8 @@ void dsp::ChannelOrder::transformation()
   }
   else if( rapid==Polarisation ){
     // number of floats between (t0,f0) and (t1,f0) of a BitSeries
-    register const unsigned input_stride = input->get_nchan()*input->get_npol()*input->get_ndim();
-    register const unsigned output_stride = output->get_ndim();
+    const unsigned input_stride = input->get_nchan()*input->get_npol()*input->get_ndim();
+    const unsigned output_stride = output->get_ndim();
     
     for( unsigned idim=0; idim<output->get_ndim(); idim++){
       for( unsigned ipol=0; ipol<output->get_npol(); ipol++){
@@ -70,8 +70,8 @@ void dsp::ChannelOrder::transformation()
 	  float* in = (float*)input->get_rawptr() + idim + input->get_ndim() * (ipol + input->get_npol()*ichan);
 	  float* out = (float*)output->get_datptr(ichan,ipol)+idim;
 	  
-	  register const unsigned isamp_end = output->get_ndat()*output->get_ndim(); 
-	  register unsigned input_samp=0;
+	  const unsigned isamp_end = output->get_ndat()*output->get_ndim(); 
+	  unsigned input_samp=0;
 
 	  for( unsigned isamp=0; isamp<isamp_end;
 	       isamp+=output_stride, input_samp+=input_stride)

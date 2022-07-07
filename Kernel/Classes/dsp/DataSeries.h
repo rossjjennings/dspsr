@@ -62,20 +62,23 @@ namespace dsp {
     virtual DataSeries& operator = (const DataSeries& copy);
 
     //! Same as operator= but takes a pointer
-    virtual void copy(const DataSeries* ds)
+    void copy (const Observation* ds);
+
+    //! Same as operator= but takes a pointer
+    virtual void copy (const DataSeries* ds)
     { operator=( *ds ); }
 
     //! Enforces that ndat*ndim must be an integer number of bytes
-    virtual void set_ndat(uint64_t _ndat);
+    void set_ndat (uint64_t);
 
     //! Enforces that ndat*ndim must be an integer number of bytes
-    virtual void set_ndim(uint64_t _ndim);
+    void set_ndim (unsigned);
 
     //! Set the number of polarizations
-    virtual void set_npol(uint64_t _npol);
+    void set_npol (unsigned);
 
     //! Set the number of channels
-    virtual void set_nchan(uint64_t _chan);
+    void set_nchan (unsigned);
 
     //! return the number of samples the current buffer can hold
     uint64_t get_ndat_allocated();

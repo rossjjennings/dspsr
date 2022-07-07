@@ -51,14 +51,23 @@ namespace dsp {
     //! Returns a null-instantiation (calls new)
     virtual TimeSeries* null_clone() const;
 
+    //! Swaps the two TimeSeries if DataSeries is a TimeSeries.  Returns '*this'
+    virtual TimeSeries& swap_data (DataSeries& ts);
+
     //! Swaps the two TimeSeries's.  Returns '*this'
-    virtual TimeSeries& swap_data(TimeSeries& ts);
+    virtual TimeSeries& swap_data (TimeSeries& ts);
 
     //! Destructor
     virtual ~TimeSeries();
 
     //! Set this equal to copy
     virtual TimeSeries& operator = (const TimeSeries& copy);
+
+    //! Call TimeSeries::copy if Observation is a TimeSeries
+    void copy (const Observation*);
+
+    //! Call TimeSeries::copy if DataSeries is a TimeSeries
+    void copy (const DataSeries*);
 
     //! Same as operator= but takes a pointer
     virtual void copy(const TimeSeries* ts)
@@ -86,6 +95,9 @@ namespace dsp {
 
     //! Match the internal memory layout of another TimeSeries
     virtual void internal_match (const TimeSeries*);
+
+    //! Match the internal memory layout of another TimeSeries
+    virtual void internal_match (const DataSeries*);
 
     //! Disable the set_nbit method of the Observation base class
     virtual void set_nbit (unsigned);

@@ -75,7 +75,7 @@ void dsp::DataSeries::set_ndat (uint64_t _ndat)
 }
 
 //! Enforces that ndat*ndim must be an integer number of bytes
-void dsp::DataSeries::set_ndim (uint64_t _ndim)
+void dsp::DataSeries::set_ndim (unsigned _ndim)
 {
   if( _ndim*get_ndat()*get_nbit() % 8 )
     throw Error(InvalidParam,"dsp::DataSeries::set_ndim",
@@ -84,25 +84,25 @@ void dsp::DataSeries::set_ndim (uint64_t _ndim)
 
   bool dim_shape_changed = (_ndim != get_ndim());
   shape_changed |= dim_shape_changed;
-  Observation::set_ndim( unsigned(_ndim) );
+  Observation::set_ndim( _ndim );
 }
 
 //! checks for change in npol
-void dsp::DataSeries::set_npol (uint64_t _npol)
+void dsp::DataSeries::set_npol (unsigned _npol)
 {
   bool pol_shape_changed = (_npol != get_npol());
   shape_changed |= pol_shape_changed;
 
-  Observation::set_npol( unsigned(_npol) );
+  Observation::set_npol( _npol );
 }
 
 //! checks for change in nchan
-void dsp::DataSeries::set_nchan (uint64_t _nchan)
+void dsp::DataSeries::set_nchan (unsigned _nchan)
 {
   bool chan_shape_changed = (_nchan != get_nchan());
   shape_changed |= chan_shape_changed;
 
-  Observation::set_nchan( unsigned(_nchan) );
+  Observation::set_nchan( _nchan );
 }
 
 //! Allocate the space required to store nsamples time samples.
@@ -316,6 +316,16 @@ dsp::DataSeries::get_udatptr (unsigned ichan, unsigned ipol) const
 
   return get_data() + (ichan*get_npol()+ipol)*subsize;
 }
+
+void dsp::DataSeries::copy (const Observation* obs)
+{
+  const DataSeries* ds = dynamic_cast<const DataSeries*> (obs);
+  if (ds)
+    copy (ds);
+  else
+    Observation::operator= (*obs);
+}
+
 
 dsp::DataSeries& dsp::DataSeries::operator = (const DataSeries& copy)
 {

@@ -95,6 +95,15 @@ void dsp::BitSeries::resize (int64_t nsamples)
 
 }
 
+void dsp::BitSeries::copy (const Observation* obs)
+{
+  const BitSeries* bs = dynamic_cast<const BitSeries*> (obs);
+  if (bs)
+    copy (bs);
+  else
+    Observation::copy (obs);
+}
+
 dsp::BitSeries& 
 dsp::BitSeries::operator = (const BitSeries& bitseries)
 {

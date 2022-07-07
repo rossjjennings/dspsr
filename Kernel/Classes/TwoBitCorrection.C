@@ -5,8 +5,6 @@
  *
  ***************************************************************************/
 
-using namespace std;
-
 #include "dsp/TwoBitCorrection.h"
 #include "dsp/TwoBitTable.h"
 #include "dsp/Input.h"
@@ -18,6 +16,8 @@ using namespace std;
 #include "ierf.h"
 
 #include <assert.h>
+
+using namespace std;
 
 // #define _DEBUG 1
 

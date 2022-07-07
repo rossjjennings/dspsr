@@ -44,6 +44,9 @@ namespace dsp {
     //! Set this equal to data
     virtual BitSeries& operator = (const BitSeries& data);
 
+    //! Call BitSeries::copy if Observation is a BitSeries
+    void copy (const Observation*);
+
     //! Same as operator= but takes a pointer
     virtual void copy (const BitSeries* bs)
     { operator=( *bs ); }

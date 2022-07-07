@@ -198,6 +198,24 @@ void dsp::TimeSeries::decrease_ndat (uint64_t new_ndat)
   Observation::set_ndat( new_ndat );
 }
 
+void dsp::TimeSeries::copy (const Observation* obs)
+{
+  const TimeSeries* ts = dynamic_cast<const TimeSeries*> (obs);
+  if (ts)
+    copy (ts);
+  else
+    DataSeries::copy (obs);
+}
+
+void dsp::TimeSeries::copy (const DataSeries* ds)
+{
+  const TimeSeries* ts = dynamic_cast<const TimeSeries*> (ds);
+  if (ts)
+    copy (ts);
+  else
+    DataSeries::copy (ds);
+}
+
 dsp::TimeSeries& dsp::TimeSeries::operator = (const TimeSeries& copy)
 {
   DataSeries::operator=(copy);
@@ -336,6 +354,16 @@ double dsp::TimeSeries::mean (unsigned ichan, unsigned ipol)
     mean += data[idat];
 
   return mean/double(get_ndat());
+}
+
+//! Match the internal memory layout of another TimeSeries
+void dsp::TimeSeries::internal_match (const DataSeries* ds)
+{
+  const TimeSeries* ts = dynamic_cast<const TimeSeries*> (ds);
+  if (ts)
+    internal_match (ts);
+  else
+    DataSeries::internal_match (ds);
 }
 
 //! Match the internal memory layout of another DataSeries
@@ -593,7 +621,18 @@ void dsp::TimeSeries::append_checks(uint64_t& ncontain,uint64_t& ncopy,
 
 #endif
 
-dsp::TimeSeries& dsp::TimeSeries::swap_data(dsp::TimeSeries& ts)
+dsp::TimeSeries& dsp::TimeSeries::swap_data (DataSeries& ds)
+{
+  TimeSeries* ts = dynamic_cast<TimeSeries*> (&ds);
+  if (ts)
+    swap_data (*ts);
+  else
+    DataSeries::swap_data(ds);
+
+  return *this;
+}
+  
+dsp::TimeSeries& dsp::TimeSeries::swap_data (TimeSeries& ts)
 {
   DataSeries::swap_data( ts );
   float* tmp = data; data = ts.data; ts.data = tmp;
@@ -700,7 +739,7 @@ void dsp::TimeSeries::finite_check () const
     {
       const float* from = get_datptr (ichan, ipol);
       for (unsigned ibin=0; ibin < nfloat; ibin++)
-	if (!finite(from[ibin]))
+	if (!isfinite(from[ibin]))
 	{
 #ifdef _DEBUG
 	  cerr << "not finite ichan=" << ichan << " ipol=" << ipol
