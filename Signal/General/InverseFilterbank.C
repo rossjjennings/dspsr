@@ -282,12 +282,12 @@ void dsp::InverseFilterbank::make_preparations ()
       << freq_res << endl;
   }
 
-  if (has_apodization())
+  if (has_temporal_apodization())
   {
     if (verbose)
       cerr << "dsp::InverseFilterbank::make_preparations creating FFT window" << endl;
 
-    dsp::Apodization* fft_window = get_apodization();
+    dsp::Apodization* fft_window = get_temporal_apodization();
     fft_window->set_size (input_fft_length);
     fft_window->set_analytic (true);
     fft_window->set_transition (input_discard_pos);

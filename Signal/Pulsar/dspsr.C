@@ -340,16 +340,11 @@ void parse_options (int argc, char** argv) try
 
   menu.add ("\n" "Dispersion removal options:");
 
-  arg = menu.add (config->apodization_type, "taper", "name");
+  arg = menu.add (config->apodization_type, "T-taper", "name");
   arg->set_help ("name of time domain apodization/tapering/window function");
   arg->set_long_help
-    ("Available tapering functions are\n"
-    " - hanning: Hanning window\n"
-    " - welch: Welch window\n"
-    " - bartlett: Bartlett window\n"
-    " - tukey: Tukey window\n"
-    " - top_hat: Top Hat window \n"
-    " - none: No window function (default)\n");
+    ("Available tapering functions:\n"
+     "\t hanning, welch, bartlett, tukey, top_hat (default: none)\n");
 
   arg = menu.add (config->filterbank, 'F', "<N>[:D]");
   arg->set_help ("create an N-channel filterbank");
@@ -377,15 +372,6 @@ void parse_options (int argc, char** argv) try
 
   arg = menu.add (config->do_deripple, "dr");
   arg->set_help( "Apply deripple correction to inverse filterbank");
-
-  arg = menu.add (config->inverse_filterbank_fft_window, "fft-window");
-  arg->set_help( "Specify FFT window function to use with inverse filterbank." );
-  arg->set_long_help(
-    "Available FFT windows are\n"
-    " - tukey: Tukey window\n"
-    " - top_hat: Top Hat window function\n"
-    " - no_window: No FFT window function (default)\n"
-  );
 
   arg = menu.add (config->plfb_nbin, 'G', "nbin");
   arg->set_help ("create phase-locked filterbank");

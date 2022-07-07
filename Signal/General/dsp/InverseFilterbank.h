@@ -14,7 +14,6 @@
 #include <string>
 
 #include "dsp/Convolution.h"
-#include "dsp/Apodization.h"
 
 namespace dsp {
 
@@ -192,10 +191,6 @@ namespace dsp {
     class Engine;
     void set_engine (Engine*);
 
-    void set_fft_window_str (std::string _fft_window_str) { fft_window_str = _fft_window_str; }
-
-    std::string get_fft_window_str () const { return fft_window_str ; }
-
     // void optimize_discard_region(
     //   int* _input_discard_pos,
     //   int* _input_discard_neg,
@@ -250,9 +245,6 @@ namespace dsp {
 
     //! Interface to alternate processing engine (e.g. GPU)
     Reference::To<Engine> engine;
-
-    //! string representing the fft window to be used
-    std::string fft_window_str;
 
   private:
 

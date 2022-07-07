@@ -81,12 +81,12 @@ void dsp::InverseFilterbankEngineCPU::setup (dsp::InverseFilterbank* filterbank)
     response = filterbank->get_response();
   }
 
-  if (filterbank->has_apodization())
+  if (filterbank->has_temporal_apodization())
   {
     if (verbose)
       cerr << "dsp::InverseFilterbankEngineCPU::setup setting fft_window" << endl;
 
-    fft_window = filterbank->get_apodization();
+    fft_window = filterbank->get_temporal_apodization();
     if (verbose)
     {
       cerr << "dsp::InverseFilterbankEngineCPU::setup fft_window.get_type() "
