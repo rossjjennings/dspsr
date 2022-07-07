@@ -72,10 +72,6 @@ void dsp::PScrunch::prepare()
     throw Error (InvalidState, "dsp::PScrunch::prepare",
 		 "invalid npol=%d", input->get_npol());
 
-  if (output_npol == 0)
-    throw Error (InvalidState, "dsp::PScrunch::prepare",
-                 "output state has not been configured");
-
   if (input->get_state() == Signal::Stokes)
     throw Error (InvalidState, "dsp::PScrunch::prepare",
 		 "input state of Signal::Stokes not supported");
