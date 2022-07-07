@@ -55,8 +55,8 @@ void dsp::FilterbankEngineCPU::setup (dsp::Filterbank* filterbank)
   if (filterbank->has_zero_DM_response()) {
     zero_DM_response = filterbank->get_zero_DM_response();
   }
-  if (filterbank->has_apodization()) {
-    apodization = filterbank->get_apodization();
+  if (filterbank->has_temporal_apodization()) {
+    apodization = filterbank->get_temporal_apodization();
   }
   if (filterbank->has_passband()) {
     passband = filterbank->get_passband();

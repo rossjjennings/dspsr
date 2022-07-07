@@ -35,6 +35,7 @@ namespace dsp {
 
     //! Set true when the data to be tapered are complex-valued
     void set_analytic (bool f = true) { analytic = f; }
+    bool get_analytic () const { return analytic; }
 
     //! Set the number of samples in the window
     void set_size (unsigned);

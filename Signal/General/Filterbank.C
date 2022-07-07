@@ -241,28 +241,8 @@ void dsp::Filterbank::make_preparations ()
          << " nsamp_overlap=" << nsamp_overlap << endl;
 
   // if given, test the validity of the window function
-  if (apodization)
-  {
-    if( input->get_nchan() > 1 )
-      throw Error(InvalidState,"dsp::Filterbank::make_preparations",
-                  "not implemented for nchan=%d > 1",
-                  input->get_nchan());
-
-    if (apodization->get_ndat() != nsamp_fft)
-      throw Error (InvalidState, "dsp::Filterbank::make_preparations",
-                   "invalid apodization function ndat=%d"
-                   " (nfft=%d)", apodization->get_ndat(), nsamp_fft);
-
-    if (input->get_state() == Signal::Analytic
-        && apodization->get_ndim() != 2)
-      throw Error (InvalidState, "dsp::Filterbank::make_preparations",
-                   "Signal::Analytic signal. Real apodization function.");
-
-    if (input->get_state() == Signal::Nyquist
-        && apodization->get_ndim() != 1)
-      throw Error (InvalidState, "dsp::Filterbank::make_preparations",
-                   "Signal::Nyquist signal. Complex apodization function.");
-  }
+  if (temporal_apodization)
+    prepare_temporal_apodization ();
 
   // matrix convolution
   matrix_convolution = false;

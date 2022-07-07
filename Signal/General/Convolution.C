@@ -109,23 +109,26 @@ dsp::Response* dsp::Convolution::get_passband()
   return passband;
 }
 
-const dsp::Apodization* dsp::Convolution::get_apodization () const {
-  return apodization;
+const dsp::Apodization* dsp::Convolution::get_temporal_apodization () const
+{
+  return temporal_apodization;
 }
 
-dsp::Apodization* dsp::Convolution::get_apodization () {
-  return apodization;
+dsp::Apodization* dsp::Convolution::get_temporal_apodization ()
+{
+  return temporal_apodization;
 }
 
 
-bool dsp::Convolution::has_apodization () const {
-  return apodization;
+bool dsp::Convolution::has_temporal_apodization () const
+{
+  return temporal_apodization;
 }
 
 //! Set the apodization function
-void dsp::Convolution::set_apodization (Apodization* _function)
+void dsp::Convolution::set_temporal_apodization (Apodization* _function)
 {
-  apodization = _function;
+  temporal_apodization = _function;
 }
 
 //! Set the passband integrator
@@ -167,6 +170,37 @@ dsp::Response* dsp::Convolution::get_zero_DM_response() {
 void dsp::Convolution::set_zero_DM_response (dsp::Response* response) {
   zero_DM_response = response;
 }
+
+//! Prepare temporal apodization / tapering window
+void dsp::Convolution::prepare_temporal_apodization ()
+{
+  if (!temporal_apodization)
+    return;
+
+  if (verbose)
+    cerr << "dsp::Convolution::prepare_temporal_apodization" << endl;
+
+  Signal::State state = input->get_state();
+
+  temporal_apodization -> set_size( nsamp_fft );
+  temporal_apodization -> set_analytic( state == Signal::Analytic );
+  temporal_apodization -> set_transition_start( nfilt_pos );
+  temporal_apodization -> set_transition_end( nfilt_neg );
+  temporal_apodization -> build ();
+
+  if (temporal_apodization->get_ndat() != nsamp_fft)
+    throw Error (InvalidState, "dsp::Convolution::prepare_temporal_apodization",
+                 "invalid apodization function ndat=%d"
+                 " (nfft=%d)", temporal_apodization->get_ndat(), nsamp_fft);
+
+  if (state == Signal::Analytic && !temporal_apodization->get_analytic())
+    throw Error (InvalidState, "dsp::Convolution::prepare_temporal_apodization",
+                 "Tapering function not configured for analytic signal.");
+
+  if (state == Signal::Nyquist && temporal_apodization->get_analytic())
+    throw Error (InvalidState, "dsp::Filterbank::make_preparations",
+                 "Tapering function not configured for real signal.");
+} 
 
 //! Prepare all relevant attributes
 void dsp::Convolution::prepare ()
@@ -271,16 +305,8 @@ void dsp::Convolution::prepare ()
 
   response->match(input);
 
-  if (apodization)
-  {
-    if (verbose)
-      cerr << "dsp::Convolution::prepare creating tapering window" << endl;
-
-    apodization->set_size( nsamp_fft );
-    apodization->set_transition_start (nfilt_pos);
-    apodization->set_transition_end (nfilt_neg);
-    apodization->build ();
-  }
+  if (temporal_apodization)
+    prepare_temporal_apodization ();
 
   if (zero_DM)
   {
@@ -558,9 +584,9 @@ void dsp::Convolution::transformation ()
 
           ptr = const_cast<float*>(input->get_datptr (ichan, ipol)) + offset;
 
-          if (apodization)
+          if (temporal_apodization)
           {
-            apodization -> operate (ptr, complex_time);
+            temporal_apodization -> operate (ptr, complex_time);
             ptr = complex_time;
           }
 

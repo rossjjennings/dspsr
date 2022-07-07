@@ -39,7 +39,7 @@ namespace dsp {
 
     In order to improve the spectral leakage characteristics, an
     apodization function may be applied to the data in the time domain
-    by setting the Convolution::apodization attribute.
+    by setting the Convolution::temporal_apodization attribute.
 
     Referring to Figure 13.1.3 in Numerical Recipes,
     \f$m_+\f$=response->get_impulse_pos() and
@@ -85,8 +85,8 @@ namespace dsp {
     //! Set the frequency response function
     virtual void set_response (Response* response);
 
-    //! Set the apodization function
-    virtual void set_apodization (Apodization* function);
+    //! Set the temporal apodization function
+    virtual void set_temporal_apodization (Apodization*);
 
     //! Set the passband integrator
     virtual void set_passband (Response* passband);
@@ -105,12 +105,12 @@ namespace dsp {
     virtual const Response* get_passband() const;
     virtual Response* get_passband();
 
-    //! Return true if the apodization attribute has been set
-    bool has_apodization() const;
+    //! Return true if the temporal apodization attribute has been set
+    bool has_temporal_apodization() const;
 
-    //! Return a pointer to to the apodization object
-    virtual const Apodization* get_apodization() const;
-    virtual Apodization* get_apodization();
+    //! Return a pointer to to the temporal apodization object
+    virtual const Apodization* get_temporal_apodization() const;
+    virtual Apodization* get_temporal_apodization();
 
     //! get the matrix_convolution flag
     bool get_matrix_convolution () const { return matrix_convolution; };
@@ -174,13 +174,16 @@ namespace dsp {
     Reference::To<ResponseProduct> zero_dm_response_product;
 
     //! Apodization function (time domain window)
-    Reference::To<Apodization> apodization;
+    Reference::To<Apodization> temporal_apodization;
 
     //! Integrated passband
     Reference::To<Response> passband;
 
     //! Prepare the output TimeSeries
     void prepare_output ();
+
+    //! Prepare the temporal apodization function
+    void prepare_temporal_apodization ();
 
     //! zero DM flag -- this indicates whether to do a parallel transformation
     //! without any dedispersion
