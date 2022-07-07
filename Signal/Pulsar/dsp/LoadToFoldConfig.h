@@ -157,7 +157,7 @@ namespace dsp {
     // Filterbank configuration options
     Filterbank::Config filterbank;
 
-    // Time-domain window applied in either Convolution or Filterbank
+    // Time-domain window applied in Convolution, Filterbank or InverseFilterbank
     std::string apodization_type;
 
     // Inverse Filterbank configuration options
@@ -167,8 +167,6 @@ namespace dsp {
 
     // whether or not to apply deripple correction
     bool do_deripple;
-
-    std::string inverse_filterbank_fft_window;
 
     bool force_sensible_nbin;
 
