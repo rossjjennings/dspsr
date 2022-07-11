@@ -111,10 +111,15 @@ void dsp::Bandpass::transformation ()
   if (full_poln)
     cross_pol = 2;
 
+  unsigned output_ndat = output->get_ndat();
+
   if (full_poln)
     output->resize (4, nchan, resolution, 1);
   else
     output->resize (npol, nchan, resolution, 1);
+
+  if (output_ndat == 0)
+    output->zero();
 
   // number of floats to step between each FFT
   unsigned step = resolution * 2;
