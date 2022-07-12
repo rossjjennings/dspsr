@@ -58,6 +58,11 @@ namespace dsp {
     
     //! Perform the transformation on the input time series
     void transformation ();
+
+    //! Detect input without further channelization
+    void detect_the_input ();
+
+    //! Integrate when input data are already detected
     void detected_input ();
 
     //! Number of channels in bandpass
