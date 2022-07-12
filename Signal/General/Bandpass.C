@@ -1,6 +1,6 @@
 /***************************************************************************
  *
- *   Copyright (C) 2002 by Stephen Ord
+ *   Copyright (C) 2002 - 2022 by Stephen Ord and Willem van Straten
  *   Licensed under the Academic Free License version 2.1
  *
  ***************************************************************************/
@@ -90,6 +90,19 @@ void dsp::Bandpass::transformation ()
       return;
     }
 
+  unsigned output_ndat = output->get_ndat();
+
+  if (full_poln)
+    output->resize (4, nchan, resolution, 1);
+  else
+    output->resize (npol, nchan, resolution, 1);
+
+  if (output_ndat == 0)
+    output->zero();
+
+  if (resolution == 1)
+    detect_the_input ();
+
   // there must be at least enough data for one FFT
   if (input->get_ndat() < nsamp_fft)
     throw Error (InvalidState, "dsp::Bandpass::transformation",
@@ -110,16 +123,6 @@ void dsp::Bandpass::transformation ()
   unsigned cross_pol = 1;
   if (full_poln)
     cross_pol = 2;
-
-  unsigned output_ndat = output->get_ndat();
-
-  if (full_poln)
-    output->resize (4, nchan, resolution, 1);
-  else
-    output->resize (npol, nchan, resolution, 1);
-
-  if (output_ndat == 0)
-    output->zero();
 
   // number of floats to step between each FFT
   unsigned step = resolution * 2;
@@ -202,6 +205,71 @@ void dsp::Bandpass::detected_input ()
       result[ichan] += tot;
     }
   }
+
+  integration_length += ndat / input->get_rate();
+}
+
+void dsp::Bandpass::detect_the_input ()
+{
+  unsigned npol = input->get_npol ();
+  unsigned nchan = input->get_nchan ();
+  uint64_t ndat = input->get_ndat();
+
+  Signal::State state = input->get_state();
+
+  // 2 floats per complex number
+  unsigned pts_reqd = nchan * 2;
+
+  bool full_poln = npol == 2 &&
+    (output_state == Signal::Stokes || output_state == Signal::Coherence);
+
+  if (full_poln)
+    // need space for one more complex spectrum
+    pts_reqd += nchan * 2;
+
+  float* spectrum[2];
+  spectrum[0] = scratch->space<float> (pts_reqd);
+  spectrum[1] = spectrum[0];
+  if (full_poln)
+    spectrum[1] += nchan * 2;
+
+  unsigned cross_pol = 1;
+  if (full_poln)
+    cross_pol = 2;
+
+  // number of floats to step between each FFT
+  unsigned step = 2;
+
+  bool complex_valued = state == Signal::Analytic;
+
+  for (uint64_t ipart=0; ipart < ndat; ipart++)
+  {
+    uint64_t offset = ipart * step;
+
+    for (unsigned ipol=0; ipol < npol; ipol++)
+    {
+      for (unsigned jpol=0; jpol<cross_pol; jpol++)
+      {
+        if (full_poln)
+          ipol = jpol;
+
+        for (unsigned ichan=0; ichan < nchan; ichan++)
+        {
+          const float* ptr = input->get_datptr (ichan, ipol);
+          ptr += offset;
+
+          spectrum[ipol][ichan*2] = ptr[0];
+          spectrum[ipol][ichan*2+1] = (complex_valued) ? ptr[1] : 0.0;
+        }
+      }
+
+      if (full_poln)
+        output->integrate (spectrum[0], spectrum[1]);
+      else
+        output->integrate (spectrum[ipol], ipol);
+
+    } // for each polarization
+  } // for each time sample
 
   integration_length += ndat / input->get_rate();
 }
