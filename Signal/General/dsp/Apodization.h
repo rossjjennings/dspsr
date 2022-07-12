@@ -80,6 +80,10 @@ namespace dsp {
     //! Returns SUM i=1..N {window[i] * data[i]}
     double integrated_product (float* data, unsigned incr=1) const;
 
+    //! Write the window to a text file
+    /*! One row per value.  Two columns: index value */
+    void dump (const std::string& filename);
+
   private:
 
     static std::map<std::string, Type> type_map;

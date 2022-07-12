@@ -189,3 +189,14 @@ double dsp::Apodization::integrated_product (float* data, unsigned incr) const
 }
 
 map<string, dsp::Apodization::Type> dsp::Apodization::type_map = init_type_map();
+
+#include <fstream>
+
+void dsp::Apodization::dump (const std::string& filename)
+{
+  ofstream out ( filename.c_str() );
+
+  for (unsigned idat=0; idat < ndat; idat++)
+    out << idat << " " << buffer[idat] << endl;
+}
+

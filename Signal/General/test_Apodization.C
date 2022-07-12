@@ -6,7 +6,6 @@
  ***************************************************************************/
 
 #include "dsp/Apodization.h"
-#include <fstream>
 
 using namespace std;
 using namespace dsp;
@@ -29,19 +28,12 @@ int main(int argc, char ** argv) try
 
   for (auto test: tests)
   {
-    ofstream out ( (test + ".dat").c_str() );
-    vector<float> data (ndat, 1.0);
-    float* dat = &(data[0]);
-
     apod.set_type (test);
     apod.set_size (ndat);
     apod.set_transition (transition);
     apod.build ();
 
-    apod.operate (dat, dat);
-
-    for (unsigned idat=0; idat < ndat; idat++)
-      out << idat << " " << data[idat] << endl;
+    apod.dump (test + ".dat");
   }
 
   return 0;

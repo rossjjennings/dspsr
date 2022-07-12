@@ -292,6 +292,7 @@ void dsp::InverseFilterbank::make_preparations ()
     fft_window->set_analytic (true);
     fft_window->set_transition (input_discard_pos);
     fft_window->build ();
+    fft_window->dump ("temporal_apodization.dat");
   }
 
   if (verbose)
