@@ -36,6 +36,9 @@ namespace dsp {
     //! Get the state of the output
     Signal::State get_state () const { return output_state; }
 
+    //! Set the input channel to analyze
+    void set_selected_input_channel (unsigned ichan) { select_input_channel = ichan; }
+
     //! Set the frequency response function
     virtual void set_response (Response* response);
 
@@ -65,8 +68,11 @@ namespace dsp {
     //! Integrate when input data are already detected
     void detected_input ();
 
-    //! Number of channels in bandpass
+    //! Number of channels in bandpass per input channel
     unsigned resolution;
+
+    //! Produce the bandpass of only the selected input channel
+    int select_input_channel;
 
     //! Integration length in seconds
     double integration_length;

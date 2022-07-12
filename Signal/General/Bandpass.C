@@ -19,6 +19,7 @@ dsp::Bandpass::Bandpass () :
   resolution = 0;
   integration_length = 0;
   output_state = Signal::PPQQ;
+  select_input_channel = -1;
 }
 
 dsp::Bandpass::~Bandpass ()
@@ -55,11 +56,18 @@ void dsp::Bandpass::transformation ()
 
   unsigned npol = input->get_npol ();
   unsigned nchan = input->get_nchan ();
-
+  unsigned ichan_offset = 0;
+ 
   if (verbose)
     cerr << "dsp::Bandpass::transformation input npol=" << npol
 	 << " nchan=" << nchan << endl;
-    
+ 
+  if (select_input_channel > -1)
+  {
+    nchan = 1;
+    ichan_offset = select_input_channel;
+  }
+   
   // 2 floats per complex number
   unsigned pts_reqd = resolution * 2;
 
@@ -140,7 +148,7 @@ void dsp::Bandpass::transformation ()
 	  if (full_poln)
 	    ipol = jpol;
 	  
-	  float* ptr = const_cast<float*>(input->get_datptr (ichan, ipol));
+	  float* ptr = const_cast<float*>(input->get_datptr (ichan+ichan_offset, ipol));
 	  ptr += offset;
 	  
 	  if (apodization)

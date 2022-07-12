@@ -121,8 +121,9 @@ int main (int argc, char** argv) try {
 
   int width_pixels  = 0;
   int height_pixels = 0;
+  int select_chan = -1;
 
-  static const char* args = "bB:c:dD:f:F:G:g:hilmn:pRr:S:T:t:svV";
+  static const char* args = "bB:c:dD:f:F:G:g:hij:lmn:pRr:S:T:t:svV";
 
   while ((c = getopt(argc, argv, args)) != -1)
     switch (c) {
@@ -238,6 +239,10 @@ int main (int argc, char** argv) try {
       nchan = atoi (optarg);
       break;
 
+    case 'j':
+      select_chan = atoi (optarg);
+      break;
+
     case 'p':
       state = Signal::Coherence;
       break;
@@ -312,6 +317,8 @@ int main (int argc, char** argv) try {
   if (geometry)
     passband->set_response( geometry->get_response() );
 
+  if (select_chan > -1)
+    passband->set_selected_input_channel( select_chan );
 
   operations.push_back (passband);
 
