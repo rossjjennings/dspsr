@@ -57,8 +57,7 @@ namespace dsp
       //! Set the current byte offset in the file
       int64_t seek_bytes (uint64_t bytes);
 
-      void set_samples_in_row(const unsigned _samples_in_row) { samples_in_row =
-        _samples_in_row; }
+      void set_samples_in_row (unsigned n) { samples_in_row = n; }
 
       void set_bytes_per_row(const unsigned bytes) { bytes_per_row = bytes; }
 
