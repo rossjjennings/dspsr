@@ -33,7 +33,8 @@ dsp::FilterbankEngineCPU::FilterbankEngineCPU ()
   zero_DM_response = nullptr;
   response = nullptr;
   passband = nullptr;
-  apodization = nullptr;
+  temporal_apodization = nullptr;
+  spectral_apodization = nullptr;
 }
 
 dsp::FilterbankEngineCPU::~FilterbankEngineCPU ()
@@ -56,8 +57,12 @@ void dsp::FilterbankEngineCPU::setup (dsp::Filterbank* filterbank)
     zero_DM_response = filterbank->get_zero_DM_response();
   }
   if (filterbank->has_temporal_apodization()) {
-    apodization = filterbank->get_temporal_apodization();
+    temporal_apodization = filterbank->get_temporal_apodization();
   }
+  if (filterbank->has_spectral_apodization()) {
+    spectral_apodization = filterbank->get_spectral_apodization();
+  }
+
   if (filterbank->has_passband()) {
     passband = filterbank->get_passband();
   }
@@ -105,7 +110,7 @@ void dsp::FilterbankEngineCPU::setup (dsp::Filterbank* filterbank)
   // also need space to hold backward FFTs, time_domain_response
   unsigned scratch_needed = bigfftsize + 2 * freq_res;
 
-  if (apodization) {
+  if (temporal_apodization) {
     scratch_needed += bigfftsize;
   }
 
@@ -245,9 +250,9 @@ void dsp::FilterbankEngineCPU::perform (
             cerr << "dsp::FilterbankEngineCPU::perform: time_dom_ptr: " << time_dom_ptr << endl;
           #endif
 
-          if (apodization != nullptr)
+          if (temporal_apodization != nullptr)
           {
-            apodization -> operate (time_dom_ptr, windowed_time_domain_scratch);
+            temporal_apodization -> operate (time_dom_ptr, windowed_time_domain_scratch);
             time_dom_ptr = windowed_time_domain_scratch;
           }
 
@@ -275,6 +280,11 @@ void dsp::FilterbankEngineCPU::perform (
 
           for (ichan=0; ichan < nchan_subband; ichan++)
           {
+            if (spectral_apodization != nullptr)
+            {
+              spectral_apodization -> operate (freq_dom_ptr);
+            }
+
             backward->bcc1d (freq_res, time_domain_scratch, freq_dom_ptr);
 
             freq_dom_ptr += freq_res*2;
@@ -334,6 +344,11 @@ void dsp::FilterbankEngineCPU::perform (
 
           for (ichan=0; ichan < nchan_subband; ichan++)
           {
+            if (spectral_apodization != nullptr)
+            {
+              spectral_apodization -> operate (freq_dom_ptr);
+            }
+
             backward->bcc1d (freq_res, time_domain_scratch, freq_dom_ptr);
 
             freq_dom_ptr += freq_res*2;
@@ -427,9 +442,9 @@ void dsp::FilterbankEngineCPU::perform (
             cerr << "dsp::FilterbankEngineCPU::perform: time_dom_ptr: " << time_dom_ptr << endl;
           #endif
 
-          if (apodization != nullptr)
+          if (temporal_apodization != nullptr)
           {
-            apodization -> operate (time_dom_ptr, windowed_time_domain_scratch);
+            temporal_apodization -> operate (time_dom_ptr, windowed_time_domain_scratch);
             time_dom_ptr = windowed_time_domain_scratch;
           }
 
@@ -486,6 +501,12 @@ void dsp::FilterbankEngineCPU::perform (
 
           for (ichan=0; ichan < nchan_subband; ichan++)
           {
+
+            if (spectral_apodization != nullptr)
+            {
+              spectral_apodization -> operate (freq_dom_ptr);
+            }
+
             backward->bcc1d (freq_res, time_domain_scratch, freq_dom_ptr);
 
             freq_dom_ptr += freq_res*2;

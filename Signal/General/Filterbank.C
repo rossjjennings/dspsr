@@ -240,9 +240,13 @@ void dsp::Filterbank::make_preparations ()
          << " nsamp_fft=" << nsamp_fft << " nsamp_step=" << nsamp_step
          << " nsamp_overlap=" << nsamp_overlap << endl;
 
-  // if given, test the validity of the window function
+  // if given, configure and test the validity of the window functions
+
   if (temporal_apodization)
     prepare_temporal_apodization ();
+
+  if (spectral_apodization)
+    prepare_spectral_apodization ( freq_res );
 
   // matrix convolution
   matrix_convolution = false;

@@ -74,7 +74,8 @@ namespace dsp
     const dsp::Response* zero_DM_response;
 
     //! apodization kernel, from Filterbank
-    const dsp::Apodization* apodization;
+    const dsp::Apodization* temporal_apodization;
+    const dsp::Apodization* spectral_apodization;
 
     //! passband kernel, from Filterbank
     dsp::Response* passband;

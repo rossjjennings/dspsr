@@ -229,11 +229,14 @@ void dsp::Convolution::prepare_spectral_apodization ( unsigned bc_nfft )
     return;
 
   if (verbose)
-    cerr << "dsp::Convolution::prepare_spectral_apodization" << endl;
+    cerr << "dsp::Convolution::prepare_spectral_apodization"
+            " (bcc) nfft=" << bc_nfft << endl;
 
   spectral_apodization -> set_size( bc_nfft );
   spectral_apodization -> set_analytic( true );
   spectral_apodization -> build ();
+
+  spectral_apodization -> dump ("spectral_taper.txt");
 
   if (spectral_apodization->get_ndat() != bc_nfft)
     throw Error (InvalidState, "Convolution::prepare_spectral_apodization",

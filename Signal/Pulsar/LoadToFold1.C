@@ -180,12 +180,20 @@ void dsp::LoadToFold::construct () try
     config->coherent_dedispersion = false;
   }
 
-  Reference::To<dsp::Apodization> apodization_window;
+  Reference::To<dsp::Apodization> temporal_apodization;
 
   if (config->temporal_apodization_type != "")
   {
-    apodization_window = new dsp::Apodization;
-    apodization_window->set_type (config->temporal_apodization_type);
+    temporal_apodization = new dsp::Apodization;
+    temporal_apodization->set_type (config->temporal_apodization_type);
+  }
+
+  Reference::To<dsp::Apodization> spectral_apodization;
+
+  if (config->spectral_apodization_type != "")
+  {
+    spectral_apodization = new dsp::Apodization;
+    spectral_apodization->set_type (config->spectral_apodization_type);
   }
 
   // the data are not detected, so set up phase coherent reduction path
@@ -320,8 +328,11 @@ void dsp::LoadToFold::construct () try
     inverse_filterbank->set_output (filterbanked);
     inverse_filterbank->set_pfb_dc_chan(manager->get_info()->get_pfb_dc_chan());
 
-    if (apodization_window)
-      inverse_filterbank->set_temporal_apodization (apodization_window);
+    if (temporal_apodization)
+      inverse_filterbank->set_temporal_apodization (temporal_apodization);
+
+    if (spectral_apodization)
+      inverse_filterbank->set_spectral_apodization (spectral_apodization);
 
     // InverseFilterbank will always have a response.
     Reference::To<dsp::InverseFilterbankResponse> inverse_filterbank_response = new dsp::InverseFilterbankResponse;
@@ -434,8 +445,11 @@ void dsp::LoadToFold::construct () try
       }
     }
 
-    if (apodization_window)
-      filterbank->set_temporal_apodization (apodization_window);
+    if (temporal_apodization)
+      filterbank->set_temporal_apodization (temporal_apodization);
+
+    if (spectral_apodization)
+      filterbank->set_spectral_apodization (spectral_apodization);
 
     // Get order of operations correct
     if (convolve_when != Filterbank::Config::Before){
@@ -459,8 +473,11 @@ void dsp::LoadToFold::construct () try
     if (!config->integration_turns)
       convolution->set_passband (passband);
 
-    if (apodization_window)
-      convolution->set_temporal_apodization (apodization_window);
+    if (temporal_apodization)
+      convolution->set_temporal_apodization (temporal_apodization);
+
+    if (spectral_apodization)
+      convolution->set_spectral_apodization (spectral_apodization);
 
     convolved = new_time_series();
 
