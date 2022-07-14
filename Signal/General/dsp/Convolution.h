@@ -41,6 +41,10 @@ namespace dsp {
     apodization function may be applied to the data in the time domain
     by setting the Convolution::temporal_apodization attribute.
 
+    In order to improve the temporal leakage characteristics, an
+    apodization function may be applied to the data in the frequency domain
+    by setting the Convolution::spectral_apodization attribute.
+
     Referring to Figure 13.1.3 in Numerical Recipes,
     \f$m_+\f$=response->get_impulse_pos() and
     \f$m_-\f$=response->get_impulse_neg(), so that the duration,
@@ -88,6 +92,9 @@ namespace dsp {
     //! Set the temporal apodization function
     virtual void set_temporal_apodization (Apodization*);
 
+    //! Set the spectral apodization function
+    virtual void set_spectral_apodization (Apodization*);
+
     //! Set the passband integrator
     virtual void set_passband (Response* passband);
 
@@ -111,6 +118,13 @@ namespace dsp {
     //! Return a pointer to to the temporal apodization object
     virtual const Apodization* get_temporal_apodization() const;
     virtual Apodization* get_temporal_apodization();
+
+    //! Return true if the spectral apodization attribute has been set
+    bool has_spectral_apodization() const;
+
+    //! Return a pointer to to the spectral apodization object
+    virtual const Apodization* get_spectral_apodization() const;
+    virtual Apodization* get_spectral_apodization();
 
     //! get the matrix_convolution flag
     bool get_matrix_convolution () const { return matrix_convolution; };
@@ -176,6 +190,9 @@ namespace dsp {
     //! Apodization function (time domain window)
     Reference::To<Apodization> temporal_apodization;
 
+    //! Apodization function (frequency domain window)
+    Reference::To<Apodization> spectral_apodization;
+
     //! Integrated passband
     Reference::To<Response> passband;
 
@@ -184,6 +201,9 @@ namespace dsp {
 
     //! Prepare the temporal apodization function
     void prepare_temporal_apodization ();
+
+    //! Prepare the spectral apodization function
+    void prepare_spectral_apodization ( unsigned bcc_nfft );
 
     //! zero DM flag -- this indicates whether to do a parallel transformation
     //! without any dedispersion

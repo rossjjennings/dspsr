@@ -125,10 +125,30 @@ bool dsp::Convolution::has_temporal_apodization () const
   return temporal_apodization;
 }
 
-//! Set the apodization function
 void dsp::Convolution::set_temporal_apodization (Apodization* _function)
 {
   temporal_apodization = _function;
+}
+
+const dsp::Apodization* dsp::Convolution::get_spectral_apodization () const
+{
+  return spectral_apodization;
+}
+
+dsp::Apodization* dsp::Convolution::get_spectral_apodization ()
+{
+  return spectral_apodization;
+}
+
+
+bool dsp::Convolution::has_spectral_apodization () const
+{
+  return spectral_apodization;
+}
+
+void dsp::Convolution::set_spectral_apodization (Apodization* _function)
+{
+  spectral_apodization = _function;
 }
 
 //! Set the passband integrator
@@ -201,6 +221,29 @@ void dsp::Convolution::prepare_temporal_apodization ()
     throw Error (InvalidState, "dsp::Filterbank::make_preparations",
                  "Tapering function not configured for real signal.");
 } 
+
+//! Prepare spectral apodization / tapering window
+void dsp::Convolution::prepare_spectral_apodization ( unsigned bc_nfft )
+{
+  if (!spectral_apodization)
+    return;
+
+  if (verbose)
+    cerr << "dsp::Convolution::prepare_spectral_apodization" << endl;
+
+  spectral_apodization -> set_size( bc_nfft );
+  spectral_apodization -> set_analytic( true );
+  spectral_apodization -> build ();
+
+  if (spectral_apodization->get_ndat() != bc_nfft)
+    throw Error (InvalidState, "Convolution::prepare_spectral_apodization",
+                 "invalid apodization function ndat=%d"
+                 " (nfft=%d)", spectral_apodization->get_ndat(), bc_nfft);
+
+  if (!spectral_apodization->get_analytic())
+    throw Error (InvalidState, "Convolution::prepare_spectral_apodization",
+                 "tapering function not configured for complex-valued data");
+}
 
 //! Prepare all relevant attributes
 void dsp::Convolution::prepare ()

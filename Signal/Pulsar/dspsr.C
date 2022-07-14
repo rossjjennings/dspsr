@@ -340,12 +340,6 @@ void parse_options (int argc, char** argv) try
 
   menu.add ("\n" "Dispersion removal options:");
 
-  arg = menu.add (config->apodization_type, "T-taper", "name");
-  arg->set_help ("name of time domain apodization/tapering/window function");
-  arg->set_long_help
-    ("Available tapering functions:\n"
-     "\t hanning, welch, bartlett, tukey, top_hat (default: none)\n");
-
   arg = menu.add (config->filterbank, 'F', "<N>[:D]");
   arg->set_help ("create an N-channel filterbank");
   arg->set_long_help
@@ -381,6 +375,17 @@ void parse_options (int argc, char** argv) try
 
   arg = menu.add (config->cyclic_mover, "cyclicoversample", "M");
   arg->set_help ("use M times as many lags to improve cyclic channel isolation (4 is recommended)");
+
+  string taper_help = "Available tapering functions:\n"
+     "\t hanning, welch, bartlett, tukey, top_hat (default: none)\n";
+
+  arg = menu.add (config->temporal_apodization_type, "t-taper", "name");
+  arg->set_help ("name of temporal apodization/tapering/window function");
+  arg->set_long_help (taper_help);
+
+  arg = menu.add (config->spectral_apodization_type, "f-taper", "name");
+  arg->set_help ("name of spectral apodization/tapering/window function");
+  arg->set_long_help (taper_help);
 
   double dm = -1.0;
   arg = menu.add (dm, 'D', "dm");

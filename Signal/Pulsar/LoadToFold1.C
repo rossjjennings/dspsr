@@ -182,10 +182,10 @@ void dsp::LoadToFold::construct () try
 
   Reference::To<dsp::Apodization> apodization_window;
 
-  if (config->apodization_type != "")
+  if (config->temporal_apodization_type != "")
   {
     apodization_window = new dsp::Apodization;
-    apodization_window->set_type (config->apodization_type);
+    apodization_window->set_type (config->temporal_apodization_type);
   }
 
   // the data are not detected, so set up phase coherent reduction path
