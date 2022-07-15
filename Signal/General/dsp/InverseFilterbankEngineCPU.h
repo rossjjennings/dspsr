@@ -70,8 +70,10 @@ namespace dsp
     //! zero DM response
     Response* zero_DM_response;
 
-    //! FFT window applied before forward FFT
-    Apodization* fft_window;
+    //! Taper applied before forward FFT
+    Apodization* temporal_apodization;
+    //! Taper applied before backward FFT
+    Apodization* spectral_apodization;
 
     //! the number of input polarizations
     unsigned input_npol;

@@ -29,7 +29,9 @@ dsp::InverseFilterbankEngineCPU::InverseFilterbankEngineCPU ()
   fft_plans_setup = false;
   response = nullptr;
   zero_DM_response = nullptr;
-  fft_window = nullptr;
+
+  temporal_apodization = nullptr;
+  spectral_apodization = nullptr;
 
   pfb_dc_chan = 0;
   pfb_all_chan = 0;
@@ -84,17 +86,34 @@ void dsp::InverseFilterbankEngineCPU::setup (dsp::InverseFilterbank* filterbank)
   if (filterbank->has_temporal_apodization())
   {
     if (verbose)
-      cerr << "dsp::InverseFilterbankEngineCPU::setup setting fft_window" << endl;
+      cerr << "dsp::InverseFilterbankEngineCPU::setup temporal apodization" << endl;
 
-    fft_window = filterbank->get_temporal_apodization();
+    temporal_apodization = filterbank->get_temporal_apodization();
     if (verbose)
     {
-      cerr << "dsp::InverseFilterbankEngineCPU::setup fft_window.get_type() "
-	   << fft_window->get_type() << endl;
-      cerr << "dsp::InverseFilterbankEngineCPU::setup fft_window.get_ndim() "
-	   << fft_window->get_ndim() << endl;
-      cerr << "dsp::InverseFilterbankEngineCPU::setup fft_window.get_ndat() "
-	   << fft_window->get_ndat() << endl;
+      cerr << "dsp::InverseFilterbankEngineCPU::setup temporal_apodization.get_type() "
+	   << temporal_apodization->get_type() << endl;
+      cerr << "dsp::InverseFilterbankEngineCPU::setup temporal_apodization.get_ndim() "
+	   << temporal_apodization->get_ndim() << endl;
+      cerr << "dsp::InverseFilterbankEngineCPU::setup temporal_apodization.get_ndat() "
+	   << temporal_apodization->get_ndat() << endl;
+    }
+  }
+
+  if (filterbank->has_spectral_apodization())
+  {
+    if (verbose)
+      cerr << "dsp::InverseFilterbankEngineCPU::setup spectral apodization" << endl;
+
+    spectral_apodization = filterbank->get_spectral_apodization();
+    if (verbose)
+    {
+      cerr << "dsp::InverseFilterbankEngineCPU::setup spectral_apodization.get_type() "
+           << spectral_apodization->get_type() << endl;
+      cerr << "dsp::InverseFilterbankEngineCPU::setup spectral_apodization.get_ndim() "
+           << spectral_apodization->get_ndim() << endl;
+      cerr << "dsp::InverseFilterbankEngineCPU::setup spectral_apodization.get_ndat() "
+           << spectral_apodization->get_ndat() << endl;
     }
   }
 
@@ -245,14 +264,14 @@ void dsp::InverseFilterbankEngineCPU::perform (
 
   if (verbose)
   {
-    if (fft_window)
+    if (temporal_apodization)
     {
-      cerr << "dsp::InverseFilterbankEngineCPU::perform fft_window.get_type() "
-        << fft_window->get_type() << endl;
-      cerr << "dsp::InverseFilterbankEngineCPU::perform fft_window.get_ndim() "
-        << fft_window->get_ndim() << endl;
-      cerr << "dsp::InverseFilterbankEngineCPU::perform fft_window.get_ndat() "
-        << fft_window->get_ndat() << endl;
+      cerr << "dsp::InverseFilterbankEngineCPU::perform temporal_apodization.get_type() "
+        << temporal_apodization->get_type() << endl;
+      cerr << "dsp::InverseFilterbankEngineCPU::perform temporal_apodization.get_ndim() "
+        << temporal_apodization->get_ndim() << endl;
+      cerr << "dsp::InverseFilterbankEngineCPU::perform temporal_apodization.get_ndat() "
+        << temporal_apodization->get_ndat() << endl;
     }
     cerr << "dsp::InverseFilterbankEngineCPU::perform output_nchan="
       << output_nchan << endl;
@@ -287,16 +306,16 @@ void dsp::InverseFilterbankEngineCPU::perform (
           sizeof_complex*input_fft_length
         );
 
-        if (fft_window)
+        if (temporal_apodization)
 	{
           // if (verbose && input_ichan == 0) {
-          //   cerr << "dsp::InverseFilterbankEngineCPU::perform applying fft_window" << endl;
+          //   cerr << "dsp::InverseFilterbankEngineCPU::perform applying temporal_apodization" << endl;
           // }
-          fft_window->operate(input_time_scratch);
+          temporal_apodization->operate(input_time_scratch);
         }
 
         if (report)
-          reporter.emit("fft_window", input_time_scratch, 1, 1, input_fft_length, 2);
+          reporter.emit("temporal_apodization", input_time_scratch, 1, 1, input_fft_length, 2);
 
         if (real_to_complex)
           forward->frc1d(input_fft_length, freq_dom_ptr, input_time_scratch);
@@ -405,6 +424,12 @@ void dsp::InverseFilterbankEngineCPU::perform (
           // if (verbose) {
           //   cerr << "dsp::InverseFilterbankEngineCPU::perform output_ichan=" << output_ichan << endl;
           // }
+
+          if (spectral_apodization != nullptr)
+          {
+            spectral_apodization -> operate (output_freq_dom_ptr);
+          }
+
           // cerr << "dsp::InverseFilterbankEngineCPU::perform before fft" << endl;
           backward->bcc1d(output_fft_length, output_fft_scratch, output_freq_dom_ptr);
           if (report)

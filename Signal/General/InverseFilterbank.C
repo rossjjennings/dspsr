@@ -124,8 +124,6 @@ void dsp::InverseFilterbank::transformation ()
     get_buffering_policy()->set_next_start (input_sample_step * npart);
   }
 
-  uint64_t output_ndat = output->get_ndat();
-
   int64_t input_sample = input->get_input_sample();
   int64_t output_sample = input_to_output ( input_sample, 
                                             input_nchan, output_nchan, 
@@ -285,7 +283,7 @@ void dsp::InverseFilterbank::make_preparations ()
   if (has_temporal_apodization())
   {
     if (verbose)
-      cerr << "dsp::InverseFilterbank::make_preparations creating FFT window" << endl;
+      cerr << "dsp::InverseFilterbank::make_preparations temporal apodization" << endl;
 
     dsp::Apodization* fft_window = get_temporal_apodization();
     fft_window->set_size (input_fft_length);
@@ -293,6 +291,13 @@ void dsp::InverseFilterbank::make_preparations ()
     fft_window->set_transition (input_discard_pos);
     fft_window->build ();
     fft_window->dump ("temporal_apodization.dat");
+  }
+
+  if (spectral_apodization)
+  {
+    if (verbose)
+      cerr << "dsp::InverseFilterbank::make_preparations spectral apodization" << endl;
+    prepare_spectral_apodization ( output_fft_length );
   }
 
   if (verbose)
