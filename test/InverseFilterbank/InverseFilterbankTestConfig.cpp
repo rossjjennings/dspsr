@@ -110,8 +110,12 @@ namespace InverseFilterbank {
         std::cerr << "test::util::InverseFilterbankProxy::setup creating Tukey FFT window" << std::endl;
       }
       Reference::To<dsp::Apodization> fft_window = new dsp::Apodization;
-      fft_window->Tukey(input_fft_length, 0, input_overlap, true);
-      filterbank->set_apodization(fft_window);
+      fft_window->set_size (input_fft_length);
+      fft_window->set_analytic (true);
+      fft_window->set_transition (input_overlap);
+      fft_window->build ();
+
+      filterbank->set_temporal_apodization(fft_window);
     }
 
     if (do_response)
