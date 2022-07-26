@@ -727,7 +727,8 @@ void dsp::Response::doswap (unsigned divisions)
 
   if (half_npts < 2)
     throw Error (InvalidState, "dsp::Response::swap",
-		 "invalid npts=%d", half_npts);
+		 "invalid npts=%d (ndat=%u ndim=%u nchan=%u)",
+                 half_npts, ndat, ndim, nchan);
 
 #ifdef _DEBUG
   cerr << "dsp::Response::swap"

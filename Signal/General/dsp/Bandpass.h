@@ -39,6 +39,9 @@ namespace dsp {
     //! Set the input channel to analyze
     void set_selected_input_channel (unsigned ichan) { select_input_channel = ichan; }
 
+    //! Integrate the passbands of all channels
+    void set_integrate_all_channels (bool flag) { integrate_all_channels = flag; }
+
     //! Set the frequency response function
     virtual void set_response (Response* response);
 
@@ -73,6 +76,9 @@ namespace dsp {
 
     //! Produce the bandpass of only the selected input channel
     int select_input_channel;
+
+    //! Integrate the bandpasses of all input channels
+    bool integrate_all_channels;
 
     //! Integration length in seconds
     double integration_length;

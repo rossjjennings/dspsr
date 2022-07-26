@@ -20,6 +20,7 @@ dsp::Bandpass::Bandpass () :
   integration_length = 0;
   output_state = Signal::PPQQ;
   select_input_channel = -1;
+  integrate_all_channels = false;
 }
 
 dsp::Bandpass::~Bandpass ()
@@ -67,7 +68,12 @@ void dsp::Bandpass::transformation ()
     nchan = 1;
     ichan_offset = select_input_channel;
   }
-   
+  
+  unsigned nchan_out = nchan;
+
+  if (integrate_all_channels)
+    nchan_out = 1;
+ 
   // 2 floats per complex number
   unsigned pts_reqd = resolution * 2;
 
@@ -101,9 +107,9 @@ void dsp::Bandpass::transformation ()
   unsigned output_ndat = output->get_ndat();
 
   if (full_poln)
-    output->resize (4, nchan, resolution, 1);
+    output->resize (4, nchan_out, resolution, 1);
   else
-    output->resize (npol, nchan, resolution, 1);
+    output->resize (npol, nchan_out, resolution, 1);
 
   if (output_ndat == 0)
     output->zero();
@@ -137,6 +143,8 @@ void dsp::Bandpass::transformation ()
 
   for (unsigned ichan=0; ichan < nchan; ichan++)
   {
+    unsigned out_ichan = (integrate_all_channels) ? 0 : ichan;
+
     for (unsigned ipol=0; ipol < npol; ipol++)
     {
       for (uint64_t ipart=0; ipart < npart; ipart++)
@@ -167,10 +175,10 @@ void dsp::Bandpass::transformation ()
 	}
 	
 	if (full_poln) 
-	  output->integrate (spectrum[0], spectrum[1], ichan);
+	  output->integrate (spectrum[0], spectrum[1], out_ichan);
 
 	else
-	  output->integrate (spectrum[ipol], ipol, ichan);
+	  output->integrate (spectrum[ipol], ipol, out_ichan);
 
 
       }  // for each part of the time series
@@ -183,7 +191,7 @@ void dsp::Bandpass::transformation ()
   {
     if (verbose)
       cerr << "dsp::Bandpass::transformation set swap" << endl;
-    output->flagswap( nchan );
+    output->flagswap( nchan_out );
   }
 
   // for each poln

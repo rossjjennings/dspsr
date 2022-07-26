@@ -49,6 +49,8 @@ void usage ()
     " -d         produce dynamic spectrum (greyscale) \n"
     " -F min,max set the min,max x-value (e.g. frequency zoom) \n" 
     " -r min,max set the min,max y-value (e.g. saturate birdies) \n"
+    " -I         integrate the passbands of all input channels \n"
+    " -j ichan   select the input channel to plot \n"
     " -l         y-axis on log scale \n"
     " -m         report index of maximum power \n"
     " -n nchan   number of frequency channels in each spectrum \n"
@@ -122,15 +124,12 @@ int main (int argc, char** argv) try {
   int width_pixels  = 0;
   int height_pixels = 0;
   int select_chan = -1;
+  bool integrate_chans = false;
 
-  static const char* args = "bB:c:dD:f:F:G:g:hij:lmn:pRr:S:T:t:svV";
+  static const char* args = "bB:c:dD:f:F:G:g:hiIj:lmn:pRr:S:T:t:svV";
 
   while ((c = getopt(argc, argv, args)) != -1)
     switch (c) {
-
-    case 'i':
-      plotter.xlabel_ichan = true;
-      break;
 
     case 'b':
       plotter.histogram = true;
@@ -182,6 +181,14 @@ int main (int argc, char** argv) try {
 
       break;
     }
+
+    case 'i':
+      plotter.xlabel_ichan = true;
+      break;
+
+    case 'I':
+      integrate_chans = true;
+      break;
 
     case 'l':
       plotter.logarithmic = true;
@@ -320,6 +327,8 @@ int main (int argc, char** argv) try {
   if (select_chan > -1)
     passband->set_selected_input_channel( select_chan );
 
+  passband->set_integrate_all_channels( integrate_chans );
+
   operations.push_back (passband);
 
   if (cpgopen(display.c_str()) < 0)
@@ -448,6 +457,7 @@ int main (int argc, char** argv) try {
 
 	passband->reset_output();
       }
+
       if (single_quit)
         break;
     }
