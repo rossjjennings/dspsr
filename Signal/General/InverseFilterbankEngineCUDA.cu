@@ -7,6 +7,8 @@
  ***************************************************************************/
 
 #include "dsp/InverseFilterbankEngineCUDA.h"
+#include "dsp/Apodization.h"
+
 #include "CUFFTError.h"
 
 #include <cstdio>
@@ -974,9 +976,9 @@ void CUDA::InverseFilterbankEngineCUDA::setup (dsp::InverseFilterbank* filterban
     response = filterbank->get_response();
   }
 
-  if (filterbank->has_apodization())
+  if (filterbank->has_temporal_apodization())
   {
-    fft_window = filterbank->get_apodization();
+    fft_window = filterbank->get_temporal_apodization();
   }
 
   setup_forward_fft_plan(
@@ -1011,8 +1013,10 @@ void CUDA::InverseFilterbankEngineCUDA::setup (dsp::InverseFilterbank* filterban
     }
   }
   // need device memory for apodization
-  if (fft_window) {
-    if (verbose) {
+  if (fft_window)
+  {
+    if (verbose)
+    {
       std::cerr << "CUDA::InverseFilterbankEngineCUDA::setup: copying fft window from host to device" << std::endl;
       std::cerr << "CUDA::InverseFilterbankEngineCUDA::setup: fft_window.get_type() "
         << fft_window->get_type() << std::endl;

@@ -87,7 +87,6 @@ TEST_CASE (
   filterbank.set_input(unpacked);
   filterbank.set_output(output);
   filterbank.set_pfb_dc_chan(true);
-  filterbank.set_fft_window_str("no_window");
 
   unsigned ndat = input_nchan*os_factor.normalize(freq_res);
 
