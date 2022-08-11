@@ -61,13 +61,13 @@ void dsp::PearsonIV::prepare ()
          << " a=" << a << " lamda=" << lamda << endl;
 
   // some quick checks
-  if (!finite(v))
+  if (!isfinite(v))
     cerr << "dsp::PearsonIV::prepare v is not finite M=" << M << endl;
 
-  if (!finite(a))
+  if (!isfinite(a))
     cerr << "dsp::PearsonIV::prepare a is not finite M=" << M << endl;
 
-  if (!finite(lamda))
+  if (!isfinite(lamda))
     cerr << "dsp::PearsonIV::prepare lamda is not finite M=" << M << endl;
 
   if (m <= 0.5)
@@ -77,7 +77,7 @@ void dsp::PearsonIV::prepare ()
   // parameters
   logk = log_normal();
 
-  if (!finite(logk))
+  if (!isfinite(logk))
     cerr << "dsp::PearsonIV::prepare logk not finite" << endl;
 
 }

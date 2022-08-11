@@ -846,7 +846,7 @@ try
   if (verbose > 2)
     cerr << "dsp::Archiver::set Pulsar::Profile scale=" << scale << endl;
 
-  if (scale == 0 || !finite(scale))
+  if (scale == 0 || !isfinite(scale))
     throw Error (InvalidParam, string(), "invalid scale=%lf", scale);
 
   unsigned not_finite = 0;
@@ -861,7 +861,7 @@ try
       zeroes ++;
       into[ibin] = 0.0;
     }
-    else if (!finite(*from))
+    else if (!isfinite(*from))
     {
       not_finite ++;
       if (verbose > 2)

@@ -123,7 +123,7 @@ int main (int argc, char** argv) try
     y = pIV(x);
 
     x_vals[i] = (float) x;
-    if (finite(y))
+    if (isfinite(y))
       y_vals[i] = (float) log(y);
     else
       y_vals[i] = -1 * FLT_MAX;
@@ -139,7 +139,7 @@ int main (int argc, char** argv) try
 
   for (i=0; i<n_bins; i++)
   {
-    if (finite(y_vals[i]))
+    if (isfinite(y_vals[i]))
     {
       if (y_vals[i] > ymax)
         ymax = y_vals[i];

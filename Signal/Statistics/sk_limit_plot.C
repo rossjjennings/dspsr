@@ -172,7 +172,7 @@ int main (int argc, char** argv) try
 
   for (i=0; i<n_bins; i++)
   {
-    if (finite(cf_vals[i]))
+    if (isfinite(cf_vals[i]))
     {
       if (cf_vals[i] > ymax) 
         ymax = cf_vals[i];
@@ -180,7 +180,7 @@ int main (int argc, char** argv) try
         ymin = cf_vals[i];
     }
 
-    if (finite(ccf_vals[i]))
+    if (isfinite(ccf_vals[i]))
     {
       if (ccf_vals[i] > ymax) 
         ymax = ccf_vals[i];

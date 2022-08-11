@@ -146,7 +146,7 @@ void dsp::Dump::calculation ()
 #endif
 
       for (uint64_t idat = 0; idat < ndat*ndim; idat++)
-	if (!finite(data[idat]))
+	if (!isfinite(data[idat]))
 	  cerr << "NaN/Inf ichan=" << ichan << " ipol=" << ipol
 	       << " ifloat=" << idat << endl;
 
