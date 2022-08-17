@@ -60,7 +60,7 @@ void PipelineConfig::setup_config (const double dm, const double period)
   // set up inverse filterbank configuration
   dsp::InverseFilterbank::Config if_config;
   config->inverse_filterbank = if_config;
-  config->apodization_type = "tukey";
+  config->temporal_apodization_type = "tukey";
 }
 
 void PipelineConfig::run_loadtofold (dsp::LoadToFold& loader)

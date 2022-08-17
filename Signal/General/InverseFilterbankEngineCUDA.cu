@@ -712,7 +712,7 @@ CUDA::InverseFilterbankEngineCUDA::InverseFilterbankEngineCUDA (cudaStream_t _st
   forward_fft_plan_setup = false;
   backward_fft_plan_setup = false;
   response = NULL;
-  fft_window = NULL;
+  // fft_window = NULL;
 
   d_scratch = NULL;
   d_input_overlap_discard = NULL;
@@ -975,6 +975,8 @@ void CUDA::InverseFilterbankEngineCUDA::setup (dsp::InverseFilterbank* filterban
   {
     response = filterbank->get_response();
   }
+
+  dsp::Apodization* fft_window = NULL;
 
   if (filterbank->has_temporal_apodization())
   {
