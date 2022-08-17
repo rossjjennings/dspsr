@@ -233,7 +233,7 @@ void dsp::InverseFilterbankEngineCPU::perform (
   unsigned stitched_offset_neg;
 
   float* freq_dom_ptr;
-  float* time_dom_ptr;
+  const float* time_dom_ptr;
   float* output_freq_dom_ptr;
 
   if (verbose)
@@ -297,31 +297,33 @@ void dsp::InverseFilterbankEngineCPU::perform (
       for (unsigned input_ichan = 0; input_ichan < input_nchan; input_ichan++)
       {
         freq_dom_ptr = input_fft_scratch;
-        time_dom_ptr = const_cast<float*>(in->get_datptr(input_ichan, ipol));
+
+        unsigned input_jchan = input_ichan;
+
+        // shift by half band:
+        // input_jchan = (input_jchan + input_nchan) % input_nchan;
+
+        // reverse channel order:
+        // input_jchan = input_nchan - input_jchan - 1;
+
+        time_dom_ptr = in->get_datptr(input_jchan, ipol);
         time_dom_ptr += n_dims*ipart*(input_fft_length - input_discard_total);
 
-        memcpy(
-          input_time_scratch,
-          time_dom_ptr,
-          sizeof_complex*input_fft_length
-        );
-
         if (temporal_apodization)
-	{
-          // if (verbose && input_ichan == 0) {
-          //   cerr << "dsp::InverseFilterbankEngineCPU::perform applying temporal_apodization" << endl;
-          // }
-          temporal_apodization->operate(input_time_scratch);
+        {
+          memcpy (input_time_scratch, time_dom_ptr, input_fft_scratch_nfloat * sizeof(float));
+          temporal_apodization->operate (input_time_scratch);
+          time_dom_ptr = input_time_scratch;
+
+          if (report)
+            reporter.emit("temporal_apodization", input_time_scratch, 1, 1, input_fft_length, 2);
         }
 
-        if (report)
-          reporter.emit("temporal_apodization", input_time_scratch, 1, 1, input_fft_length, 2);
-
         if (real_to_complex)
-          forward->frc1d(input_fft_length, freq_dom_ptr, input_time_scratch);
+          forward->frc1d(input_fft_length, freq_dom_ptr, time_dom_ptr);
         else
           // fcc1d(number_of_points, dest_ptr, src_ptr);
-          forward->fcc1d(input_fft_length, freq_dom_ptr, input_time_scratch);
+          forward->fcc1d(input_fft_length, freq_dom_ptr, time_dom_ptr);
 
         // discard oversampled regions and do circular shift
         if (report)
