@@ -123,13 +123,17 @@ int main (int argc, char** argv) try {
 
   int width_pixels  = 0;
   int height_pixels = 0;
-  int select_chan = -1;
-  bool integrate_chans = false;
+  int select_chan = -1;          // plot a single input channel
+  bool integrate_chans = false;  // integrate over input channels
 
-  static const char* args = "bB:c:dD:f:F:G:g:hiIj:lmn:pRr:S:T:t:svV";
+  static const char* args = "1bB:c:dD:f:F:G:g:hiIj:lmn:pRr:S:T:t:svV";
 
   while ((c = getopt(argc, argv, args)) != -1)
     switch (c) {
+
+    case '1':
+      single_quit = true;
+      break;
 
     case 'b':
       plotter.histogram = true;
@@ -456,10 +460,10 @@ int main (int argc, char** argv) try {
           print_max_index (output);
 
 	passband->reset_output();
-      }
 
-      if (single_quit)
-        break;
+        if (single_quit)
+          break;
+      }
     }
 
     if (dynamic)
