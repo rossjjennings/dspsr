@@ -292,22 +292,28 @@ int main (int argc, char** argv) try
 
       for (unsigned ichan=0; ichan<voltages->get_nchan(); ++ichan)
       {
-	if (display)
-	  cpgpage();
-	
-	float bottom = 0.52;
+        float bottom = 0;
 
 	for (unsigned ipol=0; ipol<voltages->get_npol(); ++ipol)
         {
+          if (ipol % 2 == 0)
+          {
+            if (display)
+              cpgpage();
+            bottom = 0.55;
+          }
+          else
+            bottom = 0.08;
+
 	  if (display && plotter) try
           {
 	    cpgsvp (0.7, 0.95, bottom, bottom+0.40);
 	    plotter->plot (ichan,ipol);
 	  }
-    catch (Error& e) { if (verbose) cerr << e << endl; }
+          catch (Error& e) { if (verbose) cerr << e << endl; }
 
-    cpgsch (1.0);
-    cerr << "ichan=" << ichan << " ipol=" << ipol << endl;
+          cpgsch (1.0);
+          cerr << "ichan=" << ichan << " ipol=" << ipol << endl;
 
 	  float* data = voltages->get_datptr (ichan, ipol);
           uint64_t nfloat = voltages->get_ndat() * voltages->get_ndim();
@@ -386,11 +392,12 @@ int main (int argc, char** argv) try
 	  cpgsci(1);
 	  cpgbox("bcst",0.0,0,"bcnvst",0.0,0);
 	  cpgmtxt("L",3.5,.5,.5,"rms");
-	  
+	
+          string title = "ichan=" + tostring(ichan) + " ipol=" + tostring(ipol);
+          cpgmtxt("T",.5, 0.0, 0.0, title.c_str());
+ 
 	  cpgsci(6);
 	  cpgpt(npoints, &(xaxis[0]), &(rms[0]), -1);
-	  
-	  bottom = 0.08;
 	}
 	
 	if (display && plotter) 
