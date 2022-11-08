@@ -76,7 +76,9 @@ void parse_options (int argc, char** argv) try
   arg->set_type("nthread");
 
   arg = menu.add (config->nbits, 'b', "bits");
-  arg->set_help ("number of bits per sample output to file");
+  arg->set_help ("number of bits per output sample (-32 -> float)");
+  arg->set_long_help
+    ("Use '-b -32' to output samples as 32-bit floating point values");
 
   arg = menu.add (config->block_size, 'B', "MB");
   arg->set_help ("block size in megabytes");
@@ -118,7 +120,9 @@ void parse_options (int argc, char** argv) try
   arg->set_help ("process only a single polarization of input");
 
   arg = menu.add (config->rescale_seconds, 'I', "secs");
-  arg->set_help ("rescale interval in seconds");
+  arg->set_help ("rescale interval in seconds (0 -> disable rescaling)");
+  arg->set_long_help
+    ("Use '-I 0' to disable rescaling (useful in combination with '-b -32')");
 
   arg = menu.add (config->scale_fac, 's', "fac");
   arg->set_help ("data scale factor to apply");
