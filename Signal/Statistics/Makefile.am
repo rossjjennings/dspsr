@@ -7,7 +7,7 @@ nobase_include_HEADERS = dsp/MidPoint.h dsp/Trapezoid.h \
 	dsp/Romberg.h dsp/Neville.h dsp/VolumeIntegral.h \
 	dsp/PearsonIV.h dsp/SKLimits.h dsp/NewtonRaphson.h
 
-bin_PROGRAMS = test_Romberg sklimit
+bin_PROGRAMS = sklimit
 
 test_Romberg_SOURCES = test_Romberg.C 
 
